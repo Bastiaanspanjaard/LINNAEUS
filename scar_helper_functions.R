@@ -498,7 +498,7 @@ create.degree.lls <- function(cs, graph){
           d_scar <- as.integer(x[2])
           de_scar <- as.numeric(x[3])
           p.conn.scar <- conn.p[, colnames(conn.p) == scar]
-          if(d_scar == (length(p.conn.scar) - 1) & (d_scar <= de_scar)){
+          if(d_scar == (length(p.conn.scar) - 1) & (de_scar <= d_scar)){
             # The cumulative distribution function gets into trouble if our
             # measured degree equals the maximum degree. The expected degree 
             # will be slightly lower than the real

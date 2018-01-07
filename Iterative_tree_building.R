@@ -20,25 +20,24 @@
 # scar with the highest p-value as the first scar.
 
 # Dependencies ####
-source("./Scripts/scar_helper_functions.R")
+source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
 # Minimum ratio between scar coincidence rate and constituent scar occurrence 
 # rates - p_AB/(p_Ap_B) for scars A and B.
-min.coinc.occurence.ratio <- 0 # Default 1, set to 0 to include all connections.
+min.coinc.occurence.ratio <- 1 # Default 1, set to 0 to include all connections.
 # Minimal detection rate ratio for scar to be considered as top scar in an 
 # iteration.
 min.detection.rate.ratio <- 0.1 # Default 0.1, set to 0 to turn off.
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.05 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
-max.scar.p <- 0.01
-
+max.scar.p <- 0.001
 
 # Load data ####
-scar.input <- read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
+scar.input <- # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
@@ -51,13 +50,16 @@ if("p" %in% names(scar.input)){
 cells.in.tree <- cells.in.tree[!duplicated(cells.in.tree), ]
 
 # Count total number of cells present even without scars
+# For Z2
 tsne.coord <- read.csv("./Data/2017_10X_2/X10_final_all_tsne_Seurat_Bo_ID.csv")
-N <- sum(grepl("Z2", tsne.coord$Cell)) 
+N <- sum(grepl("Z2", tsne.coord$Cell))
+# For (simulated) tree B
+# N <- 3000
 
 scar.freqs <- data.frame(table(cells.in.tree$Scar))
 colnames(scar.freqs)[1] <- "Scar"
 scar.freqs <- scar.freqs[order(-scar.freqs$Freq), ]
-include.scars <- scar.freqs$Scar #[1:10]
+include.scars <- scar.freqs$Scar[1:10]
 cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% include.scars, ]
 
 # Filter out low-frequency scar connections ####
@@ -82,7 +84,7 @@ ooc.cutoff.graph <-
   graph_from_data_frame(ooc.cutoff[, c("Scar.A", "Scar.B")],
                         directed = F, vertices = union(ooc.cutoff$Scar.A, 
                                                        ooc.cutoff$Scar.B))
-# plot(ooc.cutoff.graph)
+plot(ooc.cutoff.graph)
 
 # Identify incorrect connections
 incorrect.connections <- 
@@ -319,7 +321,7 @@ scar.phylo <-
 class(scar.phylo) <- "phylo"
 
 # Plot tree ####
-# pdf("Images/Simulations/Tree_B_3types_2sites_coincr0_detratio01_branchratio0.pdf",
+# pdf("Images/Simulations/Z2_p001_top10_coincr1_detratio01_branchratio005.pdf",
 #            width = 12, height = 7)
 plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
      edge.width = 3, no.margin = T, direction = "leftward")
