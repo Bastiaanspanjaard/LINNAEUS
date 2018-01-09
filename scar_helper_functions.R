@@ -15,6 +15,7 @@ suppressPackageStartupMessages(library(reshape2))
 require(stringdist)
 require(ape)
 require(poisbinom)
+require(dplyr)
 
 # Parameters ####
 wildtype.seq <- 
@@ -412,9 +413,10 @@ create.degree.lls <- function(cs, graph){
     all.scar.temp$All.scar - all.scar.temp$Only.scar
   all.scar.temp$Only.other <-
     all.scar.temp$Total - all.scar.temp$All.scar
+  all.scar.temp$Total.other <-
+    all.scar.temp$Only.other + all.scar.temp$Scar.other
   all.scar.temp$p_A <-
-    all.scar.temp$Scar.other/(all.scar.temp$Only.other +
-                                   all.scar.temp$Scar.other)
+    all.scar.temp$Scar.other/all.scar.temp$Total.other
   all.scar.temp$Log.one.minus.pA <- log(1 - all.scar.temp$p_A)
   all.scar.temp <- all.scar.temp[complete.cases(all.scar.temp), ]
 
@@ -513,7 +515,7 @@ create.degree.lls <- function(cs, graph){
           return(degree.p)
         })
 
-  scar.lls <- merge(scar.lls, all.scar.temp[, c("Scar", "Cell.type", "p_A")])
+  scar.lls <- merge(scar.lls, all.scar.temp[, c("Scar", "Cell.type", "Total.other", "p_A")])
 
   scar.lls <- scar.lls[order(-scar.lls$Degree.p, -scar.lls$Degree, 
                              -scar.lls$Scar.count), ]

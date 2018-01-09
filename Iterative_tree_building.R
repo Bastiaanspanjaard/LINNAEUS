@@ -30,14 +30,23 @@ min.coinc.occurence.ratio <- 1 # Default 1, set to 0 to include all connections.
 # iteration.
 min.detection.rate.ratio <- 0.1 # Default 0.1, set to 0 to turn off.
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.05 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
-max.scar.p <- 0.001
+max.scar.p <- 0.01
 
 # Load data ####
-scar.input <- # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
+# Count total number of cells present even without scars
+# For Z2
+# tsne.coord <- read.csv("./Data/2017_10X_2/X10_final_all_tsne_Seurat_Bo_ID.csv")
+# N <- sum(grepl("Z2", tsne.coord$Cell))
+# For A5
+# tsne.coord <- read.csv("./Data/2017_10X_6/A56_final_all_tsne_Seurat.csv")
+# N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
+# For (simulated) tree B
+N <- 3000
+scar.input <- read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
@@ -49,17 +58,12 @@ if("p" %in% names(scar.input)){
 }
 cells.in.tree <- cells.in.tree[!duplicated(cells.in.tree), ]
 
-# Count total number of cells present even without scars
-# For Z2
-tsne.coord <- read.csv("./Data/2017_10X_2/X10_final_all_tsne_Seurat_Bo_ID.csv")
-N <- sum(grepl("Z2", tsne.coord$Cell))
-# For (simulated) tree B
-# N <- 3000
 
 scar.freqs <- data.frame(table(cells.in.tree$Scar))
 colnames(scar.freqs)[1] <- "Scar"
 scar.freqs <- scar.freqs[order(-scar.freqs$Freq), ]
-include.scars <- scar.freqs$Scar[1:10]
+set.seed(1)
+include.scars <- scar.freqs$Scar #[1:10] #[sample.int(nrow(scar.freqs), 20)] 
 cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% include.scars, ]
 
 # Filter out low-frequency scar connections ####
@@ -84,7 +88,10 @@ ooc.cutoff.graph <-
   graph_from_data_frame(ooc.cutoff[, c("Scar.A", "Scar.B")],
                         directed = F, vertices = union(ooc.cutoff$Scar.A, 
                                                        ooc.cutoff$Scar.B))
+# pdf("Images/Simulations/Z2_network_10scars_p01_coincr1_detratio01_branchratio0.pdf",
+#            width = 20, height = 10)
 plot(ooc.cutoff.graph)
+# dev.off()
 
 # Identify incorrect connections
 incorrect.connections <- 
@@ -228,11 +235,20 @@ while(scar.index <= scar.amount){
     
     scar.lls.unique <- 
       unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", "Degree.p")])
+    mean.det.rates <- 
+      ddply(scar.lls, .(Scar),
+            function(x) data.frame(Mean.p_A = weighted.mean(x$p_A, x$Total.other)))
+    scar.lls.unique <- merge(scar.lls.unique, mean.det.rates)
+    scar.lls.unique <- scar.lls.unique[order(-scar.lls.unique$Degree.p,
+                                             -scar.lls.unique$Degree,
+                                             -scar.lls.unique$Mean.p_A), ]
+    
     # scar.lls.unique <- scar.lls.unique[scar.lls.unique$Scar %in% possible.top.scars, ]
         
     scar.remove <- scar.lls.unique$Scar[1]
     it.tree.element <- list(Scar = scar.remove,
-                            LLS = scar.lls)
+                            LLS = scar.lls,
+                            LLS.unique = scar.lls.unique)
   }
   it.tree.building[[scar.index]] <- it.tree.element
   
@@ -321,14 +337,15 @@ scar.phylo <-
 class(scar.phylo) <- "phylo"
 
 # Plot tree ####
-# pdf("Images/Simulations/Z2_p001_top10_coincr1_detratio01_branchratio005.pdf",
-#            width = 12, height = 7)
+# pdf("Images/Simulations/Z2_30scars_p01_coincr1_detratio01_branchratio005.pdf",
+#            width = 20, height = 10)
 plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
      edge.width = 3, no.margin = T, direction = "leftward")
 # title(main = sub("Root,", "", nodes$Name[grep("Root", nodes$Name)]))
-edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, -0.5))
+edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
+           col = "red")
 # dev.off()
 
 # Investigate tree building ####
 View(tree.summary.old)
-# View(it.tree.building[[1]]$LLS)
+View(it.tree.building[[1]]$LLS)
