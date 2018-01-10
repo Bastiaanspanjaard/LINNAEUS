@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(reshape2))
 require(stringdist)
 require(ape)
 require(poisbinom)
-require(dplyr)
+require(plyr)
 
 # Parameters ####
 wildtype.seq <- 
