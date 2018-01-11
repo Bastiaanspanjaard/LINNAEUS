@@ -26,19 +26,17 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.1 
-# Minimal detection rate ratio for scar to be considered as top scar in an 
-# iteration.
-min.detection.rate.ratio <- 0.1 # Default 0.1, set to 0 to turn off.
+doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
+# The minimum detection rate for a scar to be considered as top scar.
+min.detection.rate <- 0.1 # Default value is 0.1
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.01
 
-# OBSOLETE
-# Minimum ratio between scar coincidence rate and constituent scar occurrence 
-# rates - p_AB/(p_Ap_B) for scars A and B.
-min.coinc.occurence.ratio <- 1.2 # Default 1, set to 0 to include all connections.
+# For testing purposes: how many scars to include in tree building (takes the
+# most frequent scars, set to NA to include all)
+number.scars <- NA
 
 # Load data ####
 # Count total number of cells present even without scars
@@ -49,10 +47,10 @@ min.coinc.occurence.ratio <- 1.2 # Default 1, set to 0 to include all connection
 # tsne.coord <- read.csv("./Data/2017_10X_6/A56_final_all_tsne_Seurat.csv")
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-# N <- 3000
+N <- 3000
 scar.input <- read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
+  #read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
@@ -64,17 +62,18 @@ if("p" %in% names(scar.input)){
 }
 cells.in.tree <- cells.in.tree[!duplicated(cells.in.tree), ]
 
-
 scar.freqs <- data.frame(table(cells.in.tree$Scar))
 colnames(scar.freqs)[1] <- "Scar"
 scar.freqs <- scar.freqs[order(-scar.freqs$Freq), ]
 set.seed(1)
-include.scars <- scar.freqs$Scar #[1:20] #[sample.int(nrow(scar.freqs), 20)] 
+if(is.na(number.scars)){
+  include.scars <- scar.freqs$Scar
+}else{
+  include.scars <- scar.freqs$Scar[1:number.scars]
+}
 cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% include.scars, ]
 
 # Filter out low-frequency scar connections ####
-doublet.rate <- 0.1
-
 # Count how often every scar-scar connection is seen
 scar.connections <- connections.for.graph(cells.in.tree)
 only.once.connections <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
@@ -83,14 +82,9 @@ only.once.connections <-
   merge(only.once.connections, 
         scar.connections)
 
-# Compare the connection frequency to the constituent scars frequencies
-# and remove connections that aren't seen often enough.
-only.once.connections$AB.ratio.obs <- only.once.connections$x_AB/N
-only.once.connections$AB.ratio.exp <- 
-  only.once.connections$x_A * only.once.connections$x_B/N^2
-only.once.connections$AB.obs.exp <- 
-  only.once.connections$AB.ratio.obs/only.once.connections$AB.ratio.exp
-
+# Calculate how many doublets we'd expect given a doublet rate, and (under
+# assumption that the number of doublets is binomially distributed) calculate
+# an expected value + 2*sigma threshold
 only.once.connections$AB.doublets <- 
   2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
 only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
@@ -104,8 +98,6 @@ ooc.cutoff <-
   only.once.connections[only.once.connections$x_AB > 
                           only.once.connections$AB.doublet.threshold, ]
 
-# ooc.cutoff <- only.once.connections[only.once.connections$AB.obs.exp >= 
-                                      # min.coinc.occurence.ratio, ]
 ooc.cutoff.graph <-
   graph_from_data_frame(ooc.cutoff[, c("Scar.A", "Scar.B")],
                         directed = F, vertices = union(ooc.cutoff$Scar.A, 
@@ -117,9 +109,9 @@ plot(ooc.cutoff.graph)
 
 # Identify incorrect connections
 incorrect.connections <- 
-  only.once.connections[only.once.connections$AB.obs.exp > 0 & 
-                          only.once.connections$AB.obs.exp < 
-                          min.coinc.occurence.ratio, ]
+  only.once.connections[only.once.connections$x_AB > 0 & 
+                          only.once.connections$x_AB <= 
+                          only.once.connections$AB.doublet.threshold, ]
 
 # Identify and remove cells with incorrect connections
 # ic <- 1
@@ -180,7 +172,7 @@ while(scar.index <= scar.amount){
   }
   if(starting.scar == "Root"){
     second.decomposition <- 
-      first.decomposition #[[top.incomplete.edge$Component]]
+      first.decomposition
   }else{
     second.decomposition <- 
       decompose(delete_vertices(first.decomposition[[comp]], starting.scar))
@@ -188,14 +180,6 @@ while(scar.index <= scar.amount){
   current.component <- top.incomplete.edge$Component
   current.graph <- second.decomposition[[current.component]]
   current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
-  
-  # Determine which connections are not correct. Put relevant cells in
-  # "incorrect cells" and filter the dataset. NB - put in conditional that
-  # signals when this breaks up the connected component!
-  
-  
-  # tree.summary$Size[top.incomplete.edge.index] <- 
-  #   length(unique(current.cs.component$Cell))
   
   # cs <- current.cs.component
   # graph <- current.graph
@@ -211,71 +195,29 @@ while(scar.index <= scar.amount){
     scar.lls <- create.degree.lls(current.cs.component, 
                                   current.graph)
     
-    # Only test for scars that have a high average detection rate; set to
-    # on average 1/10 of the maximum scar detection rate per cell type. To
-    # determine this average detection rate ratio, first compute the max
-    # detection rate per cell type.
-    max.p.celltypes <- aggregate(scar.lls$p_A,
-                                 by = list(Cell.type = scar.lls$Cell.type),
-                                 max)
-    colnames(max.p.celltypes)[2] <- "Max.p"
-    # Then list all combinations of scars and cell types, and add their
-    # detection rates and the maximum detection rate per cell type.
-    possible.top.scars <- expand.grid(unique(scar.lls$Scar), unique(scar.lls$Cell.type))
-    colnames(possible.top.scars) <- c("Scar", "Cell.type")
-    possible.top.scars <- 
-      merge(merge(possible.top.scars, scar.lls, all.x = T), max.p.celltypes)
-    possible.top.scars[is.na(possible.top.scars)] <- 0
-    # Compute the ratio of the detection rate of a scar in a cell type to the
-    # maximum detection rate in that cell type.
-    possible.top.scars$p_A.to.max <- 
-      possible.top.scars$p_A/possible.top.scars$Max.p
-    # Remove scar/cell type combinations that have no maximum detection rate
-    # (i.e. none of the scars under consideration are in this cell type)
-    possible.top.scars <- possible.top.scars[complete.cases(possible.top.scars), ]
-    # Calculate the mean detection rate to max detection rate ratio per scar
-    top.scars <- aggregate(possible.top.scars$p_A.to.max,
-                           by = list(Scar = possible.top.scars$Scar),
-                           mean)
-    colnames(top.scars)[2] <- "Mean.to.max.rate"
-    # Determine valid top scar candidates and subset the likelihood computations
-    valid.top.scars <- 
-      top.scars$Scar[top.scars$Mean.to.max.rate >= min.detection.rate.ratio]
-    scar.lls <- scar.lls[scar.lls$Scar %in% valid.top.scars, ]
-
-    # possible.top.scars <- merge(scar.lls, max.p.celltypes)
-    # possible.top.scars$p_A.to.max <- 
-    #   possible.top.scars$p_A/possible.top.scars$Max.p
-    # top.scars <- aggregate(possible.top.scars$p_A.to.max,
-    #                        by = list(Scar = possible.top.scars$Scar),
-    #                        mean)
-    # 
-    # possible.top.scars <-
-    #   possible.top.scars[possible.top.scars$p_A >= possible.top.scars$Max.p/10, ]
-    # scar.lls <- scar.lls[scar.lls$Scar %in% unique(possible.top.scars$Scar), ]
-    
-    # Old filtering version (worked with simulations but real data has more
-    # variation)
-    # possible.top.scars <- 
-    #   scar.lls$Scar[scar.lls$p_A >= max(scar.lls$p_A)/10]
-    # scar.lls <- scar.lls[scar.lls$Scar %in% unique(possible.top.scars$Scar), ]
-    
-    scar.lls.unique <- 
-      unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", "Degree.p")])
-    mean.det.rates <- 
+    # Calculate the weighted average detection rate of all scars.
+    average.det.rates <- 
       ddply(scar.lls, .(Scar),
             function(x) data.frame(Mean.p_A = weighted.mean(x$p_A, x$Total.other)))
-    scar.lls.unique <- merge(scar.lls.unique, mean.det.rates)
-    scar.lls.unique <- scar.lls.unique[order(-scar.lls.unique$Degree.p,
-                                             -scar.lls.unique$Degree,
-                                             -scar.lls.unique$Mean.p_A), ]
     
-    # scar.lls.unique <- scar.lls.unique[scar.lls.unique$Scar %in% possible.top.scars, ]
-        
-    scar.remove <- scar.lls.unique$Scar[1]
+    # Select only scars whose average detection rate is higher than cutoff
+    scar.lls <- merge(scar.lls, average.det.rates)
+    scar.lls <- scar.lls[order(-scar.lls$Degree.p,
+                               -scar.lls$Degree,
+                               -scar.lls$Mean.p_A), ]
+    scar.lls.select <- scar.lls[scar.lls$Mean.p_A > min.detection.rate, ]
+    scar.lls.unique <- 
+      unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
+                          "Degree.p", "Mean.p_A")])
+    scar.lls.select.unique <- 
+      scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
+    
+    scar.remove <- scar.lls.select.unique$Scar[1]
     it.tree.element <- list(Scar = scar.remove,
                             LLS = scar.lls,
-                            LLS.unique = scar.lls.unique)
+                            LLS.select = scar.lls.select,
+                            LLS.unique = scar.lls.unique,
+                            LLS.select.unique = scar.lls.select.unique)
   }
   it.tree.building[[scar.index]] <- it.tree.element
   
@@ -364,18 +306,19 @@ scar.phylo <-
 class(scar.phylo) <- "phylo"
 
 # Plot tree ####
-pdf("Images/Simulations/Z2_10scars_p01_doubletrate01_detratio01_branchratio0.pdf",
-           width = 20, height = 10)
+# pdf("Images/Simulations/Z2_20scars_p01_doubletrate01_detratio01_branchratio0.pdf",
+           # width = 20, height = 10)
 plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
      edge.width = 3, no.margin = T, direction = "leftward")
 # title(main = sub("Root,", "", nodes$Name[grep("Root", nodes$Name)]))
 edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
            col = "red")
-dev.off()
+# dev.off()
 
 # Investigate tree building ####
 View(tree.summary.old)
-View(it.tree.building[[1]]$LLS.unique)
+View(it.tree.building[[1]]$LLS)
+View(it.tree.building[[8]]$LLS.unique)
 
 detection.rate.progression <-
   data.frame(Scar = character(),
