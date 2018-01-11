@@ -26,17 +26,17 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.2 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.1 # Default value is 0.1
+min.detection.rate <- 0.01 # Default value is 0.1
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.01
 
 # For testing purposes: how many scars to include in tree building (takes the
 # most frequent scars, set to NA to include all)
-number.scars <- NA
+number.scars <- 10
 
 # Load data ####
 # Count total number of cells present even without scars
@@ -44,13 +44,13 @@ number.scars <- NA
 # tsne.coord <- read.csv("./Data/2017_10X_2/X10_final_all_tsne_Seurat_Bo_ID.csv")
 # N <- sum(grepl("Z2", tsne.coord$Cell))
 # For A5
-# tsne.coord <- read.csv("./Data/2017_10X_6/A56_final_all_tsne_Seurat.csv")
-# N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
+tsne.coord <- read.csv("./Data/2017_10X_6/A56_final_all_tsne_Seurat.csv")
+N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000
-scar.input <- read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
-  # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  #read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
+# N <- 3000
+scar.input <- # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
+  read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
@@ -212,7 +212,13 @@ while(scar.index <= scar.amount){
     scar.lls.select.unique <- 
       scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
     
-    scar.remove <- scar.lls.select.unique$Scar[1]
+    if(nrow(scar.lls.select) > 0){
+      scar.remove <- scar.lls.select.unique$Scar[1]
+    }else{
+      print("No scar above minimum detection rate. Taking best scar under minimum detection rate")
+      scar.remove <- scar.lls.unique$Scar[1]
+    }
+    
     it.tree.element <- list(Scar = scar.remove,
                             LLS = scar.lls,
                             LLS.select = scar.lls.select,
@@ -317,9 +323,9 @@ edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
 
 # Investigate tree building ####
 View(tree.summary.old)
-View(it.tree.building[[1]]$LLS)
+# View(it.tree.building[[1]]$LLS)
+View(it.tree.building[[5]]$LLS.select.unique)
 View(it.tree.building[[8]]$LLS.unique)
-
 detection.rate.progression <-
   data.frame(Scar = character(),
              Step = integer(),
@@ -334,10 +340,10 @@ for(n.scar in 1:length(it.tree.building)){
                                         detection.rate.add)
   }
 }
-ggplot(detection.rate.progression) +
-  geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
-  scale_fill_gradient(low = "grey", high = "red")
-
+print(ggplot(detection.rate.progression) +
+        geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
+        scale_fill_gradient(low = "grey", high = "red")
+)
 # ggplot(detection.rate.progression) +
 #   geom_line(aes(x = Step, y = Detection.rate, color = Scar)) +
 #   scale_color_manual(values = rep("black", 9))
