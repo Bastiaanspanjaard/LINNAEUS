@@ -7,7 +7,7 @@
 # sequencing.
 
 # Dependencies ####
-source("./Scripts/scar_helper_functions.R")
+source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
 generations <- 6 # Number of developmental generations while scarring takes place
@@ -160,8 +160,8 @@ ggplot(wt.dynamics) +
   geom_point(aes(x = Time, y = WT.perc)) +
   # scale_x_continuous(breaks = 2* 0:ceiling(generations/2)) +
   scale_y_continuous(limits = c(0, 100))
-wt.rates <- read.csv("./Data/Dynamics_wt_rates.csv",
-                     stringsAsFactors = F)
+# wt.rates <- read.csv("./Data/Dynamics_wt_rates.csv",
+                     # stringsAsFactors = F)
 fit.function <- function(x,l, a) { a * exp(l*x) + 100 - a}
 fit.all <- nls( Percentage ~ fit.function(Timepoint,l, a),
                 data = wt.rates, 
@@ -186,6 +186,9 @@ ggplot(wt.dynamics) +
 edges.scars <- merge(edges, cells[, c("phylo.number", "Scar.acquisition")])
 edges.scars <- edges.scars[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
 edges.scars <- edges.scars[order(edges.scars$parent.phylo, edges.scars$phylo.number), ]
+# write.csv(edges.scars, 
+#           "./Data/Simulations/tree_B_dev_tree.csv", quote = F, row.names = F)
+
 # pdf("Images/Simulations/Input_scartree_C.pdf",
 #            width = 24, height = 10)
 plot(tree, show.node.label = F, show.tip.label = F, edge.width = 3, no.margin = T)
@@ -334,6 +337,9 @@ colnames(edges.scars.collapse.2)[4] <- "V1"
 edges.scars.collapse.2 <- merge(edges.scars.collapse.2, converter,
                                 by.x = "phylo.number", by.y = "Old.name")
 colnames(edges.scars.collapse.2)[5] <- "V2"
+# write.csv(edges.scars.collapse.2[, c("V1", "V2", "Scar.acquisition")], 
+#           "./Data/Simulations/tree_B_scar_tree.csv", quote = F, row.names = F)
+
 # edges.scars.collapse.2$Edges.to.tip <- 0
 # edges.scars.collapse.2$Edges.to.tip[edges.scars.collapse.2$V2 %in% 
 #                                       tip.converter$New.name] <- 1
