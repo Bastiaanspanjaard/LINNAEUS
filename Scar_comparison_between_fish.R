@@ -39,6 +39,14 @@ unique.scars$Presence <- apply(unique.scars[, -1], 1,
                                function(x) sum(x > 1))
 table(unique.scars$Presence)
 
+all.CIGARs <- unique(rbind(Z1.scars[, c("Sequence", "CIGAR")], 
+                           Z2.scars[, c("Sequence", "CIGAR")],
+                           Z3.scars[, c("Sequence", "CIGAR")],
+                           Z4.scars[, c("Sequence", "CIGAR")],
+                           Z5.scars[, c("Sequence", "CIGAR")]))
+all.CIGARs <- all.CIGARs[!duplicated(all.CIGARs$Sequence), ]
+unique.scars <- merge(unique.scars, all.CIGARs)
+
 # Compare presence with probabilities ####
 unique.scars$Sequence.short <- 
   substr(unique.scars$Sequence, 3 + sc.primer.length, sc.primer.length + 53)
@@ -53,6 +61,9 @@ unique.scars <- merge(unique.scars, scar.probabilities[, c("Sequence", "p", "Emb
                       by.x = "Sequence.short", by.y = "Sequence", all.x = T)
 unique.scars$Embryos[is.na(unique.scars$Embryos)] <- 0
 unique.scars$p[is.na(unique.scars$p)] <- min(unique.scars$p, na.rm = T)/100
+unique.scars$p[unique.scars$Sequence.short == wildtype.clip] <- max(unique.scars$p, na.rm = T) + 0.1
+unique.scars <- unique.scars[order(-unique.scars$Presence, -unique.scars$p), ]
+unique.scars$Scar <- paste(0:(nrow(unique.scars)-1), unique.scars$CIGAR, sep = ":")
 
 ggplot(unique.scars[unique.scars$Presence == 5, ]) +
   geom_histogram(aes(x = p)) +
@@ -83,22 +94,22 @@ sum(unique.scars$Presence > 1 & unique.scars$p < 0.01)
 
 # Write output ####
 Z1.scars.compared <- merge(Z1.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
-# write.csv(Z1.scars.compared, file = "./Data/2017_10X_1/Z1_scars_compared.csv",
-#           quote = F, row.names = F)
-sum(Z1.scars.compared$Presence > 0 & Z1.scars.compared$Presence < 3 & Z1.scars.compared$p < 0.001)
+write.csv(Z1.scars.compared, file = "./Data/2017_10X_1/Z1_scars_compared.csv",
+          quote = F, row.names = F)
+# sum(Z1.scars.compared$Presence > 0 & Z1.scars.compared$Presence < 3 & Z1.scars.compared$p < 0.001)
 Z2.scars.compared <- merge(Z2.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
-sum(Z2.scars.compared$Presence > 0 & Z2.scars.compared$Presence < 2 & Z2.scars.compared$p < 0.001)
-# write.csv(Z2.scars.compared, file = "./Data/2017_10X_2/Z2_scars_compared.csv",
-#           quote = F, row.names = F)
+# sum(Z2.scars.compared$Presence > 0 & Z2.scars.compared$Presence < 2 & Z2.scars.compared$p < 0.001)
+write.csv(Z2.scars.compared, file = "./Data/2017_10X_2/Z2_scars_compared.csv",
+          quote = F, row.names = F)
 Z3.scars.compared <- merge(Z3.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
-sum(Z3.scars.compared$Presence > 0 & Z3.scars.compared$Presence < 2 & Z3.scars.compared$p < 0.001)
-# write.csv(Z3.scars.compared, file = "./Data/2017_10X_2/Z3_scars_compared.csv",
-#           quote = F, row.names = F)
+# sum(Z3.scars.compared$Presence > 0 & Z3.scars.compared$Presence < 2 & Z3.scars.compared$p < 0.001)
+write.csv(Z3.scars.compared, file = "./Data/2017_10X_2/Z3_scars_compared.csv",
+          quote = F, row.names = F)
 Z4.scars.compared <- merge(Z4.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
-sum(Z4.scars.compared$Presence > 0 & Z4.scars.compared$Presence < 2 & Z4.scars.compared$p < 0.001)
-# write.csv(Z4.scars.compared, file = "./Data/2017_10X_10_CR/Z4_scars_compared.csv",
-#           quote = F, row.names = F)
+# sum(Z4.scars.compared$Presence > 0 & Z4.scars.compared$Presence < 2 & Z4.scars.compared$p < 0.001)
+write.csv(Z4.scars.compared, file = "./Data/2017_10X_10_CR/Z4_scars_compared.csv",
+          quote = F, row.names = F)
 Z5.scars.compared <- merge(Z5.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
-sum(Z5.scars.compared$Presence > 0 & Z5.scars.compared$Presence < 2 & Z5.scars.compared$p < 0.001)
-# write.csv(Z5.scars.compared, file = "./Data/2017_10X_10_CR/Z5_scars_compared.csv",
-#           quote = F, row.names = F)
+# sum(Z5.scars.compared$Presence > 0 & Z5.scars.compared$Presence < 2 & Z5.scars.compared$p < 0.001)
+write.csv(Z5.scars.compared, file = "./Data/2017_10X_10_CR/Z5_scars_compared.csv",
+          quote = F, row.names = F)
