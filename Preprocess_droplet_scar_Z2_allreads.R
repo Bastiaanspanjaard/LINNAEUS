@@ -17,10 +17,10 @@ scars.in.2 <- read.csv("./Data/2017_10X_2/scar_4_filtered_scars.csv",
 scars.in <- rbind(scars.in.1, scars.in.2)
 
 # Select only cells that exist in the mRNA data
-wt.barcodes <- read.csv("./Data/Larvae_data/Larvae_cell_names.csv",
-                        stringsAsFactors = F, sep = ",")
-barcodes <- wt.barcodes[wt.barcodes$Library == "L2", ]
-scars.unfiltered <- merge(scars.in, barcodes)
+wt.all.cells <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv",
+                         stringsAsFactors = F, sep = ",")
+wt.cells <- wt.all.cells[wt.all.cells$Library == "L2", ]
+scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cluster")])
 scars.unfiltered$Scar.id <- 1:nrow(scars.unfiltered)
 scars.unfiltered$Keep <- T
 scars.unfiltered$Pair <- "With"
@@ -212,4 +212,68 @@ scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.sc
 # Write filtered results ####
 # write.csv(scars.output, "./Data/2017_10X_2/Z2_preprocessed_scars_allreads_7Larvae.csv",
 #           quote = F, row.names = F)
+# Undersequencing filter ####
+# scars.output <- read.csv("./Data/2017_10X_2/Z2_preprocessed_scars_allreads_7Larvae.csv",
+#                          stringsAsFactors = F)
+# We use two final filters for the scar data. The first is an undersequencing
+# filter; this removes all scars whose read number is under a cutoff. This
+# cutoff is determined based on the histogram of reads per observed scar. 
+
+# Undersequencing filter
+ggplot(scars.output) +
+  geom_histogram(aes(x = Reads), binwidth = 2) +
+  scale_x_continuous(limits = c(-10, 200))
+min.scar.reads <- 30
+scars.output.2 <- scars.output[scars.output$Reads >= min.scar.reads, ]
+
+# Doublet filter ####
+# The second filter is a doublet/bleedthrough filter that removes cells that have
+# more scars than a cutoff set by looking at all cells of that type. This
+# cutoff is currently set the same for all cell types.
+
+# Remove cells that have too many scars
+cell.scar.count <-
+  data.frame(table(scars.output.2$Barcode))
+colnames(cell.scar.count) <- c("Barcode", "Scars")
+cell.scar.count$Barcode <- as.character(cell.scar.count$Barcode)
+cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Barcode", "Cluster")])
+
+maximum.scars <- data.frame(Cluster = unique(cell.scar.count$Cluster),
+                            Maximum = NA)
+
+for(c.row in 1:nrow(maximum.scars)){
+  c.cluster <- maximum.scars$Cluster[c.row]
+  print(
+    ggplot(cell.scar.count[cell.scar.count$Cluster == c.cluster, ]) +
+      geom_histogram(aes(x = Scars), binwidth = 1) +
+      labs(title = c.cluster)
+  )
+  maximum.scars$Maximum[c.row] <-
+    readline(prompt = paste("Max number scars for cell in cluster ", 
+                            c.cluster, "? ", sep = ""))
+}
+maximum.scars$Maximum <- as.integer(maximum.scars$Maximum)
+
+# postscript("./Images/2017_10X_2/Z2_cell_type_scar_counts_with_cutoff.eps",
+#     width = 7, height = 4.5)
+ggplot() +
+  geom_histogram(data = cell.scar.count, aes(x = Scars), binwidth = 1) +
+  geom_vline(data = maximum.scars, aes(xintercept = Maximum + 0.5), color = "red") +
+  facet_wrap(~ Cluster) +
+  labs(y = "Count") +
+  theme(axis.title = element_text(size = 12),
+        axis.text = element_text(size = 6),
+        strip.text = element_text(size = 6))
+# dev.off()
+
+cell.scar.count <- merge(cell.scar.count, maximum.scars)
+
+cells.too.many.scars <- 
+  cell.scar.count$Barcode[cell.scar.count$Scars > cell.scar.count$Maximum]
+scars.output.2 <- scars.output.2[!(scars.output.2$Barcode %in% cells.too.many.scars), ]
+
+# Write final output ####
+# write.csv(scars.output.2, "./Data/2017_10X_2/Z2_used_scars_7Larvae.csv",
+#           row.names = F, quote = F)
+# write.csv(maximum.scars, "./Data/2017_10X_2/Z2_max_scars_7Larvae.csv")
 
