@@ -93,23 +93,28 @@ ggplot(unique.scars[unique.scars$p < 0.001, ]) +
 sum(unique.scars$Presence > 1 & unique.scars$p < 0.01)
 
 # Write output ####
-Z1.scars.compared <- merge(Z1.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
+Z1.scars.compared <- 
+  merge(Z1.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 write.csv(Z1.scars.compared, file = "./Data/2017_10X_1/Z1_scars_compared.csv",
           quote = F, row.names = F)
 # sum(Z1.scars.compared$Presence > 0 & Z1.scars.compared$Presence < 3 & Z1.scars.compared$p < 0.001)
-Z2.scars.compared <- merge(Z2.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
+Z2.scars.compared <- 
+  merge(Z2.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z2.scars.compared$Presence > 0 & Z2.scars.compared$Presence < 2 & Z2.scars.compared$p < 0.001)
 write.csv(Z2.scars.compared, file = "./Data/2017_10X_2/Z2_scars_compared.csv",
           quote = F, row.names = F)
-Z3.scars.compared <- merge(Z3.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
+Z3.scars.compared <- 
+  merge(Z3.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z3.scars.compared$Presence > 0 & Z3.scars.compared$Presence < 2 & Z3.scars.compared$p < 0.001)
 write.csv(Z3.scars.compared, file = "./Data/2017_10X_2/Z3_scars_compared.csv",
           quote = F, row.names = F)
-Z4.scars.compared <- merge(Z4.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
+Z4.scars.compared <- 
+  merge(Z4.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z4.scars.compared$Presence > 0 & Z4.scars.compared$Presence < 2 & Z4.scars.compared$p < 0.001)
 write.csv(Z4.scars.compared, file = "./Data/2017_10X_10_CR/Z4_scars_compared.csv",
           quote = F, row.names = F)
-Z5.scars.compared <- merge(Z5.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos")])
+Z5.scars.compared <- 
+  merge(Z5.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z5.scars.compared$Presence > 0 & Z5.scars.compared$Presence < 2 & Z5.scars.compared$p < 0.001)
 write.csv(Z5.scars.compared, file = "./Data/2017_10X_10_CR/Z5_scars_compared.csv",
           quote = F, row.names = F)

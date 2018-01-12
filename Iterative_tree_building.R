@@ -34,7 +34,7 @@ branch.size.ratio <- 0 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
-max.embryos <- 1
+max.larvae <- 1
 
 # For testing purposes: how many scars to include in tree building (takes the
 # most frequent scars, set to NA to include all)
@@ -52,15 +52,18 @@ N <- sum(grepl("L2", tsne.coord$Cell))
 scar.input <- # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+scar.input <- merge(scar.input, tsne.coord)
+colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
+  "Cell.type"
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
 if("p" %in% names(scar.input)){
   cells.in.tree <- scar.input[scar.input$p <= max.scar.p, 
                               c("Cell", "Scar", "Cell.type")]
-  if("Embryos" %in% names(scar.input)){
+  if("Presence" %in% names(scar.input)){
     cells.in.tree <- 
-      scar.input[scar.input$p <= max.scar.p & scar.input$Embryos <= max.embryos, 
+      scar.input[scar.input$p <= max.scar.p & scar.input$Presence <= max.larvae, 
                  c("Barcode", "Scar", "Cell.type")]
   }
 }else{
