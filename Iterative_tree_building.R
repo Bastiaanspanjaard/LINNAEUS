@@ -49,8 +49,8 @@ N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
 # N <- 3000
 scar.input <- # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
-  read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_used_scars_2.csv", stringsAsFactors = F)
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
