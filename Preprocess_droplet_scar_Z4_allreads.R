@@ -10,16 +10,13 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Load data ####
 # Scars
-scars.in.1 <- read.csv("./Data/2017_10X_2/scar_2_filtered_scars.csv",
+scars.in <- read.csv("./Data/2017_10X_10_CR/Z4_scar_filtered_scars.csv",
                      stringsAsFactors = F, sep = "\t")
-scars.in.2 <- read.csv("./Data/2017_10X_2/scar_4_filtered_scars.csv",
-                       stringsAsFactors = F, sep = "\t")
-scars.in <- rbind(scars.in.1, scars.in.2)
 
 # Select only cells that exist in the mRNA data
 wt.barcodes <- read.csv("./Data/Larvae_data/Larvae_cell_names.csv",
                         stringsAsFactors = F, sep = ",")
-barcodes <- wt.barcodes[wt.barcodes$Library == "L2", ]
+barcodes <- wt.barcodes[wt.barcodes$Library == "L4", ]
 scars.unfiltered <- merge(scars.in, barcodes)
 scars.unfiltered$Scar.id <- 1:nrow(scars.unfiltered)
 scars.unfiltered$Keep <- T
@@ -27,13 +24,9 @@ scars.unfiltered$Pair <- "With"
 cells <- unique(scars.unfiltered$Barcode)
 
 # Read in all >1 read sequences (all UMIs)
-all.scars.g1.1 <- read.table("./Data/2017_10X_2/scar_2_reads_over1.txt",
+all.scars.g1 <- read.table("./Data/2017_10X_10_CR/Z4_scar_reads_over1.txt",
                              sep = "\t", stringsAsFactors = F)
-colnames(all.scars.g1.1)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
-all.scars.g1.2 <- read.table("./Data/2017_10X_2/scar_4_reads_over1.txt",
-                           sep = "\t", stringsAsFactors = F)
-colnames(all.scars.g1.2)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
-all.scars.g1 <- rbind(all.scars.g1.1, all.scars.g1.2)
+colnames(all.scars.g1)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
 all.scars.g1$V11 <- trimws(all.scars.g1$V1)
 all.scars.g1$Reads <- sapply(all.scars.g1$V11,
                              function(x) unlist(strsplit(x, " "))[1])
@@ -210,6 +203,6 @@ scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.sc
                                1:6]
 
 # Write filtered results ####
-# write.csv(scars.output, "./Data/2017_10X_2/Z2_preprocessed_scars_allreads_7Larvae.csv",
+# write.csv(scars.output, "./Data/2017_10X_10_CR/Z4_preprocessed_scars_allreads_7Larvae.csv",
 #           quote = F, row.names = F)
 
