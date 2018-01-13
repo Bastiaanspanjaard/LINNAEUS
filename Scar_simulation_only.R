@@ -160,8 +160,8 @@ ggplot(wt.dynamics) +
   geom_point(aes(x = Time, y = WT.perc)) +
   # scale_x_continuous(breaks = 2* 0:ceiling(generations/2)) +
   scale_y_continuous(limits = c(0, 100))
-# wt.rates <- read.csv("./Data/Dynamics_wt_rates.csv",
-                     # stringsAsFactors = F)
+wt.rates <- read.csv("./Data/Dynamics_wt_rates.csv",
+stringsAsFactors = F)
 fit.function <- function(x,l, a) { a * exp(l*x) + 100 - a}
 fit.all <- nls( Percentage ~ fit.function(Timepoint,l, a),
                 data = wt.rates, 
@@ -196,75 +196,75 @@ edgelabels(edges.scars$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
 # title(main = cells$Scar.acquisition[is.na(cells$parent.phylo)])
 # dev.off()
 
-str(tree)
-require(jsonlite)
-require(networkD3)
-as.list.edges <- function(nodename, tree.edges) {
-  children <- tree.edges$Child[tree.edges$Parent == nodename]
-  if(length(children) == 0){
-    return(list(name = nodename))
-  }else{
-    return(list(name = nodename, 
-                children = 
-                  lapply(children, 
-                         function(x) {
-                           as.list.edges(x, tree.edges)
-                         }
-                  )
-    )
-    )
-  }
-}
-
-as.list.scar.edges <- function(nodename, scar.edges) {
-  children <- scar.edges$Child[scar.edges$Parent == nodename]
-  scars <- scar.edges$Scar[scar.edges$Child == nodename]
-  if(length(children) == 0){
-    return(list(name = nodename, scar = scars))
-  }else{
-    return(list(name = nodename, 
-                scar = scars,
-                children = 
-                  lapply(children, 
-                         function(x) {
-                           as.list.scar.edges(x, scar.edges)
-                         }
-                  )
-    )
-    )
-  }
-}
-
-
-# Make edges.scars into list of lists
-family.edges <-
-  data.frame(Parent = c(rep("Leentje", 4), rep("Toos", 2), rep("Jaap", 2),
-                        rep("Peter", 3), rep("Marleen", 3)),
-             Child = c("Toos", "Jaap", "Peter", "Marleen",
-                       "David", "Sem", "Paul", "Arne",
-                       "Julia", "Merijn", "Tirtsa", "Bastiaan", "Rosa", "Emma"),
-             stringsAsFactors = F)
-
-function.test.list <- as.list.edges("Leentje", family.edges)
-diagonalNetwork(function.test.list)
-
-edges.c <- data.frame(edges)
-edges.c$parent.phylo <- as.character(edges.c$parent.phylo)
-edges.c$phylo.number <- as.character(edges.c$phylo.number)
-
-scar.edges <- rbind(data.frame(parent.phylo = "Root", phylo.number = "33",
-                               stringsAsFactors = F),
-                    edges)
-colnames(scar.edges) <- c("Parent", "Child")
-scar.edges <- merge(scar.edges, cells[, c("phylo.number", "Scar.acquisition")],
-                    by.x = "Child", by.y = "phylo.number")
-colnames(scar.edges)[3] <- "Scar"
-edge.list <- as.list.scar.edges("Root", scar.edges)
-
-
-edges.for.fie <- data.frame(edges)
-colnames(edges.for.fie) <- c("Parent", "Child")
-tree.list <- as.list.edges(34, edges.for.fie)
+# str(tree)
+# require(jsonlite)
+# require(networkD3)
+# as.list.edges <- function(nodename, tree.edges) {
+#   children <- tree.edges$Child[tree.edges$Parent == nodename]
+#   if(length(children) == 0){
+#     return(list(name = nodename))
+#   }else{
+#     return(list(name = nodename, 
+#                 children = 
+#                   lapply(children, 
+#                          function(x) {
+#                            as.list.edges(x, tree.edges)
+#                          }
+#                   )
+#     )
+#     )
+#   }
+# }
+# 
+# as.list.scar.edges <- function(nodename, scar.edges) {
+#   children <- scar.edges$Child[scar.edges$Parent == nodename]
+#   scars <- scar.edges$Scar[scar.edges$Child == nodename]
+#   if(length(children) == 0){
+#     return(list(name = nodename, scar = scars))
+#   }else{
+#     return(list(name = nodename, 
+#                 scar = scars,
+#                 children = 
+#                   lapply(children, 
+#                          function(x) {
+#                            as.list.scar.edges(x, scar.edges)
+#                          }
+#                   )
+#     )
+#     )
+#   }
+# }
+# 
+# 
+# # Make edges.scars into list of lists
+# family.edges <-
+#   data.frame(Parent = c(rep("Leentje", 4), rep("Toos", 2), rep("Jaap", 2),
+#                         rep("Peter", 3), rep("Marleen", 3)),
+#              Child = c("Toos", "Jaap", "Peter", "Marleen",
+#                        "David", "Sem", "Paul", "Arne",
+#                        "Julia", "Merijn", "Tirtsa", "Bastiaan", "Rosa", "Emma"),
+#              stringsAsFactors = F)
+# 
+# function.test.list <- as.list.edges("Leentje", family.edges)
+# diagonalNetwork(function.test.list)
+# 
+# edges.c <- data.frame(edges)
+# edges.c$parent.phylo <- as.character(edges.c$parent.phylo)
+# edges.c$phylo.number <- as.character(edges.c$phylo.number)
+# 
+# scar.edges <- rbind(data.frame(parent.phylo = "Root", phylo.number = "33",
+#                                stringsAsFactors = F),
+#                     edges)
+# colnames(scar.edges) <- c("Parent", "Child")
+# scar.edges <- merge(scar.edges, cells[, c("phylo.number", "Scar.acquisition")],
+#                     by.x = "Child", by.y = "phylo.number")
+# colnames(scar.edges)[3] <- "Scar"
+# edge.list <- as.list.scar.edges("Root", scar.edges)
+# 
+# 
+# edges.for.fie <- data.frame(edges)
+# colnames(edges.for.fie) <- c("Parent", "Child")
+# tree.list <- as.list.edges(34, edges.for.fie)
 # diagonalNetwork(tree.list)
 
 # Turn nested list into json
@@ -455,14 +455,15 @@ cells.sampled <- 3000
 set.seed(1)
 
 # Sample cells and scars
-readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites)
+readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites,
+                          doublet.rate = 0.1)
 cells.in.tree <- readout.wt[readout.wt$Scar != 0, ]
 
 length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_B_3k_cells_3celltypes_1site.csv",
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_Bd01_3k_cells_3celltypes_2sites.csv",
 #           quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree

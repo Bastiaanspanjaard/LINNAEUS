@@ -26,7 +26,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.2 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.01 # Default value is 0.1
 # Minimum cell number ratio between branches.
@@ -41,20 +41,35 @@ max.larvae <- 1
 number.scars <- 10
 
 # Load data ####
+# mRNA
+tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
 # Count total number of cells present even without scars
 # For Z2
-tsne.coord <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
-N <- sum(grepl("L2", tsne.coord$Cell))
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
+# For Z4
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
+# For Z5
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
 # N <- 3000
-scar.input <- # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
+N <- nrow(tsne.coord)
+
+# Scars
+scar.input <- 
+  # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
-scar.input <- merge(scar.input, tsne.coord)
+  # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")], 
+                    tsne.coord)
 colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
   "Cell.type"
+colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
+  "Cell"
+
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
@@ -64,7 +79,7 @@ if("p" %in% names(scar.input)){
   if("Presence" %in% names(scar.input)){
     cells.in.tree <- 
       scar.input[scar.input$p <= max.scar.p & scar.input$Presence <= max.larvae, 
-                 c("Barcode", "Scar", "Cell.type")]
+                 c("Cell", "Scar", "Cell.type")]
   }
 }else{
   cells.in.tree <- scar.input
@@ -321,8 +336,8 @@ scar.phylo <-
 class(scar.phylo) <- "phylo"
 
 # Plot tree ####
-# pdf("Images/Simulations/Z2_20scars_p01_doubletrate01_detratio01_branchratio0.pdf",
-           # width = 20, height = 10)
+# pdf("Images/Simulations/Z2_15scars_L1_p001_doubletrate01_detratio01_branchratio0.pdf",
+# width = 20, height = 10)
 plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
      edge.width = 3, no.margin = T, direction = "leftward")
 # title(main = sub("Root,", "", nodes$Name[grep("Root", nodes$Name)]))
@@ -332,9 +347,10 @@ edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
 
 # Investigate tree building ####
 View(tree.summary.old)
+View(tree.summary)
 # View(it.tree.building[[1]]$LLS)
-View(it.tree.building[[5]]$LLS.select.unique)
-View(it.tree.building[[8]]$LLS.unique)
+# View(it.tree.building[[1]]$LLS.select.unique)
+View(it.tree.building[[5]]$LLS.unique)
 detection.rate.progression <-
   data.frame(Scar = character(),
              Step = integer(),
@@ -356,3 +372,16 @@ print(ggplot(detection.rate.progression) +
 # ggplot(detection.rate.progression) +
 #   geom_line(aes(x = Step, y = Detection.rate, color = Scar)) +
 #   scale_color_manual(values = rep("black", 9))
+
+# Investigations ####
+scar.1 <- "515:39M7D2M10D34M"
+scar.2 <- "622:48M1D27M"
+cells.with.1 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.1]
+cells.with.2 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.2]
+cells.with.12 <- intersect(cells.with.1, cells.with.2)
+View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.12, ])
+cs.with.1 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ]
+cs.with.2 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.2, ]
+View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ])
+View(scars.in.1[scars.in.1$Barcode %in% cells.with.12, ])
+View(scars.in.2[scars.in.2$Barcode %in% cells.with.12, ])

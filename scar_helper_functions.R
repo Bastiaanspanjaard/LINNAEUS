@@ -890,14 +890,20 @@ find.links <- function(fscars.r){
   return(connections)
 }
 
-get.readout <- function(scar.cells.final, cells.sampled, integration.sites){
+get.readout <- function(scar.cells.final, cells.sampled, 
+                        integration.sites, doublet.rate = 0){
   sites <- nrow(integration.sites)
+  
+  # cells.included = singlets + 2 * doublets = cells.sampled + number.doublets
+  number.doublets <- rbinom(1, cells.sampled, doublet.rate)
+  cells.included <- cells.sampled + number.doublets
+  
   cells.found <-
-    data.frame(Cell = sample(scar.cells.final$Cell, cells.sampled))
+    data.frame(Cell = sample(scar.cells.final$Cell, cells.included))
   cells.found <- merge(cells.found, scar.cells.final[, c("Cell", "Cell.type", 
                                                          "Detection.rate")])
   cells.found$Scars.found <-
-    rbinom(n = cells.sampled, size = sites, prob = cells.found$Detection.rate)
+    rbinom(n = cells.included, size = sites, prob = cells.found$Detection.rate)
   full.readout <- scar.cells.final[scar.cells.final$Cell %in% cells.found$Cell, ]
   long.drop.out.readout <-
     data.frame(Cell = rep(cells.found$Cell, cells.found$Scars.found),
@@ -906,12 +912,12 @@ get.readout <- function(scar.cells.final, cells.sampled, integration.sites){
                                  scar.cells.final[, c("Cell", "Cell.type")])
                                  
   
-  # HERE - first determine which integration sites are found in a cell, then
+  # First determine which integration sites are found in a cell, then
   # determine whether we actually see those integration sites (using the
   # integration site detection rates).
   readout.row <- 1
   c.row <- 1 # For debugging
-  for(c.row in 1:cells.sampled){
+  for(c.row in 1:cells.included){
     c.scar.size <- cells.found$Scars.found[c.row]
     if(c.scar.size == 0){next}
     cell <- cells.found$Cell[c.row]
@@ -928,7 +934,29 @@ get.readout <- function(scar.cells.final, cells.sampled, integration.sites){
     readout.row <- readout.row + c.scar.size
   }
   
-  readout <- long.drop.out.readout[complete.cases(long.drop.out.readout), ]
+  readout.pre.doublet <- long.drop.out.readout[complete.cases(long.drop.out.readout), ]
+  
+  readout.pre.doublet <- unique(readout.pre.doublet)
+  
+  doublets <- 
+    data.frame(
+      matrix(cells.found$Cell[sample.int(nrow(cells.found), 
+                                         2 * number.doublets)], ncol = 2))
+  doublets$Cell <- paste(doublets$X1, doublets$X2, sep = ";")
+  doublet.scars <- 
+    rbind(merge(doublets, readout.pre.doublet, by.x = "X1", 
+                by.y = "Cell")[, c("Cell", "Scar", "Cell.type")],
+          merge(doublets, readout.pre.doublet, by.x = "X2", 
+                by.y = "Cell")[, c("Cell", "Scar", "Cell.type")])
+  # The total number of doublets can be lower than the number of doublets
+  # we started with since not all cells have a scar readout.
+  
+  readout.no.doublet <- 
+    readout.pre.doublet[!(readout.pre.doublet$Cell %in% 
+                            c(as.character(doublets$X1), 
+                              as.character(doublets$X2))), ]
+  
+  readout <- rbind(readout.no.doublet, doublet.scars)
   readout <- unique(readout)
   
   return(readout)
