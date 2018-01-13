@@ -944,10 +944,11 @@ get.readout <- function(scar.cells.final, cells.sampled,
                                          2 * number.doublets)], ncol = 2))
   doublets$Cell <- paste(doublets$X1, doublets$X2, sep = ";")
   doublet.scars <- 
-    rbind(merge(doublets, readout.pre.doublet, by.x = "X1", 
-                by.y = "Cell")[, c("Cell", "Scar", "Cell.type")],
-          merge(doublets, readout.pre.doublet, by.x = "X2", 
-                by.y = "Cell")[, c("Cell", "Scar", "Cell.type")])
+    rbind(merge(doublets, readout.pre.doublet[, c("Cell", "Scar")], by.x = "X1", 
+                by.y = "Cell")[, c("Cell", "Scar")],
+          merge(doublets, readout.pre.doublet[, c("Cell", "Scar")], by.x = "X2", 
+                by.y = "Cell")[, c("Cell", "Scar")])
+  doublet.scars$Cell.type <- "Doublet"
   # The total number of doublets can be lower than the number of doublets
   # we started with since not all cells have a scar readout.
   
