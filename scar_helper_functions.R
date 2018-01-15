@@ -505,7 +505,11 @@ create.degree.lls <- function(cs, graph){
             # measured degree equals the maximum degree. The expected degree 
             # will be slightly lower than the real
             # degree, so we split the difference.
-            d_scar <- d_scar - (d_scar - de_scar)/2
+            
+            # If the measured degree is maximal (i.e. the number of other
+            # scars) the degree is set to 1 without testing.
+            degree.p <- 1
+            # d_scar <- d_scar - (d_scar - de_scar)/2
           }
           if(d_scar <= de_scar){ # Observation less than expected - lower tail
             degree.p <- ppoisbinom(d_scar, p.conn.scar)

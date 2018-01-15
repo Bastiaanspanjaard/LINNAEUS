@@ -456,14 +456,14 @@ set.seed(1)
 
 # Sample cells and scars
 readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites,
-                          doublet.rate = 0.1)
+                          doublet.rate = 0.05)
 cells.in.tree <- readout.wt[readout.wt$Scar != 0, ]
 
 length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_Bd01_3k_cells_3celltypes_2sites.csv",
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv",
 #           quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree

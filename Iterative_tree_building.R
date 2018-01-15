@@ -26,7 +26,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.09 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.1 # Default value is 0.1
 # Minimum cell number ratio between branches.
@@ -41,11 +41,12 @@ max.larvae <- 1
 number.scars <- NA
 
 # Load data ####
+print("Loading data")
 # mRNA
-# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
+tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
 # Count total number of cells present even without scars
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
 # For Z5
@@ -53,19 +54,19 @@ number.scars <- NA
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000
-# N <- nrow(tsne.coord)
+# N <- 3000
+N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
   # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
-  read.csv("./Data/Simulations/Tree_Bd01_3k_cells_3celltypes_2sites.csv")
+  # read.csv("./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-# scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")], 
-#                     tsne.coord)
+scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")],
+                    tsne.coord)
 colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
   "Cell.type"
 colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
@@ -87,20 +88,21 @@ if("p" %in% names(scar.input)){
 }
 cells.in.tree <- cells.in.tree[!duplicated(cells.in.tree), ]
 
-# cells.in.tree <- cells.in.tree[!grepl(";", cells.in.tree$Cell), ] 
+# cells.in.tree <- cells.in.tree[!grepl(";", cells.in.tree$Cell), ]
 
 scar.freqs <- data.frame(table(cells.in.tree$Scar))
 colnames(scar.freqs)[1] <- "Scar"
 scar.freqs <- scar.freqs[order(-scar.freqs$Freq), ]
 set.seed(1)
 if(is.na(number.scars)){
-  include.scars <- scar.freqs$Scar
+  include.scars <- scar.freqs$Scar[scar.freqs$Freq > 1]
 }else{
   include.scars <- scar.freqs$Scar[1:number.scars]
 }
 cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% include.scars, ]
 
 # Filter out low-frequency scar connections ####
+print("Filtering doublets")
 # Count how often every scar-scar connection is seen
 scar.connections <- connections.for.graph(cells.in.tree)
 only.once.connections <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
@@ -109,36 +111,119 @@ only.once.connections <-
   merge(only.once.connections, 
         scar.connections)
 
+# Investigate difference between dataset with doublets and without
+# cells.in.tree.no.d <- cells.in.tree[cells.in.tree$Cell.type != "Doublet", ]
+# scar.connections.no.d <- connections.for.graph(cells.in.tree.no.d)
+# only.once.connections.no.d <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
+# colnames(only.once.connections.no.d) <- c("Scar.A", "Scar.B")
+# only.once.connections.no.d <- 
+#   merge(only.once.connections.no.d, 
+#         scar.connections.no.d)
+# colnames(only.once.connections.no.d)[3:5] <- c("xnd_A", "xnd_B", "xnd_AB")
+
+
 # Calculate how many doublets we'd expect given a doublet rate, and (under
 # assumption that the number of doublets is binomially distributed) calculate
 # an expected value + 2*sigma threshold
 only.once.connections$AB.doublets <- 
   2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
 only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
-only.once.connections$AB.doublet.sd <- 
-  sqrt(N * only.once.connections$AB.doublet.rate * 
-         (1 - only.once.connections$AB.doublet.rate))
-only.once.connections$AB.doublet.threshold <- 
-  only.once.connections$AB.doublets + 2 * only.once.connections$AB.doublet.sd
+# only.once.connections$AB.doublet.sd <- 
+#   sqrt(N * only.once.connections$AB.doublet.rate * 
+#          (1 - only.once.connections$AB.doublet.rate))
+# only.once.connections$AB.doublet.threshold <- 
+#   only.once.connections$AB.doublets + 2 * only.once.connections$AB.doublet.sd
+
+only.once.connections$Doublet.p <-
+  apply(only.once.connections[, c("x_AB", "AB.doublet.rate")], 1,
+        function(x){
+          x_d <- as.integer(x[1])
+          p_d <- as.numeric(x[2])
+          binom.test(x_d, N, p_d, alternative = "greater")$p.value
+        }
+  )
+only.once.connections$Doublet.padj <-
+  p.adjust(only.once.connections$Doublet.p, "fdr")
+
+# only.once.connections.no.d <- merge(only.once.connections, only.once.connections.no.d)
+# only.once.connections.no.d$Doublet.diff <- 
+#   only.once.connections.no.d$x_AB - only.once.connections.no.d$xnd_AB
+# interesting.doublet.cases <- 
+#   only.once.connections.no.d[only.once.connections.no.d$x_AB != only.once.connections.no.d$xnd_AB,
+#                              c("Scar.A", "Scar.B", "x_A", "x_B", "x_AB", 
+#                                "xnd_A", "xnd_B", "xnd_AB", "AB.doublets",
+#                                "Doublet.diff")]
+# ggplot(interesting.doublet.cases) +
+#   geom_point(aes(x = x_A, y = Doublet.diff))
+# ggplot(interesting.doublet.cases) +
+#   geom_point(aes(x = AB.doublets, y = Doublet.diff))
+# doublet.fit <- lm(Doublet.diff ~ AB.doublets + 0, data = interesting.doublet.cases)
+# plot(density(resid(doublet.fit)))
+# # qqnorm(resid(doublet.fit))
+# qqline(resid(doublet.fit))
+# 
+# # Generate binomial distribution for different probabilities.
+# row.n <- 621
+# d.rate.plot <- only.once.connections.no.d$AB.doublet.rate[row.n]
+# calc.doublets.plot <- only.once.connections.no.d$AB.doublets[row.n]
+# calc.threshold.plot <- only.once.connections.no.d$AB.doublet.threshold[row.n]
+# obs.doublets.plot <- only.once.connections.no.d$Doublet.diff[row.n]
+# binom.1 <- data.frame(Measurement = rbinom(1000, N, d.rate.plot))
+# ggplot(binom.1) +
+#   geom_histogram(aes(x = Measurement)) +
+#   geom_vline(xintercept = calc.doublets.plot) +
+#   geom_vline(xintercept = calc.threshold.plot, color = "blue") +
+#   geom_vline(xintercept = obs.doublets.plot, color = "red") +
+#   labs(title = d.rate.plot)
+# 
+# # Test doublet rates
+# only.once.connections.no.d$Doublet.p <-
+#   apply(only.once.connections.no.d[, c("x_AB", "AB.doublet.rate")], 1,
+#         function(x){
+#           x_d <- as.integer(x[1])
+#           p_d <- as.numeric(x[2])
+#           binom.test(x_d, N, p_d, alternative = "greater")$p.value
+#         }
+#   )
+# 
+# pure.doublets <- only.once.connections.no.d[only.once.connections.no.d$x_AB > 0 &
+#                                               only.once.connections.no.d$xnd_AB == 0, ]
+# real.connections <- only.once.connections.no.d[only.once.connections.no.d$xnd_AB > 0, ]
+# 
+# doublets.qmark <- only.once.connections.no.d[only.once.connections.no.d$Doublet.p > 0.01, ]
+# 
+# x <- only.once.connections.no.d[1, c("x_AB", "AB.doublet.rate")]
+# x_d <- as.integer(x[1])
+# p_d <- as.numeric(x[2])
+# binom.test(x_d, N, p_d, alternative = "greater")$p.value
+# 
+# dscars <- c("10264", "8798")
+# dscar.cells.1 <- as.character(cells.in.tree$Cell[cells.in.tree$Cell.type == "Doublet" &
+#                                cells.in.tree$Scar == dscars[1]])
+# dscar.cells.2 <- as.character(cells.in.tree$Cell[cells.in.tree$Cell.type == "Doublet" &
+#                                                    cells.in.tree$Scar == dscars[2]])
+# dscar.cs <- cells.in.tree[cells.in.tree$Cell %in% intersect(dscar.cells.1, dscar.cells.2), ]
 
 ooc.cutoff <- 
-  only.once.connections[only.once.connections$x_AB > 
-                          only.once.connections$AB.doublet.threshold, ]
+  # only.once.connections[only.once.connections$x_AB > 
+  #                         only.once.connections$AB.doublet.threshold, ]
+  only.once.connections[only.once.connections$Doublet.padj > 0.01, ]
 
-ooc.cutoff.graph <-
-  graph_from_data_frame(ooc.cutoff[, c("Scar.A", "Scar.B")],
-                        directed = F, vertices = union(ooc.cutoff$Scar.A, 
-                                                       ooc.cutoff$Scar.B))
+# ooc.cutoff.graph <-
+#   graph_from_data_frame(ooc.cutoff[, c("Scar.A", "Scar.B")],
+#                         directed = F, vertices = union(ooc.cutoff$Scar.A, 
+#                                                        ooc.cutoff$Scar.B))
 # pdf("Images/Simulations/Z2_network_10scars_p01_coincr1_detratio01_branchratio0.pdf",
 #            width = 20, height = 10)
-plot(ooc.cutoff.graph)
+# plot(ooc.cutoff.graph)
 # dev.off()
 
 # Identify incorrect connections
 incorrect.connections <- 
-  only.once.connections[only.once.connections$x_AB > 0 & 
-                          only.once.connections$x_AB <= 
-                          only.once.connections$AB.doublet.threshold, ]
+  # only.once.connections[only.once.connections$x_AB > 0 & 
+  #                         only.once.connections$x_AB <= 
+  #                         only.once.connections$AB.doublet.threshold, ]
+  only.once.connections[only.once.connections$Doublet.padj >= 0.01, ]
 
 # Identify and remove cells with incorrect connections
 # ic <- 1
@@ -339,7 +424,7 @@ scar.phylo <-
 class(scar.phylo) <- "phylo"
 
 # Plot tree ####
-# pdf("Images/Simulations/Z2_15scars_L1_p001_doubletrate01_detratio01_branchratio0.pdf",
+# pdf("Images/Simulations/tree_B_wdoublets_doubletrate009_detratio01_branchratio025.pdf",
 # width = 20, height = 10)
 plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
      edge.width = 3, no.margin = T, direction = "leftward")
@@ -348,12 +433,98 @@ edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
            col = "red")
 # dev.off()
 
+# Place cells in tree ####
+# Name nodes
+tree.summary.old.pc <- tree.summary.old[tree.summary.old$Node.1 == "Root", ]
+tree.summary.old.pc$pc <-
+  paste("0", tree.summary.old.pc$Component, sep = "_")
+for(d in 1:max(tree.summary.old$Depth)){
+  tree.summary.pc.add <- tree.summary.old[tree.summary.old$Depth == d, ]
+  tree.summary.pc.add <- merge(tree.summary.pc.add, tree.summary.old.pc[, c("Node.2", "pc")],
+                               by.x = "Node.1", by.y = "Node.2")
+  tree.summary.pc.add$pc <- 
+    paste(tree.summary.pc.add$pc, tree.summary.pc.add$Component, sep = "_")
+  tree.summary.old.pc <- rbind(tree.summary.old.pc, tree.summary.pc.add)
+}
+
+# Place correct cells in the lowest possible place
+correct.cell.placement.positions <- 
+  merge(cells.in.tree.f, tree.summary.old[, c("Node.2", "Depth", "Main")],
+        by.x = "Scar", by.y = "Node.2")
+correct.cell.depths <-
+  aggregate(correct.cell.placement.positions$Depth,
+            by = list(Cell = correct.cell.placement.positions$Cell),
+            max)
+colnames(correct.cell.depths)[2] <- "Depth"                      
+correct.cell.placement <- merge(correct.cell.placement.positions, correct.cell.depths)
+correct.cell.placement <- 
+  merge(correct.cell.placement, tree.summary.old.pc[, c("Node.2", "pc")],
+        by.x = "Scar", by.y = "Node.2")
+
+# Determine which doublet-flagged cells can be placed: 
+# unplaceable cells will not have any scars in the actual tree; of the remainder,
+#   incorrect cells will have conflicting scar placements; 
+#   correct cells are the remaining cells.
+cells.in.tree.flagged <- cells.in.tree[cells.in.tree$Cell %in% inc.cells, ]
+cells.in.tree.flagged <- 
+  merge(cells.in.tree.flagged, tree.summary.old[, c("Node.2", "Depth", "Main")],
+        by.x = "Scar", by.y = "Node.2", all.x = T)
+unplaceable.cells <- 
+  unique(cells.in.tree.flagged$Cell[is.na(cells.in.tree.flagged$Depth)])
+
+placeable.cells <- cells.in.tree.flagged[!is.na(cells.in.tree.flagged$Depth), ]
+unplaceable.cells <- setdiff(unplaceable.cells, placeable.cells$Cell)
+placeable.cells <- merge(placeable.cells, tree.summary.old.pc[, c("Node.2", "pc")],
+                         by.x = "Scar", by.y = "Node.2")
+correct.conflicting <- unique(placeable.cells[, c("Cell", "Cell.type")])
+correct.conflicting$pc <- NA                               
+correct.conflicting$pc <-
+  sapply(correct.conflicting$Cell,
+         function(x){
+           this.cell <- placeable.cells[placeable.cells$Cell == x, ]
+           if(max(table(this.cell$Depth)) > 1){
+             return("-1")
+           }else{
+             this.cell <- this.cell[order(this.cell$Depth), ]
+             conflict <- F
+             for(i in 2:nrow(this.cell)){
+               if(!grepl(this.cell$pc[i-1], this.cell$pc[i])){
+                 conflict <- T
+                 break
+               }
+             }
+             if(conflict){
+               return("-1")
+             }else{
+               return(this.cell$pc[nrow(this.cell)])
+             }
+           }
+         }
+  )
+really.conflicting <- correct.conflicting[correct.conflicting$pc == "-1", ]
+actually.not.conflicting <- correct.conflicting[correct.conflicting$pc != "-1", ]
+actually.not.conflicting <-
+  merge(actually.not.conflicting, tree.summary.old.pc[, c("Node.2", "Depth", "pc", "Main")])
+colnames(actually.not.conflicting)[which(colnames(actually.not.conflicting) == "Node.2")] <-
+  "Scar"
+
+# Place placeable doublet-flagged cells
+correct.cell.placement <- rbind(correct.cell.placement, actually.not.conflicting)
+
+# Calculate tree statistics
+tree.statistics <- data.frame(Cells = length(unique(cells.in.tree$Cell)),
+                              Doublets = nrow(really.conflicting),
+                              Unplaceable = length(unplaceable.cells),
+                              Placeable.main = sum(correct.cell.placement$Main),
+                              Placeable.off.main = sum(!correct.cell.placement$Main),
+                              Recovered.suspected.doublets = nrow(actually.not.conflicting))
+
 # Investigate tree building ####
 View(tree.summary.old)
 View(tree.summary)
 # View(it.tree.building[[1]]$LLS)
 # View(it.tree.building[[1]]$LLS.select.unique)
-View(it.tree.building[[5]]$LLS.unique)
+# View(it.tree.building[[5]]$LLS.unique)
 detection.rate.progression <-
   data.frame(Scar = character(),
              Step = integer(),
@@ -368,23 +539,23 @@ for(n.scar in 1:length(it.tree.building)){
                                         detection.rate.add)
   }
 }
-print(ggplot(detection.rate.progression) +
-        geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
-        scale_fill_gradient(low = "grey", high = "red")
-)
+# print(ggplot(detection.rate.progression) +
+#         geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
+#         scale_fill_gradient(low = "grey", high = "red")
+# )
 # ggplot(detection.rate.progression) +
 #   geom_line(aes(x = Step, y = Detection.rate, color = Scar)) +
 #   scale_color_manual(values = rep("black", 9))
 
 # Investigations ####
-scar.1 <- "515:39M7D2M10D34M"
-scar.2 <- "622:48M1D27M"
-cells.with.1 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.1]
-cells.with.2 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.2]
-cells.with.12 <- intersect(cells.with.1, cells.with.2)
-View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.12, ])
-cs.with.1 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ]
-cs.with.2 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.2, ]
-View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ])
-View(scars.in.1[scars.in.1$Barcode %in% cells.with.12, ])
-View(scars.in.2[scars.in.2$Barcode %in% cells.with.12, ])
+# scar.1 <- "515:39M7D2M10D34M"
+# scar.2 <- "622:48M1D27M"
+# cells.with.1 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.1]
+# cells.with.2 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.2]
+# cells.with.12 <- intersect(cells.with.1, cells.with.2)
+# View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.12, ])
+# cs.with.1 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ]
+# cs.with.2 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.2, ]
+# View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ])
+# View(scars.in.1[scars.in.1$Barcode %in% cells.with.12, ])
+# View(scars.in.2[scars.in.2$Barcode %in% cells.with.12, ])
