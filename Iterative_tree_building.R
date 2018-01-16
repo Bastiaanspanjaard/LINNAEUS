@@ -434,6 +434,7 @@ edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
 # dev.off()
 
 # Place cells in tree ####
+print("Placing cells")
 # Name nodes
 tree.summary.old.pc <- tree.summary.old[tree.summary.old$Node.1 == "Root", ]
 tree.summary.old.pc$pc <-
@@ -519,43 +520,102 @@ tree.statistics <- data.frame(Cells = length(unique(cells.in.tree$Cell)),
                               Placeable.off.main = sum(!correct.cell.placement$Main),
                               Recovered.suspected.doublets = nrow(actually.not.conflicting))
 
-# Investigate tree building ####
-View(tree.summary.old)
-View(tree.summary)
-# View(it.tree.building[[1]]$LLS)
-# View(it.tree.building[[1]]$LLS.select.unique)
-# View(it.tree.building[[5]]$LLS.unique)
-detection.rate.progression <-
-  data.frame(Scar = character(),
-             Step = integer(),
-             Detection.rate = numeric())
-for(n.scar in 1:length(it.tree.building)){
-  detection.rate.add <- it.tree.building[[n.scar]]$LLS.unique[, c("Scar", "Mean.p_A")]
-  if(length(detection.rate.add) >= 1){
-    colnames(detection.rate.add)[2] <- "Detection.rate"
-    detection.rate.add$Step = n.scar
-    
-    detection.rate.progression <- rbind(detection.rate.progression,
-                                        detection.rate.add)
-  }
-}
-# print(ggplot(detection.rate.progression) +
-#         geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
-#         scale_fill_gradient(low = "grey", high = "red")
-# )
-# ggplot(detection.rate.progression) +
-#   geom_line(aes(x = Step, y = Detection.rate, color = Scar)) +
-#   scale_color_manual(values = rep("black", 9))
+tree.summary.out <- tree.summary.old.pc[, c("Node.2", "Depth", "Main", "pc", "Size")]
+colnames(tree.summary.out)[1] <- "Scar"
 
-# Investigations ####
-# scar.1 <- "515:39M7D2M10D34M"
-# scar.2 <- "622:48M1D27M"
-# cells.with.1 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.1]
-# cells.with.2 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.2]
-# cells.with.12 <- intersect(cells.with.1, cells.with.2)
-# View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.12, ])
-# cs.with.1 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ]
-# cs.with.2 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.2, ]
-# View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ])
-# View(scars.in.1[scars.in.1$Barcode %in% cells.with.12, ])
-# View(scars.in.2[scars.in.2$Barcode %in% cells.with.12, ])
+# write.csv(tree.summary.out,
+#           "./Data/2017_10X_2/Z2_tree_summary_dr09_det01_bs025_scarp001_larvae1.csv",
+#           row.names = F, quote = F)
+# write.csv(correct.cell.placement,
+#           "./Data/2017_10X_2/Z2_tree_sc_positions_dr09_det01_bs025_scarp001_larvae1.csv",
+#           row.names = F, quote = F)
+
+# Make node piecharts ####
+print("Making node piecharts")
+# Aggregate cells (stratified by cell type) to nodes to make a cumulative node
+# count.
+cumulative.node.count <- 
+  expand.grid(Node = unique(tree.summary.old.pc$pc),
+              Cell.type = unique(correct.cell.placement$Cell.type),
+              stringsAsFactors = F)
+
+node.count <- 
+  data.frame(table(correct.cell.placement$pc, correct.cell.placement$Cell.type))
+colnames(node.count)[1:2] <- c("Node", "Cell.type")
+
+cumulative.node.count$Cumulative.count <- NA
+for(i in 1:nrow(cumulative.node.count)){
+  c.node <- cumulative.node.count$Node[i]
+  c.node.pattern <- paste(c.node, "(_|$)", sep = "")
+  c.type <- cumulative.node.count$Cell.type[i]
+  
+  nodes.under.and.including <-
+    node.count[node.count$Cell.type == c.type &
+                 grepl(c.node.pattern, node.count$Node), ]
+  
+  cumulative.node.count$Cumulative.count[i] <-
+    sum(nodes.under.and.including$Freq)
+  
+}
+
+# Calculate total node sizes and cell type ratios per node
+total.node.sizes <- aggregate(cumulative.node.count$Cumulative.count,
+                              by = list(Node = cumulative.node.count$Node),
+                              sum)
+colnames(total.node.sizes)[2] <- "Total"
+cumulative.node.count <- merge(cumulative.node.count, total.node.sizes)
+cumulative.node.count$Ratio <-
+  cumulative.node.count$Cumulative.count/cumulative.node.count$Total
+
+# Plot pie charts
+ggplot(cumulative.node.count) +
+  geom_bar(aes(x = "", y = Ratio, fill = as.factor(Cell.type)), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  coord_polar("y", start = 0) +
+  facet_wrap(~ Node) +
+  labs(x = "", y = "") +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+
+# Investigate tree building ####
+# View(tree.summary.old)
+# View(tree.summary)
+# # View(it.tree.building[[1]]$LLS)
+# # View(it.tree.building[[1]]$LLS.select.unique)
+# # View(it.tree.building[[5]]$LLS.unique)
+# detection.rate.progression <-
+#   data.frame(Scar = character(),
+#              Step = integer(),
+#              Detection.rate = numeric())
+# for(n.scar in 1:length(it.tree.building)){
+#   detection.rate.add <- it.tree.building[[n.scar]]$LLS.unique[, c("Scar", "Mean.p_A")]
+#   if(length(detection.rate.add) >= 1){
+#     colnames(detection.rate.add)[2] <- "Detection.rate"
+#     detection.rate.add$Step = n.scar
+#     
+#     detection.rate.progression <- rbind(detection.rate.progression,
+#                                         detection.rate.add)
+#   }
+# }
+# # print(ggplot(detection.rate.progression) +
+# #         geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
+# #         scale_fill_gradient(low = "grey", high = "red")
+# # )
+# # ggplot(detection.rate.progression) +
+# #   geom_line(aes(x = Step, y = Detection.rate, color = Scar)) +
+# #   scale_color_manual(values = rep("black", 9))
+# 
+# # Investigations ####
+# # scar.1 <- "515:39M7D2M10D34M"
+# # scar.2 <- "622:48M1D27M"
+# # cells.with.1 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.1]
+# # cells.with.2 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.2]
+# # cells.with.12 <- intersect(cells.with.1, cells.with.2)
+# # View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.12, ])
+# # cs.with.1 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ]
+# # cs.with.2 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.2, ]
+# # View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ])
+# # View(scars.in.1[scars.in.1$Barcode %in% cells.with.12, ])
+# # View(scars.in.2[scars.in.2$Barcode %in% cells.with.12, ])
