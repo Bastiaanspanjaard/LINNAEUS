@@ -437,14 +437,14 @@ edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
 print("Placing cells")
 # Name nodes
 tree.summary.old.pc <- tree.summary.old[tree.summary.old$Node.1 == "Root", ]
-tree.summary.old.pc$pc <-
+tree.summary.old.pc$Node <-
   paste("0", tree.summary.old.pc$Component, sep = "_")
 for(d in 1:max(tree.summary.old$Depth)){
   tree.summary.pc.add <- tree.summary.old[tree.summary.old$Depth == d, ]
-  tree.summary.pc.add <- merge(tree.summary.pc.add, tree.summary.old.pc[, c("Node.2", "pc")],
+  tree.summary.pc.add <- merge(tree.summary.pc.add, tree.summary.old.pc[, c("Node.2", "Node")],
                                by.x = "Node.1", by.y = "Node.2")
-  tree.summary.pc.add$pc <- 
-    paste(tree.summary.pc.add$pc, tree.summary.pc.add$Component, sep = "_")
+  tree.summary.pc.add$Node <- 
+    paste(tree.summary.pc.add$Node, tree.summary.pc.add$Component, sep = "_")
   tree.summary.old.pc <- rbind(tree.summary.old.pc, tree.summary.pc.add)
 }
 
@@ -459,7 +459,7 @@ correct.cell.depths <-
 colnames(correct.cell.depths)[2] <- "Depth"                      
 correct.cell.placement <- merge(correct.cell.placement.positions, correct.cell.depths)
 correct.cell.placement <- 
-  merge(correct.cell.placement, tree.summary.old.pc[, c("Node.2", "pc")],
+  merge(correct.cell.placement, tree.summary.old.pc[, c("Node.2", "Node")],
         by.x = "Scar", by.y = "Node.2")
 
 # Determine which doublet-flagged cells can be placed: 
@@ -475,11 +475,11 @@ unplaceable.cells <-
 
 placeable.cells <- cells.in.tree.flagged[!is.na(cells.in.tree.flagged$Depth), ]
 unplaceable.cells <- setdiff(unplaceable.cells, placeable.cells$Cell)
-placeable.cells <- merge(placeable.cells, tree.summary.old.pc[, c("Node.2", "pc")],
+placeable.cells <- merge(placeable.cells, tree.summary.old.pc[, c("Node.2", "Node")],
                          by.x = "Scar", by.y = "Node.2")
 correct.conflicting <- unique(placeable.cells[, c("Cell", "Cell.type")])
-correct.conflicting$pc <- NA                               
-correct.conflicting$pc <-
+correct.conflicting$Node <- NA                               
+correct.conflicting$Node <-
   sapply(correct.conflicting$Cell,
          function(x){
            this.cell <- placeable.cells[placeable.cells$Cell == x, ]
@@ -489,7 +489,7 @@ correct.conflicting$pc <-
              this.cell <- this.cell[order(this.cell$Depth), ]
              conflict <- F
              for(i in 2:nrow(this.cell)){
-               if(!grepl(this.cell$pc[i-1], this.cell$pc[i])){
+               if(!grepl(this.cell$Node[i-1], this.cell$Node[i])){
                  conflict <- T
                  break
                }
@@ -497,15 +497,15 @@ correct.conflicting$pc <-
              if(conflict){
                return("-1")
              }else{
-               return(this.cell$pc[nrow(this.cell)])
+               return(this.cell$Node[nrow(this.cell)])
              }
            }
          }
   )
-really.conflicting <- correct.conflicting[correct.conflicting$pc == "-1", ]
-actually.not.conflicting <- correct.conflicting[correct.conflicting$pc != "-1", ]
+really.conflicting <- correct.conflicting[correct.conflicting$Node == "-1", ]
+actually.not.conflicting <- correct.conflicting[correct.conflicting$Node != "-1", ]
 actually.not.conflicting <-
-  merge(actually.not.conflicting, tree.summary.old.pc[, c("Node.2", "Depth", "pc", "Main")])
+  merge(actually.not.conflicting, tree.summary.old.pc[, c("Node.2", "Depth", "Node", "Main")])
 colnames(actually.not.conflicting)[which(colnames(actually.not.conflicting) == "Node.2")] <-
   "Scar"
 
@@ -520,30 +520,37 @@ tree.statistics <- data.frame(Cells = length(unique(cells.in.tree$Cell)),
                               Placeable.off.main = sum(!correct.cell.placement$Main),
                               Recovered.suspected.doublets = nrow(actually.not.conflicting))
 
-tree.summary.out <- tree.summary.old.pc[, c("Node.2", "Depth", "Main", "pc", "Size")]
-colnames(tree.summary.out)[1] <- "Scar"
+# tree.summary.out <- 
+#   aggregate(correct.cell.placement$Scar,
+#             by = list(Scar = correct.cell.placement$Scar,
+#                       Depth = correct.cell.placement$Depth,
+#                       Main = correct.cell.placement$Main,
+#                       Node = correct.cell.placement$Node),
+#             length)
 
-# write.csv(tree.summary.out,
-#           "./Data/2017_10X_2/Z2_tree_summary_dr09_det01_bs025_scarp001_larvae1.csv",
-#           row.names = F, quote = F)
+tree.summary.out.2 <- tree.summary.old.pc[, c("Node.2", "Depth", "Main", "Node", "Size")]
+colnames(tree.summary.out.2)[1] <- "Scar"
+
 # write.csv(correct.cell.placement,
 #           "./Data/2017_10X_2/Z2_tree_sc_positions_dr09_det01_bs025_scarp001_larvae1.csv",
 #           row.names = F, quote = F)
 
-# Make node piecharts ####
-print("Making node piecharts")
+# Create tree summary and make node piecharts ####
+print("Making tree summary and node piecharts")
 # Aggregate cells (stratified by cell type) to nodes to make a cumulative node
 # count.
 cumulative.node.count <- 
-  expand.grid(Node = unique(tree.summary.old.pc$pc),
+  expand.grid(Node = unique(tree.summary.old.pc$Node),
               Cell.type = unique(correct.cell.placement$Cell.type),
               stringsAsFactors = F)
 
 node.count <- 
-  data.frame(table(correct.cell.placement$pc, correct.cell.placement$Cell.type))
+  data.frame(table(correct.cell.placement$Node, correct.cell.placement$Cell.type))
 colnames(node.count)[1:2] <- c("Node", "Cell.type")
+node.count <- merge(node.count, tree.summary.old.pc[, c("Node", "Main")])
 
-cumulative.node.count$Cumulative.count <- NA
+cumulative.node.count$Cumulative.count.main <- NA
+cumulative.node.count$Cumulative.count.all <- NA
 for(i in 1:nrow(cumulative.node.count)){
   c.node <- cumulative.node.count$Node[i]
   c.node.pattern <- paste(c.node, "(_|$)", sep = "")
@@ -553,23 +560,55 @@ for(i in 1:nrow(cumulative.node.count)){
     node.count[node.count$Cell.type == c.type &
                  grepl(c.node.pattern, node.count$Node), ]
   
-  cumulative.node.count$Cumulative.count[i] <-
+  cumulative.node.count$Cumulative.count.main[i] <-
+    sum(nodes.under.and.including$Freq[nodes.under.and.including$Main])
+  cumulative.node.count$Cumulative.count.all[i] <-
     sum(nodes.under.and.including$Freq)
-  
 }
 
-# Calculate total node sizes and cell type ratios per node
-total.node.sizes <- aggregate(cumulative.node.count$Cumulative.count,
-                              by = list(Node = cumulative.node.count$Node),
-                              sum)
-colnames(total.node.sizes)[2] <- "Total"
-cumulative.node.count <- merge(cumulative.node.count, total.node.sizes)
-cumulative.node.count$Ratio <-
-  cumulative.node.count$Cumulative.count/cumulative.node.count$Total
+# Calculate total node sizes, make tree summary and calculate cell type ratios 
+# per node
+tree.summary.out.1 <- aggregate(cumulative.node.count$Cumulative.count.main,
+                          by = list(Node = cumulative.node.count$Node),
+                          sum)
+colnames(tree.summary.out.1)[2] <- "Total.main"
+tree.summary.out.2 <- aggregate(cumulative.node.count$Cumulative.count.all,
+                                by = list(Node = cumulative.node.count$Node),
+                                sum)
+colnames(tree.summary.out.2)[2] <- "Total.all"
+tree.summary.out <- merge(tree.summary.out.1, tree.summary.out.2)
 
-# Plot pie charts
+tree.summary.out <- merge(tree.summary.out, 
+                          tree.summary.old.pc[, c("Node", "Node.2", "Depth", "Main")])
+colnames(tree.summary.out)[which(colnames(tree.summary.out) == "Node.2")] <- "Scar"
+tree.summary.out <- tree.summary.out[, c("Scar", "Node", "Depth", "Total.main", "Total.all", "Main")]
+
+cumulative.node.count <- merge(cumulative.node.count, tree.summary.out)
+cumulative.node.count$Ratio.main <-
+  cumulative.node.count$Cumulative.count.main/cumulative.node.count$Total.main
+cumulative.node.count$Ratio.all <-
+  cumulative.node.count$Cumulative.count.all/cumulative.node.count$Total.all
+
+# Output tree summary
+# write.csv(tree.summary.out,
+#           "./Data/2017_10X_2/Z2_tree_summary_dr09_det01_bs025_scarp001_larvae1.csv",
+#           row.names = F, quote = F)
+
+# Plot pie charts main only
+ggplot(cumulative.node.count[cumulative.node.count$Main, ]) +
+  geom_bar(aes(x = "", y = Ratio.main, fill = as.factor(Cell.type)), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  coord_polar("y", start = 0) +
+  facet_wrap(~ Node) +
+  labs(x = "", y = "") +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+
+# Plot pie charts all
 ggplot(cumulative.node.count) +
-  geom_bar(aes(x = "", y = Ratio, fill = as.factor(Cell.type)), stat = "identity") +
+  geom_bar(aes(x = "", y = Ratio.all, fill = as.factor(Cell.type)), stat = "identity") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   coord_polar("y", start = 0) +
   facet_wrap(~ Node) +
