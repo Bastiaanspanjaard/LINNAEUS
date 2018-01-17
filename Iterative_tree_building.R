@@ -26,7 +26,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.09 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.2 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.1 # Default value is 0.1
 # Minimum cell number ratio between branches.
@@ -46,11 +46,11 @@ print("Loading data")
 tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
 # Count total number of cells present even without scars
 # For Z2
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
 # For Z5
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
@@ -62,11 +62,11 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")],
-                    tsne.coord)
+  read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+# scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")],
+#                     tsne.coord)
 colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
   "Cell.type"
 colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
