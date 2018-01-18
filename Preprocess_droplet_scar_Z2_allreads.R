@@ -16,10 +16,16 @@ scars.in.2 <- read.csv("./Data/2017_10X_2/scar_4_filtered_scars.csv",
                        stringsAsFactors = F, sep = "\t")
 scars.in <- rbind(scars.in.1, scars.in.2)
 
+mixed.barcodes <- read.table("./Data/2017_10X_2/overlapping_bc.txt",
+                             stringsAsFactors = F)
+colnames(mixed.barcodes) <- "Barcode"
+
 # Select only cells that exist in the mRNA data
 wt.all.cells <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv",
                          stringsAsFactors = F, sep = ",")
 wt.cells <- wt.all.cells[wt.all.cells$Library == "L2", ]
+mixed.barcodes <- merge(mixed.barcodes, wt.cells)
+
 scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cluster")])
 scars.unfiltered$Scar.id <- 1:nrow(scars.unfiltered)
 scars.unfiltered$Keep <- T

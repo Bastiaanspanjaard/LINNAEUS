@@ -26,11 +26,11 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.2 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.1 # Default value is 0.1
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.125 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
@@ -43,28 +43,30 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA
-tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
+# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
 # Count total number of cells present even without scars
 # For Z2
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
 # For Z5
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-# N <- 3000
-N <- nrow(tsne.coord)
+N <- 120 # 3000
+# N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
+  # read.csv("./Data/Simulations/Tree_A_100cellsout_detection03.csv")
+  read.csv("./Data/Simulations/Tree_A_1kcellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
 # scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")],
 #                     tsne.coord)
 colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
@@ -433,6 +435,8 @@ edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
            col = "red")
 # dev.off()
 
+View(it.tree.building[[1]]$LLS.unique)
+
 # Place cells in tree ####
 print("Placing cells")
 # Name nodes
@@ -466,51 +470,52 @@ correct.cell.placement <-
 # unplaceable cells will not have any scars in the actual tree; of the remainder,
 #   incorrect cells will have conflicting scar placements; 
 #   correct cells are the remaining cells.
-cells.in.tree.flagged <- cells.in.tree[cells.in.tree$Cell %in% inc.cells, ]
-cells.in.tree.flagged <- 
-  merge(cells.in.tree.flagged, tree.summary.old[, c("Node.2", "Depth", "Main")],
-        by.x = "Scar", by.y = "Node.2", all.x = T)
-unplaceable.cells <- 
-  unique(cells.in.tree.flagged$Cell[is.na(cells.in.tree.flagged$Depth)])
-
-placeable.cells <- cells.in.tree.flagged[!is.na(cells.in.tree.flagged$Depth), ]
-unplaceable.cells <- setdiff(unplaceable.cells, placeable.cells$Cell)
-placeable.cells <- merge(placeable.cells, tree.summary.old.pc[, c("Node.2", "Node")],
-                         by.x = "Scar", by.y = "Node.2")
-correct.conflicting <- unique(placeable.cells[, c("Cell", "Cell.type")])
-correct.conflicting$Node <- NA                               
-correct.conflicting$Node <-
-  sapply(correct.conflicting$Cell,
-         function(x){
-           this.cell <- placeable.cells[placeable.cells$Cell == x, ]
-           if(max(table(this.cell$Depth)) > 1){
-             return("-1")
-           }else{
-             this.cell <- this.cell[order(this.cell$Depth), ]
-             conflict <- F
-             for(i in 2:nrow(this.cell)){
-               if(!grepl(this.cell$Node[i-1], this.cell$Node[i])){
-                 conflict <- T
-                 break
-               }
-             }
-             if(conflict){
+if(length(inc.cells) > 0){
+  cells.in.tree.flagged <- cells.in.tree[cells.in.tree$Cell %in% inc.cells, ]
+  cells.in.tree.flagged <- 
+    merge(cells.in.tree.flagged, tree.summary.old[, c("Node.2", "Depth", "Main")],
+          by.x = "Scar", by.y = "Node.2", all.x = T)
+  unplaceable.cells <- 
+    unique(cells.in.tree.flagged$Cell[is.na(cells.in.tree.flagged$Depth)])
+  placeable.cells <- cells.in.tree.flagged[!is.na(cells.in.tree.flagged$Depth), ]
+  unplaceable.cells <- setdiff(unplaceable.cells, placeable.cells$Cell)
+  placeable.cells <- merge(placeable.cells, tree.summary.old.pc[, c("Node.2", "Node")],
+                           by.x = "Scar", by.y = "Node.2")
+  correct.conflicting <- unique(placeable.cells[, c("Cell", "Cell.type")])
+  correct.conflicting$Node <- NA                               
+  correct.conflicting$Node <-
+    sapply(correct.conflicting$Cell,
+           function(x){
+             this.cell <- placeable.cells[placeable.cells$Cell == x, ]
+             if(max(table(this.cell$Depth)) > 1){
                return("-1")
              }else{
-               return(this.cell$Node[nrow(this.cell)])
+               this.cell <- this.cell[order(this.cell$Depth), ]
+               conflict <- F
+               for(i in 2:nrow(this.cell)){
+                 if(!grepl(this.cell$Node[i-1], this.cell$Node[i])){
+                   conflict <- T
+                   break
+                 }
+               }
+               if(conflict){
+                 return("-1")
+               }else{
+                 return(this.cell$Node[nrow(this.cell)])
+               }
              }
            }
-         }
-  )
-really.conflicting <- correct.conflicting[correct.conflicting$Node == "-1", ]
-actually.not.conflicting <- correct.conflicting[correct.conflicting$Node != "-1", ]
-actually.not.conflicting <-
-  merge(actually.not.conflicting, tree.summary.old.pc[, c("Node.2", "Depth", "Node", "Main")])
-colnames(actually.not.conflicting)[which(colnames(actually.not.conflicting) == "Node.2")] <-
-  "Scar"
-
-# Place placeable doublet-flagged cells
-correct.cell.placement <- rbind(correct.cell.placement, actually.not.conflicting)
+    )
+  really.conflicting <- correct.conflicting[correct.conflicting$Node == "-1", ]
+  actually.not.conflicting <- correct.conflicting[correct.conflicting$Node != "-1", ]
+  actually.not.conflicting <-
+    merge(actually.not.conflicting, tree.summary.old.pc[, c("Node.2", "Depth", "Node", "Main")])
+  colnames(actually.not.conflicting)[which(colnames(actually.not.conflicting) == "Node.2")] <-
+    "Scar"
+  
+  # Place placeable doublet-flagged cells
+  correct.cell.placement <- rbind(correct.cell.placement, actually.not.conflicting)
+}
 
 # Calculate tree statistics
 tree.statistics <- data.frame(Cells = length(unique(cells.in.tree$Cell)),
@@ -519,14 +524,6 @@ tree.statistics <- data.frame(Cells = length(unique(cells.in.tree$Cell)),
                               Placeable.main = sum(correct.cell.placement$Main),
                               Placeable.off.main = sum(!correct.cell.placement$Main),
                               Recovered.suspected.doublets = nrow(actually.not.conflicting))
-
-# tree.summary.out <- 
-#   aggregate(correct.cell.placement$Scar,
-#             by = list(Scar = correct.cell.placement$Scar,
-#                       Depth = correct.cell.placement$Depth,
-#                       Main = correct.cell.placement$Main,
-#                       Node = correct.cell.placement$Node),
-#             length)
 
 tree.summary.out.2 <- tree.summary.old.pc[, c("Node.2", "Depth", "Main", "Node", "Size")]
 colnames(tree.summary.out.2)[1] <- "Scar"
@@ -591,7 +588,7 @@ cumulative.node.count$Ratio.all <-
 
 # Output tree summary
 # write.csv(tree.summary.out,
-#           "./Data/2017_10X_2/Z2_tree_summary_dr09_det01_bs025_scarp001_larvae1.csv",
+#           "./Data/Simulations/Tree_A_1kcellsout_det03_reconstructed_tree.csv",
 #           row.names = F, quote = F)
 
 # Plot pie charts main only

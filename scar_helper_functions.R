@@ -500,18 +500,12 @@ create.degree.lls <- function(cs, graph){
           d_scar <- as.integer(x[2])
           de_scar <- as.numeric(x[3])
           p.conn.scar <- conn.p[, colnames(conn.p) == scar]
-          if(d_scar == (length(p.conn.scar) - 1) & (de_scar <= d_scar)){
-            # The cumulative distribution function gets into trouble if our
-            # measured degree equals the maximum degree. The expected degree 
-            # will be slightly lower than the real
-            # degree, so we split the difference.
-            
+          if(d_scar == (nrow(scar.lls) - 1)){
             # If the measured degree is maximal (i.e. the number of other
             # scars) the degree is set to 1 without testing.
             degree.p <- 1
             # d_scar <- d_scar - (d_scar - de_scar)/2
-          }
-          if(d_scar <= de_scar){ # Observation less than expected - lower tail
+          }else if(d_scar <= de_scar){ # Observation less than expected - lower tail
             degree.p <- ppoisbinom(d_scar, p.conn.scar)
           }else{ # Observation more than expected - higher tail
             degree.p <- ppoisbinom(d_scar, p.conn.scar, lower_tail = F)
@@ -942,26 +936,28 @@ get.readout <- function(scar.cells.final, cells.sampled,
   
   readout.pre.doublet <- unique(readout.pre.doublet)
   
-  doublets <- 
-    data.frame(
-      matrix(cells.found$Cell[sample.int(nrow(cells.found), 
-                                         2 * number.doublets)], ncol = 2))
-  doublets$Cell <- paste(doublets$X1, doublets$X2, sep = ";")
-  doublet.scars <- 
-    rbind(merge(doublets, readout.pre.doublet[, c("Cell", "Scar")], by.x = "X1", 
-                by.y = "Cell")[, c("Cell", "Scar")],
-          merge(doublets, readout.pre.doublet[, c("Cell", "Scar")], by.x = "X2", 
-                by.y = "Cell")[, c("Cell", "Scar")])
-  doublet.scars$Cell.type <- "Doublet"
-  # The total number of doublets can be lower than the number of doublets
-  # we started with since not all cells have a scar readout.
-  
+  if(doublet.rate > 0){
+    doublets <- 
+      data.frame(
+        matrix(cells.found$Cell[sample.int(nrow(cells.found), 
+                                           2 * number.doublets)], ncol = 2))
+    doublets$Cell <- paste(doublets$X1, doublets$X2, sep = ";")
+    doublet.scars <- 
+      rbind(merge(doublets, readout.pre.doublet[, c("Cell", "Scar")], by.x = "X1", 
+                  by.y = "Cell")[, c("Cell", "Scar")],
+            merge(doublets, readout.pre.doublet[, c("Cell", "Scar")], by.x = "X2", 
+                  by.y = "Cell")[, c("Cell", "Scar")])
+    doublet.scars$Cell.type <- "Doublet"
+    # The total number of doublets can be lower than the number of doublets
+    # we started with since not all cells have a scar readout.
   readout.no.doublet <- 
     readout.pre.doublet[!(readout.pre.doublet$Cell %in% 
                             c(as.character(doublets$X1), 
                               as.character(doublets$X2))), ]
-  
-  readout <- rbind(readout.no.doublet, doublet.scars)
+    readout <- rbind(readout.no.doublet, doublet.scars)
+  }else{
+    readout <- readout.pre.doublet
+  }
   readout <- unique(readout)
   
   return(readout)

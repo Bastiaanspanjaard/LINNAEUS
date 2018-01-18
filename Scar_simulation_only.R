@@ -10,15 +10,15 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 6 # Number of developmental generations while scarring takes place
+generations <- 4 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
-generations.post <- 7 # Number of cell divisions a single cell undergoes after scarring
+generations.post <- 8 # Number of cell divisions a single cell undergoes after scarring
 # takes place
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.1 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.2 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
                                stringsAsFactors = F)[, 1:2]
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
@@ -29,16 +29,19 @@ scar.probabilities <- scar.probabilities[order(-scar.probabilities$p), ]
 scar.probabilities$Scar <- 1:nrow(scar.probabilities)
 scar.probabilities$Cum.p <- cumsum(scar.probabilities$p)
 # colors.hm <- rev(colorRampPalette(c("Red", "Yellow", "Blue"))(100))
-cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
-                         Detection.rate = c(0.7, 0.3, 0.15),
-                         Abundance = c(0.15, 0.25, 0.6))
+cell.types <- data.frame(Cell.type = c("Medium"),
+                         Detection.rate = 0.3,
+                         Abundance = 1)
+# cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
+                         # Detection.rate = c(0.7, 0.3, 0.15),
+                         # Abundance = c(0.15, 0.25, 0.6))
 # cell.types$Cum.abundance <- cumsum(cell.types$Abundance)
-integration.types <- data.frame(Integration = c("Strong", "Weak"),
-                                Detection.rate = c(1, 0.05),
-                                Abundance = c(0.85, 0.15))
-# integration.types <- data.frame(Integration = c("Strong"),
-#                                 Detection.rate = c(1),
-#                                 Abundance = c(1))
+# integration.types <- data.frame(Integration = c("Strong", "Weak"),
+                                # Detection.rate = c(1, 0.05),
+                                # Abundance = c(0.85, 0.15))
+integration.types <- data.frame(Integration = c("Strong"),
+                                Detection.rate = c(1),
+                                Abundance = c(1))
 
 # Create tree ####
 # Parameters: generations
@@ -186,8 +189,8 @@ ggplot(wt.dynamics) +
 edges.scars <- merge(edges, cells[, c("phylo.number", "Scar.acquisition")])
 edges.scars <- edges.scars[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
 edges.scars <- edges.scars[order(edges.scars$parent.phylo, edges.scars$phylo.number), ]
-# write.csv(edges.scars, 
-#           "./Data/Simulations/tree_B_dev_tree.csv", quote = F, row.names = F)
+# write.csv(edges.scars,
+#           "./Data/Simulations/tree_A_dev_tree.csv", quote = F, row.names = F)
 
 # pdf("Images/Simulations/Input_scartree_C.pdf",
 #            width = 24, height = 10)
@@ -195,85 +198,6 @@ plot(tree, show.node.label = F, show.tip.label = F, edge.width = 3, no.margin = 
 edgelabels(edges.scars$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
 # title(main = cells$Scar.acquisition[is.na(cells$parent.phylo)])
 # dev.off()
-
-# str(tree)
-# require(jsonlite)
-# require(networkD3)
-# as.list.edges <- function(nodename, tree.edges) {
-#   children <- tree.edges$Child[tree.edges$Parent == nodename]
-#   if(length(children) == 0){
-#     return(list(name = nodename))
-#   }else{
-#     return(list(name = nodename, 
-#                 children = 
-#                   lapply(children, 
-#                          function(x) {
-#                            as.list.edges(x, tree.edges)
-#                          }
-#                   )
-#     )
-#     )
-#   }
-# }
-# 
-# as.list.scar.edges <- function(nodename, scar.edges) {
-#   children <- scar.edges$Child[scar.edges$Parent == nodename]
-#   scars <- scar.edges$Scar[scar.edges$Child == nodename]
-#   if(length(children) == 0){
-#     return(list(name = nodename, scar = scars))
-#   }else{
-#     return(list(name = nodename, 
-#                 scar = scars,
-#                 children = 
-#                   lapply(children, 
-#                          function(x) {
-#                            as.list.scar.edges(x, scar.edges)
-#                          }
-#                   )
-#     )
-#     )
-#   }
-# }
-# 
-# 
-# # Make edges.scars into list of lists
-# family.edges <-
-#   data.frame(Parent = c(rep("Leentje", 4), rep("Toos", 2), rep("Jaap", 2),
-#                         rep("Peter", 3), rep("Marleen", 3)),
-#              Child = c("Toos", "Jaap", "Peter", "Marleen",
-#                        "David", "Sem", "Paul", "Arne",
-#                        "Julia", "Merijn", "Tirtsa", "Bastiaan", "Rosa", "Emma"),
-#              stringsAsFactors = F)
-# 
-# function.test.list <- as.list.edges("Leentje", family.edges)
-# diagonalNetwork(function.test.list)
-# 
-# edges.c <- data.frame(edges)
-# edges.c$parent.phylo <- as.character(edges.c$parent.phylo)
-# edges.c$phylo.number <- as.character(edges.c$phylo.number)
-# 
-# scar.edges <- rbind(data.frame(parent.phylo = "Root", phylo.number = "33",
-#                                stringsAsFactors = F),
-#                     edges)
-# colnames(scar.edges) <- c("Parent", "Child")
-# scar.edges <- merge(scar.edges, cells[, c("phylo.number", "Scar.acquisition")],
-#                     by.x = "Child", by.y = "phylo.number")
-# colnames(scar.edges)[3] <- "Scar"
-# edge.list <- as.list.scar.edges("Root", scar.edges)
-# 
-# 
-# edges.for.fie <- data.frame(edges)
-# colnames(edges.for.fie) <- c("Parent", "Child")
-# tree.list <- as.list.edges(34, edges.for.fie)
-# diagonalNetwork(tree.list)
-
-# Turn nested list into json
-# write_json(test.list, "./D3/Test_R.json")
-# This works!
-# write_json(edge.list, "./D3/Dev_tree_B.json")
-
-# Simple way of plotting a network (not with customizing options of full D3,
-# I think)
 
 # Scar tree
 # Start with edges.scars. First collapse all nodes and tips that did not get a
@@ -305,12 +229,7 @@ while(index <= nrow(edges.scars.collapse.2)){
     single.name <- edges.scars.collapse.2$parent.phylo[index]
     child.name <- edges.scars.collapse.2$phylo.number[index]
     single.index <- which(edges.scars.collapse.2$phylo.number == single.name)
-    # target.index <- which(edges.scars.collapse.2$parent.phylo == target.name)
-    # if(single.name %in% c(110 ,116, 113, 114, 188, 248) |
-    #    child.name %in% c(110 ,116, 113, 114, 188, 248)){
-    #   print(paste("Single", single.name, "and child", child.name, "at index", index))
-    # }
-    
+
     # Collapse the single and its child: replace the name of the single with
     # the name of its child; add the child scar to the single's scars; remove
     # the edge to the child.
@@ -337,26 +256,8 @@ colnames(edges.scars.collapse.2)[4] <- "V1"
 edges.scars.collapse.2 <- merge(edges.scars.collapse.2, converter,
                                 by.x = "phylo.number", by.y = "Old.name")
 colnames(edges.scars.collapse.2)[5] <- "V2"
-# write.csv(edges.scars.collapse.2[, c("V1", "V2", "Scar.acquisition")], 
-#           "./Data/Simulations/tree_B_scar_tree.csv", quote = F, row.names = F)
-
-# edges.scars.collapse.2$Edges.to.tip <- 0
-# edges.scars.collapse.2$Edges.to.tip[edges.scars.collapse.2$V2 %in% 
-#                                       tip.converter$New.name] <- 1
-# current.edge.dist <- 1
-# while(){
-#   one.level.earlier.nodes <- 
-#     edges.scars.collapse.2$V2[edges.scars.collapse.2$Edges.to.tip == current.edge.dist]
-#   
-#   edges.scars.collapse.2$Edges.to.tip[edges.scars.collapse.2$V2 %in% tip.converter$New.name] <- 1
-#   
-# }
-
-# counts.1 <- data.frame(table(edges.scars.collapse.2$V1))
-# counts.2 <- data.frame(table(edges.scars.collapse.2$V2))
-# counts <- merge()
-# setdiff(edges.scars.collapse.2$V1, edges.scars.collapse.2$V2)
-# setdiff(edges.scars.collapse.2$parent.phylo, edges.scars.collapse.2$phylo.number)
+# write.csv(edges.scars.collapse.2[, c("V1", "V2", "Scar.acquisition")],
+#           "./Data/Simulations/tree_A_scar_tree.csv", quote = F, row.names = F)
 
 scar.tree <- list(
   edge = as.matrix(edges.scars.collapse.2[, c("V1", "V2")]),
@@ -450,26 +351,26 @@ integration.sites <- merge(integration.sites, integration.types[, c("Integration
 
 # Sample cells and scars ####
 # Parameters 
-cells.sampled <- 3000
+cells.sampled <- 1200
 # detection.rate <- 0.5
-set.seed(1)
+set.seed(2)
 
 # Sample cells and scars
 readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites,
-                          doublet.rate = 0.05)
+                          doublet.rate = 0)
 cells.in.tree <- readout.wt[readout.wt$Scar != 0, ]
 
 length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv",
-#           quote = F, row.names = F)
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_A_100cellsout_detection03.csv",
+# quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree
 cells.in.tree.phylip$Presence <- 1
 phylip.out.array <- acast(cells.in.tree.phylip, Cell ~ Scar, value.var = "Presence")
-phylip.out.array[is.na(phylip.out.array)] <- "?"
+phylip.out.array[is.na(phylip.out.array)] <- "0"
 phylip.out <- data.frame(Cell = rownames(phylip.out.array),
                          Scar.vector = apply(phylip.out.array, 1,
                                              function(x) paste(x, collapse = "")))
@@ -485,5 +386,5 @@ phylip.out$Cell <-
     })
       
 colnames(phylip.out) <- c(nrow(phylip.out), ncol(phylip.out.array))
-# write.table(phylip.out, "./Data/Simulations/Tree_B_3k_cells_3celltypes_1site_phylip_q.txt",
-#             sep = " ", row.names = F, quote = F)
+# write.table(phylip.out, "./Data/Simulations/Tree_A_100cellsout_phylip_detection03_0.txt",
+# sep = " ", row.names = F, quote = F)
