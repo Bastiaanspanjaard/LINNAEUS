@@ -10,17 +10,18 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 4 # Number of developmental generations while scarring takes place
+generations <- 3 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
-generations.post <- 8 # Number of cell divisions a single cell undergoes after scarring
+generations.post <- 9 # Number of cell divisions a single cell undergoes after scarring
 # takes place
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.2 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.15 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
                                stringsAsFactors = F)[, 1:2]
+scar.probabilities <- scar.probabilities[1:99, ] # Use this to select only a few scars with lower numbers
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
 # scar.probabilities$p <- 
 #   c(0.5, rep(0.5/(nrow(scar.probabilities) - 1), nrow(scar.probabilities) - 1))
@@ -83,7 +84,7 @@ scar.cells$Cell <- cells$Cell
 scar.cells$Parent <- cells$Parent
 scar.cells$Generation <- rep(1:generations, 2^(0:(generations - 1)))
 
-set.seed(1)
+set.seed(2)
 
 cells$Scar.acquisition <- ""
 for(cell.in.question in 1:nrow(scar.cells)){
@@ -189,6 +190,7 @@ ggplot(wt.dynamics) +
 edges.scars <- merge(edges, cells[, c("phylo.number", "Scar.acquisition")])
 edges.scars <- edges.scars[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
 edges.scars <- edges.scars[order(edges.scars$parent.phylo, edges.scars$phylo.number), ]
+
 # write.csv(edges.scars,
 #           "./Data/Simulations/tree_A_dev_tree.csv", quote = F, row.names = F)
 
@@ -198,6 +200,13 @@ plot(tree, show.node.label = F, show.tip.label = F, edge.width = 3, no.margin = 
 edgelabels(edges.scars$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
 # title(main = cells$Scar.acquisition[is.na(cells$parent.phylo)])
 # dev.off()
+
+dev.tree.edges <- cells[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
+colnames(dev.tree.edges)[1:2] <- c("Parent", "Child")
+dev.tree.edges$Parent[is.na(dev.tree.edges$Parent)] <- 0
+# write.table(dev.tree.edges,
+#           "./Data/Simulations/tree_C_dev_tree_2.txt", quote = F, row.names = F,
+#           sep = " ")
 
 # Scar tree
 # Start with edges.scars. First collapse all nodes and tips that did not get a
@@ -351,7 +360,7 @@ integration.sites <- merge(integration.sites, integration.types[, c("Integration
 
 # Sample cells and scars ####
 # Parameters 
-cells.sampled <- 1200
+cells.sampled <- 125
 # detection.rate <- 0.5
 set.seed(2)
 
@@ -364,7 +373,7 @@ length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_A_100cellsout_detection03.csv",
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_C2_100cellsout_detection03.csv",
 # quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree
@@ -386,5 +395,9 @@ phylip.out$Cell <-
     })
       
 colnames(phylip.out) <- c(nrow(phylip.out), ncol(phylip.out.array))
-# write.table(phylip.out, "./Data/Simulations/Tree_A_100cellsout_phylip_detection03_0.txt",
+phylip.scar.conversion <- data.frame(Scar.order = 1:ncol(phylip.out.array),
+                                     Scar = colnames(phylip.out.array))
+# write.table(phylip.out, "./Data/Simulations/Tree_C2_100cellsout_phylip_detection03_0.txt",
 # sep = " ", row.names = F, quote = F)
+# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_C2_scar_conversion.csv",
+#           row.names = F, quote = F)

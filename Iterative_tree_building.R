@@ -30,7 +30,7 @@ doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.1 # Default value is 0.1
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.125 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
@@ -54,13 +54,14 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 120 # 3000
+N <- 125 # 3000
 # N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
   # read.csv("./Data/Simulations/Tree_A_100cellsout_detection03.csv")
-  read.csv("./Data/Simulations/Tree_A_1kcellsout_detection03.csv")
+  # read.csv("./Data/Simulations/Tree_A_1kcellsout_detection03.csv")
+  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
@@ -515,6 +516,10 @@ if(length(inc.cells) > 0){
   
   # Place placeable doublet-flagged cells
   correct.cell.placement <- rbind(correct.cell.placement, actually.not.conflicting)
+}else{
+  really.conflicting <- cells.in.tree.f[0, ]
+  unplaceable.cells <- character()
+  actually.not.conflicting <- cells.in.tree.f[0, ]
 }
 
 # Calculate tree statistics
@@ -614,6 +619,25 @@ ggplot(cumulative.node.count) +
         axis.text.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_blank())
+
+# Create edgelist of scars and cells ####
+# Create edgelist of scars
+tree.summary.edge <- tree.summary.out[, c("Node", "Scar")]
+colnames(tree.summary.edge) <- c("Child", "Scar.acquisition")
+tree.summary.edge$Parent <-
+  sapply(tree.summary.edge$Child,
+         function(x){
+           y <- unlist(strsplit(x, "_"))
+           z <- paste(y[-length(y)], collapse = "_")
+         }
+  )
+cell.edge <- correct.cell.placement[, c("Node", "Cell")]
+colnames(cell.edge) <- c("Parent", "Child")
+cell.edge$Scar.acquisition <- ""
+
+tree.edgelist <- rbind(tree.summary.edge, cell.edge)[, c("Parent", "Child", "Scar.acquisition")]
+# write.csv(tree.edgelist, "./Data/Simulations/Tree_C2_100cell_03det_iterative_tree.csv",
+#           row.names = F, quote = F)
 
 # Investigate tree building ####
 # View(tree.summary.old)

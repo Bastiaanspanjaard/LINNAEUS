@@ -1,55 +1,202 @@
-do_install = function(){
-	install.packages("treemap")
-	install.packages("data.tree")
-	install.packages("collapsibleTree")
-}
-
-rl = function(){
-	library(data.tree)
-	library(treemap)
-	library(collapsibleTree)
-}
-
-#dev_tree = read.table('/Users/polivar/Downloads/bs/tree_B_dev_tree.txt', h=T)
-#B_scartree = read.table('/Users/polivar/Downloads/bs/tree_B_scar_tree.txt', h=T)
-#> head(B_scartree)
-#  row.names V1    V2 Scar.acquisition
-#1        26  7 37970               NA
-#2        26  8 24841               NA
-#3        26  1 26212            39244
-#4        25  9 33957               NA
-#5        27 10 24547               NA
-#6        27 11 19955               NA
-
-#hh = head(dev_tree)
+# Dependencies ####
+require(data.tree)
+require(treemap)
+source("./Scripts/linnaeus-scripts/collapsibleTree.R")
+source("./Scripts/linnaeus-scripts/collapsibleTree.data.tree.R")
 
 generate_tree = function(df){
-	rm(list=ls(envir=globalenv(), pattern='^n'), envir=globalenv())
-	apply(df, 1, function(x){
-		parent = paste0('nd', as.numeric(x[1]))
-		child = paste0('nd', as.numeric(x[2]))
-		if(length(x) ==4){
-			scar_p = ifelse(is.na(x[3]), parent, x[3])
-			scar_c = ifelse(is.na(x[4]), child, x[4])
-		}
-		if(length(x) ==3){
-			scar_p = ' '
-			scar_c = ifelse(is.na(x[3]), child, x[3])
-		}
-		if(!exists(parent)){ 
-			eval_txt = sprintf('%s <<- Node$new("%s", name="%s")', parent, parent, scar_p)
-	#		message(eval_txt)
-			eval(parse(text=eval_txt))
-		}
-		if(!exists(child)){ 
-			eval_txt = sprintf('%s <<- Node$new("%s", name="%s")', child, child, scar_c)
-	#		message(eval_txt)
-			eval(parse(text=eval_txt))
-		}
-		add_txt = sprintf('%s$AddChildNode(%s)', parent, child)
-		eval(parse(text=add_txt))
-	})
-	return(eval(parse(text=sprintf('%s$root', ls(envir=globalenv(), pattern='^nd')[1]))))
+  # columns.include <- c("Parent", "Child", "Scar.acquisition")
+  # if(!is.null(fill.col)){
+  #   columns.include <- c(columns.include, fill.col)
+  # }
+  # if(!is.null(size.col)){ columns.include <- c(columns.include, size.col)}
+  for(i in 1:nrow(df)){
+    parent = paste0('nd', as.character(df$Parent[i]))
+    child = paste0('nd', as.character(df$Child[i]))
+    scar <- df$Scar.acquisition[i]
+  
+    if(!exists(child)){ 
+      eval_txt = sprintf('%s <<- Node$new("%s", name="%s", scar = "%s")', 
+                         child, child, child, scar)
+      eval(parse(text=eval_txt))
+      if("fill" %in% colnames(df)){
+        eval_txt <- paste(child, "$fill <- \"", df$fill[i], "\"", sep = "")
+        eval(parse(text = eval_txt))
+      }
+      if("size" %in% colnames(df)){
+        eval_txt <- paste(child, "$size <- ", df$size[i], sep = "")
+        eval(parse(text = eval_txt))
+      }
+    }
+    if(exists(parent)){
+      add_txt = sprintf('%s$AddChildNode(%s)', parent, child)
+      eval(parse(text=add_txt))
+    }
+  }
+  
+  return_tree <- eval(parse(text=sprintf('%s$root', ls(envir=globalenv(), pattern='^nd')[1])))
+  rm(list=ls(envir=globalenv(), pattern='^nd'), envir=globalenv())
+  
+  return(return_tree)
+}  
+    
+# Create developmental tree C ####
+dev_tree <- read.table("./Data/Simulations/tree_C_dev_tree_2.txt", 
+                       header = T, fill = T, stringsAsFactors = F)
+dev_tree$fill <- "black"
+dev_tree$size <- 1.5
+dev_tree_C <- generate_tree(dev_tree)
+dev_tree_wg <- collapsibleTree(dev_tree_C, root = dev_tree_C$scar, collapsed = F,
+                               fontSize = 12, width = 300, height = 200,
+                               fill = "fill", nodeSize = "size")
+dev_tree_wg
+# htmlwidgets::saveWidget(dev_tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_dev_tree.html")
+
+# Create CS 0 tree C ####
+phylip.edges <- read.table("./Data/Simulations/Tree_C2_100cells_03det_0_PHYLIP_tree1",
+                                     stringsAsFactors = F)
+phylip.scars <- read.csv("./Data/Simulations/Tree_C2_scar_conversion.csv",
+                            stringsAsFactors = F)
+
+# Add scar acquisition
+phylip.edges$Scars <- do.call(paste0, phylip.edges[-(1:3)])
+phylip.edges$Scar.acquisition <- 
+  sapply(phylip.edges$Scars,
+         function(x) paste(phylip.scars$Scar[unlist(strsplit(x, "")) == "1"], 
+                           collapse = ","))
+
+# Change cell names (remove x's)
+phylip.edges$Child <- 
+  sapply(phylip.edges$V2,
+         function(x){
+           if(grepl("_", x)){
+             return(unlist(strsplit(x, "x"))[1])
+           }else{
+             return(x)
+           }
+         }
+  )
+
+# Get correctly-formatted edge list with scars
+phylip.edges.f <- phylip.edges[, c("V1", "Child", "Scar.acquisition")]
+colnames(phylip.edges.f)[1] <- "Parent"
+
+# Collapse empty (i.e. scar-less) nodes, unless that node is a cell.
+phylip.edges.collapse <- phylip.edges.f
+# Loop over dataframe to find all nodes and tips that did not get a scar
+index <- 1
+while(index <= nrow(phylip.edges.collapse)){
+  if(phylip.edges.collapse$Scar.acquisition[index] == "" &
+     !grepl("_", phylip.edges.collapse$Child[index])){
+    cell.wo.scar.name <- phylip.edges.collapse$Child[index]
+    upstream.name <- phylip.edges.collapse$Parent[index]
+    phylip.edges.collapse$Parent[phylip.edges.collapse$Parent == 
+                                        cell.wo.scar.name] <-
+      upstream.name
+    phylip.edges.collapse <- phylip.edges.collapse[-index, ]
+  }else{index <- index + 1}
 }
 
-#for( i in ls(pattern='^n')){eval(parse(text=sprintf('print(%s$level)',i)))}
+# Create nodes before cells if a scar is created in a cell
+e <- 1
+while(e <= nrow(phylip.edges.collapse)){
+  # For every edge, test if a scar is created in a cell. If so, create a new
+  # node to create the scar in that has the cell as daughter.
+  if(phylip.edges.collapse$Scar.acquisition[e] != "" & 
+     grepl("_", phylip.edges.collapse$Child[e])){
+    # Determine the cell
+    cell.child <- phylip.edges.collapse$Child[e]
+    
+    # Determine the new node number
+    numbered.parent.nodes <- 
+      as.integer(phylip.edges.collapse$Parent[which(phylip.edges.collapse$Parent != "root" & 
+                                         !grepl("_", phylip.edges.collapse$Parent))])
+    numbered.child.nodes <- 
+      as.integer(phylip.edges.collapse$Child[which(phylip.edges.collapse$Child != "root" & 
+                                         !grepl("_", phylip.edges.collapse$Child))])
+    new.node <- max(c(numbered.child.nodes, numbered.parent.nodes)) + 1
+    
+    # Determine scar
+    node.scar <- phylip.edges.collapse$Scar.acquisition[e]
+    
+    # Create and add new edge
+    new.edge <- data.frame(Parent = new.node,
+                           Child = cell.child,
+                           Scar.acquisition = "")
+    phylip.edges.collapse <- rbind(phylip.edges.collapse, new.edge)
+    
+    # Change old edge
+    phylip.edges.collapse$Child[e] <- new.node
+  }
+  e <- e + 1
+}
+
+phylip.edges.collapse <- 
+  rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
+        phylip.edges.collapse)
+phylip.edges.collapse$fill <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return("lightgrey")
+           }else{
+             return("black")
+           }
+  })
+phylip.edges.collapse$size <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return(0.5)
+           }else{
+             return(1.5)
+           }
+         })
+# Add entries for nodesize and fill; get fields into tree (fill has to be named
+# "fill", nodesize can be anything but its name has to be supplied in the 
+# collapsibleTree functioncall.
+phylip.tree <- generate_tree(phylip.edges.collapse)
+phylip.tree_wg <- 
+  collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
+                  fontSize = 12, width = 300, height = 800, fill = "fill",
+                  nodeSize = "size")
+phylip.tree_wg
+# htmlwidgets::saveWidget(phylip.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_CamSok0.html")
+
+
+# Create Iterative tree C ####
+iterative.edges <- read.csv("./Data/Simulations/Tree_C2_100cell_03det_iterative_tree.csv",
+                            stringsAsFactors = F)
+iterative.edges$Scar.acquisition[is.na(iterative.edges$Scar.acquisition)] <- ""
+iterative.edges$fill <-  
+  sapply(iterative.edges$Child,
+         function(x){
+           if(substring(x, 1, 1) != 0){
+             return("lightgrey")
+           }else{
+             return("black")
+           }
+         })
+iterative.edges$size <- 
+  sapply(iterative.edges$Child,
+         function(x){
+           if(substring(x, 1, 1) != 0){
+             return(0.5)
+           }else{
+             return(1.5)
+           }
+         })
+iterative.tree <- generate_tree(iterative.edges)
+iterative.tree_wg <- 
+  collapsibleTree(iterative.tree, root = iterative.tree$scar, collapsed = F,
+                  fontSize = 12, width = 300, height = 500, fill = "fill",
+                  nodeSize = "size")
+iterative.tree_wg
+# htmlwidgets::saveWidget(iterative.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
+
+  
+
+
