@@ -166,7 +166,7 @@ phylip.tree_wg
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_CamSok0.html")
 
 
-# Create Iterative tree C ####
+# Create LINNAEUS tree C ####
 iterative.edges <- read.csv("./Data/Simulations/Tree_C2_100cell_03det_iterative_tree.csv",
                             stringsAsFactors = F)
 iterative.edges$Scar.acquisition[is.na(iterative.edges$Scar.acquisition)] <- ""
@@ -198,5 +198,74 @@ iterative.tree_wg
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
 
   
+
+
+
+
+# Create developmental tree B ####
+dev_tree <- read.table("./Data/Simulations/tree_B2_dev_tree.txt", 
+                       header = T, fill = T, stringsAsFactors = F)
+dev_tree$fill <- "black"
+dev_tree$size <- 1
+dev_tree_B <- generate_tree(dev_tree)
+dev_tree_wg <- collapsibleTree(dev_tree_B, root = dev_tree_B$scar, collapsed = F,
+                               fontSize = 8, width = 300, height = 400,
+                               fill = "fill", nodeSize = "size")
+dev_tree_wg
+# htmlwidgets::saveWidget(dev_tree_wg,
+                        # file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_dev_tree.html")
+
+# Create scar tree B ####
+scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv", 
+                       header = T, fill = T, stringsAsFactors = F)
+# scar_tree <- scar_tree[order(scar_tree$Parent), ]
+# Sort scar tree to conform with the developmental tree as good as possible
+
+scar_tree$fill <- "black"
+scar_tree$size <- 1
+scar_tree_B <- generate_tree(scar_tree)
+scar_tree_wg <- collapsibleTree(scar_tree_B, root = scar_tree_B$scar, collapsed = F,
+                               fontSize = 8, width = 300, height = 400,
+                               fill = "fill", nodeSize = "size")
+scar_tree_wg
+# htmlwidgets::saveWidget(scar_tree_wg,
+# file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_scar_tree.html")
+
+# Create LINNAEUS tree C ####
+iterative.edges <- read.csv("./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
+                            stringsAsFactors = F, sep = " ")
+iterative.edges$Scar.acquisition[is.na(iterative.edges$Scar.acquisition)] <- ""
+iterative.edges <- iterative.edges[!grepl("_", iterative.edges$Child), ]
+iterative.edges$fill <-  "black"
+iterative.edges$size <- 1
+
+iterative.edge.reorder <- which(iterative.edges$Scar.acquisition == scar_tree$Scar.acquisition)
+tentative.reorder <- data.frame(Scar.acquisition = iterative.edges$Scar.acquisition)
+tentative.reorder$Order <- 
+  sapply(tentative.reorder$Scar.acquisition,
+       function(x) {
+         if(x %in% scar_tree$Scar.acquisition){
+           which(scar_tree$Scar.acquisition == x)
+         }else{0}
+       }
+)
+tentative.reorder$Order[tentative.reorder$Order == 0] <-
+  c(6, 13, 23, 28, 27)
+iterative.edges <- merge(iterative.edges, tentative.reorder)
+iterative.edges <- iterative.edges[order(iterative.edges$Order),
+                                   c("Parent", "Child", "Scar.acquisition", 
+                                     "fill", "size")]
+iterative.tree <- generate_tree(iterative.edges)
+iterative.tree_wg <- 
+  collapsibleTree(iterative.tree, root = iterative.tree$scar, collapsed = F,
+                  fontSize = 8, width = 300, height = 400, fill = "fill",
+                  nodeSize = "size")
+iterative.tree_wg
+# htmlwidgets::saveWidget(iterative.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_LINNAEUS_tree.html")
+
+
+
+
 
 

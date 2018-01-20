@@ -28,7 +28,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # number of doublets is binomially distributed.
 doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.1 # Default value is 0.1
+min.detection.rate <- 0.05 # Default value is 0.1
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
@@ -54,14 +54,13 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 125 # 3000
+N <- 3000 # 125
 # N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
-  # read.csv("./Data/Simulations/Tree_A_100cellsout_detection03.csv")
-  # read.csv("./Data/Simulations/Tree_A_1kcellsout_detection03.csv")
-  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
   # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
@@ -636,8 +635,49 @@ colnames(cell.edge) <- c("Parent", "Child")
 cell.edge$Scar.acquisition <- ""
 
 tree.edgelist <- rbind(tree.summary.edge, cell.edge)[, c("Parent", "Child", "Scar.acquisition")]
-# write.csv(tree.edgelist, "./Data/Simulations/Tree_C2_100cell_03det_iterative_tree.csv",
+# write.csv(tree.edgelist, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
 #           row.names = F, quote = F)
+
+# Do same for collapsed tree
+tree.summary.c <- tree.summary[, c("Node.1", "Node.2")]
+# Create root node
+root.scars <- unique(tree.summary$Node.1[grepl("Root", tree.summary$Node.1)])
+root.scars <- paste(unlist(strsplit(root.scars, ","))[-1], collapse = ",")
+tree.summary.c$Node.1[grepl("Root", tree.summary$Node.1)] <- root.scars
+tree.summary.c <- 
+  rbind(data.frame(Node.1 = 0, Node.2 = root.scars, stringsAsFactors = F),
+        tree.summary.c)
+# Rename nodes and create scar.acquisition column
+known.nodes <- 
+  data.frame(Old.node = unique(c(tree.summary.c$Node.1, tree.summary.c$Node.2)))
+known.nodes$New.node <- 0:(nrow(known.nodes) - 1)
+tree.summary.c <- merge(tree.summary.c, known.nodes,
+                        by.x = "Node.1", by.y = "Old.node")
+colnames(tree.summary.c)[3] <- "Parent"
+tree.summary.c <- merge(tree.summary.c, known.nodes,
+                        by.x = "Node.2", by.y = "Old.node")
+colnames(tree.summary.c)[4] <- "Child"
+tree.summary.c <- tree.summary.c[, c("Parent", "Child", "Node.2")]
+colnames(tree.summary.c)[3] <- "Scar.acquisition"
+# Place cells in tree
+cells.to.place <- correct.cell.placement[, c("Cell", "Scar")]
+# x <- 70
+cells.to.place$Parent <-
+  sapply(cells.to.place$Scar,
+         function(x){
+           scar.pattern <- 
+             paste("^", x, ",|^", x, "$|,", x, ",|,", x, "$", sep = "")
+           parent <- tree.summary.c$Child[grepl(scar.pattern, tree.summary.c$Scar.acquisition)]
+           return(parent)
+         }
+  )
+colnames(cells.to.place)[1] <- "Child"
+cells.to.place <- cells.to.place[, c("Parent", "Child")]
+cells.to.place$Scar.acquisition <- ""
+
+collapsed.tree <- rbind(tree.summary.c, cells.to.place)
+write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
+          row.names = F, quote = F, sep = " ")
 
 # Investigate tree building ####
 # View(tree.summary.old)

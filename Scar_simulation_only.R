@@ -10,18 +10,19 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 3 # Number of developmental generations while scarring takes place
+generations <- 6 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
-generations.post <- 9 # Number of cell divisions a single cell undergoes after scarring
+generations.post <- 8 # Number of cell divisions a single cell undergoes after scarring
 # takes place
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.15 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.1 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
-                               stringsAsFactors = F)[, 1:2]
-scar.probabilities <- scar.probabilities[1:99, ] # Use this to select only a few scars with lower numbers
+                               stringsAsFactors = F)[, 1:2] # NB In the scar creation
+# section there is currently a line that ensures uniqueness of all scars created.
+scar.probabilities <- scar.probabilities[1:999, ] # Use this to select only a few scars with lower numbers
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
 # scar.probabilities$p <- 
 #   c(0.5, rep(0.5/(nrow(scar.probabilities) - 1), nrow(scar.probabilities) - 1))
@@ -30,19 +31,19 @@ scar.probabilities <- scar.probabilities[order(-scar.probabilities$p), ]
 scar.probabilities$Scar <- 1:nrow(scar.probabilities)
 scar.probabilities$Cum.p <- cumsum(scar.probabilities$p)
 # colors.hm <- rev(colorRampPalette(c("Red", "Yellow", "Blue"))(100))
-cell.types <- data.frame(Cell.type = c("Medium"),
-                         Detection.rate = 0.3,
-                         Abundance = 1)
-# cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
-                         # Detection.rate = c(0.7, 0.3, 0.15),
-                         # Abundance = c(0.15, 0.25, 0.6))
+# cell.types <- data.frame(Cell.type = c("Medium"),
+#                          Detection.rate = 0.3,
+#                          Abundance = 1)
+cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
+Detection.rate = c(0.7, 0.3, 0.15),
+Abundance = c(0.15, 0.25, 0.6))
 # cell.types$Cum.abundance <- cumsum(cell.types$Abundance)
-# integration.types <- data.frame(Integration = c("Strong", "Weak"),
-                                # Detection.rate = c(1, 0.05),
-                                # Abundance = c(0.85, 0.15))
-integration.types <- data.frame(Integration = c("Strong"),
-                                Detection.rate = c(1),
-                                Abundance = c(1))
+integration.types <- data.frame(Integration = c("Strong", "Weak"),
+Detection.rate = c(1, 0.05),
+Abundance = c(0.85, 0.15))
+# integration.types <- data.frame(Integration = c("Strong"),
+#                                 Detection.rate = c(1),
+#                                 Abundance = c(1))
 
 # Create tree ####
 # Parameters: generations
@@ -84,9 +85,10 @@ scar.cells$Cell <- cells$Cell
 scar.cells$Parent <- cells$Parent
 scar.cells$Generation <- rep(1:generations, 2^(0:(generations - 1)))
 
-set.seed(2)
+set.seed(1)
 
 cells$Scar.acquisition <- ""
+all.scars.created <- integer()
 for(cell.in.question in 1:nrow(scar.cells)){
   # Per cell
   print(paste("Cell", cell.in.question))
@@ -107,6 +109,7 @@ for(cell.in.question in 1:nrow(scar.cells)){
     cells$Scar.acquisition[cell.in.question] <- paste(scars, collapse = ",")
     scar.indices <- which(!cell.scarring$Scar)[1:number.scars.acquired]
     cell.scarring$Scar[scar.indices] <- scars
+    all.scars.created <- c(all.scars.created, scars)
   }
   scar.cells[cell.in.question, -(1:3)] <- cell.scarring$Scar
   # scarring.time <- proc.time() - ptm
@@ -126,6 +129,9 @@ for(cell.in.question in 1:nrow(scar.cells)){
     scar.cells[scar.cells$Cell %in% cell.progeny, -(1:3)] <-
       scar.cells[cell.in.question, -(1:3)]
   }
+  # Below line ensures uniqueness of all scars created by removing all scars,
+  # once created, from the pool of scars to choose from.
+  scar.probabilities <- scar.probabilities[!(scar.probabilities$Scar %in% scars), ]
   # scar.propagation.time.2 <- proc.time() - ptm
 
     #
@@ -151,7 +157,7 @@ for(g in 1:generations){
 }
 time.step <- 0.25
 wt.dynamics$Time <- wt.dynamics$Generation * time.step
-extend.time.to <- 3
+extend.time.to <- 2
 total.generations <- extend.time.to/time.step
 wt.dynamics.extended <- 
   data.frame(Generation = (max(wt.dynamics$Generation) + 1):total.generations,
@@ -172,7 +178,7 @@ fit.all <- nls( Percentage ~ fit.function(Timepoint,l, a),
                 start = list(l=-0.3, a = 90))
 fit.all.parameters <- as.list(summary(fit.all)[10][[1]][,1])
 
-# postscript("./Images/Simulated_dynamics_with_observed_fit_figure_version.eps",
+# postscript("./Images/Simulations/Tree_B_Simulated_dynamics_with_observed_fit_figure_version.eps",
 #            width = 2.5, height = 1.75)
 ggplot(wt.dynamics) +
   geom_point(aes(x = Time, y = WT.perc)) +
@@ -205,20 +211,20 @@ dev.tree.edges <- cells[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
 colnames(dev.tree.edges)[1:2] <- c("Parent", "Child")
 dev.tree.edges$Parent[is.na(dev.tree.edges$Parent)] <- 0
 # write.table(dev.tree.edges,
-#           "./Data/Simulations/tree_C_dev_tree_2.txt", quote = F, row.names = F,
+#           "./Data/Simulations/tree_B2_dev_tree.txt", quote = F, row.names = F,
 #           sep = " ")
 
 # Scar tree
 # Start with edges.scars. First collapse all nodes and tips that did not get a
 # scar. Then collapse all (resulting) singles. Finally, plot the tree.
-edges.scars.collapse <- edges.scars
+edges.scars.collapse <- dev.tree.edges # edges.scars
 # Loop over dataframe to find all nodes and tips that did not get a scar
 index <- 1
 while(index <= nrow(edges.scars.collapse)){
   if(edges.scars.collapse$Scar.acquisition[index] == ""){
-    cell.wo.scar.name <- edges.scars.collapse$phylo.number[index]
-    upstream.name <- edges.scars.collapse$parent.phylo[index]
-    edges.scars.collapse$parent.phylo[edges.scars.collapse$parent.phylo == 
+    cell.wo.scar.name <- edges.scars.collapse$Child[index]
+    upstream.name <- edges.scars.collapse$Parent[index]
+    edges.scars.collapse$Parent[edges.scars.collapse$Parent == 
                                         cell.wo.scar.name] <-
       upstream.name
     edges.scars.collapse <- edges.scars.collapse[-index, ]
@@ -231,18 +237,19 @@ edges.scars.collapse.2 <- edges.scars.collapse
 index <- 1
 while(index <= nrow(edges.scars.collapse.2)){
   non.singles <-
-    unique(edges.scars.collapse.2$parent.phylo[duplicated(edges.scars.collapse.2$parent.phylo)])
-  if(!(edges.scars.collapse.2$parent.phylo[index] %in% non.singles)){
+    c(unique(edges.scars.collapse.2$Parent[duplicated(edges.scars.collapse.2$Parent)]),
+      0)
+  if(!(edges.scars.collapse.2$Parent[index] %in% non.singles)){
     # Identify the single, its child, and the edge where the single is the
     # child.
-    single.name <- edges.scars.collapse.2$parent.phylo[index]
-    child.name <- edges.scars.collapse.2$phylo.number[index]
-    single.index <- which(edges.scars.collapse.2$phylo.number == single.name)
+    single.name <- edges.scars.collapse.2$Parent[index]
+    child.name <- edges.scars.collapse.2$Child[index]
+    single.index <- which(edges.scars.collapse.2$Child == single.name)
 
     # Collapse the single and its child: replace the name of the single with
     # the name of its child; add the child scar to the single's scars; remove
     # the edge to the child.
-    edges.scars.collapse.2$phylo.number[single.index] <- child.name
+    edges.scars.collapse.2$Child[single.index] <- child.name
     edges.scars.collapse.2$Scar.acquisition[single.index] <-
       paste(edges.scars.collapse.2$Scar.acquisition[single.index],
             edges.scars.collapse.2$Scar.acquisition[index], sep = ",")
@@ -253,20 +260,24 @@ while(index <= nrow(edges.scars.collapse.2)){
   }
 }
 
-tip.converter <- data.frame(Old.name = setdiff(edges.scars.collapse.2$phylo.number, edges.scars.collapse.2$parent.phylo))
-tip.converter$New.name <- 1:nrow(tip.converter)
-node.converter <- data.frame(Old.name = sort(unique(edges.scars.collapse.2$parent.phylo)))
-node.converter$New.name <- (nrow(tip.converter) + 1):(nrow(tip.converter) + nrow(node.converter))
-converter <- rbind(tip.converter, node.converter)
-
-edges.scars.collapse.2 <- merge(edges.scars.collapse.2, converter,
-                                by.x = "parent.phylo", by.y = "Old.name")
-colnames(edges.scars.collapse.2)[4] <- "V1"
-edges.scars.collapse.2 <- merge(edges.scars.collapse.2, converter,
-                                by.x = "phylo.number", by.y = "Old.name")
-colnames(edges.scars.collapse.2)[5] <- "V2"
-# write.csv(edges.scars.collapse.2[, c("V1", "V2", "Scar.acquisition")],
-#           "./Data/Simulations/tree_A_scar_tree.csv", quote = F, row.names = F)
+# tip.converter <- data.frame(Old.name = setdiff(edges.scars.collapse.2$Child, edges.scars.collapse.2$Parent))
+# tip.converter$New.name <- 1:nrow(tip.converter)
+# node.converter <- data.frame(Old.name = sort(unique(edges.scars.collapse.2$Parent)))
+# node.converter$New.name <- (nrow(tip.converter) + 1):(nrow(tip.converter) + nrow(node.converter))
+# converter <- rbind(tip.converter, node.converter)
+# 
+# edges.scars.collapse.2 <- merge(edges.scars.collapse.2, converter,
+#                                 by.x = "parent.phylo", by.y = "Old.name")
+# colnames(edges.scars.collapse.2)[4] <- "Parent"
+# edges.scars.collapse.2 <- merge(edges.scars.collapse.2, converter,
+#                                 by.x = "phylo.number", by.y = "Old.name")
+# colnames(edges.scars.collapse.2)[5] <- "Child"
+# edges.scars.collapse.2 <- 
+#   edges.scars.collapse.2[order(edges.scars.collapse.2$Parent,
+#                                edges.scars.collapse.2$Child), ]
+# write.table(edges.scars.collapse.2[, c("Parent", "Child", "Scar.acquisition")],
+#           "./Data/Simulations/tree_B2_scar_tree.csv", quote = F, row.names = F,
+#           sep = " ")
 
 scar.tree <- list(
   edge = as.matrix(edges.scars.collapse.2[, c("V1", "V2")]),
@@ -360,7 +371,7 @@ integration.sites <- merge(integration.sites, integration.types[, c("Integration
 
 # Sample cells and scars ####
 # Parameters 
-cells.sampled <- 125
+cells.sampled <- 3000
 # detection.rate <- 0.5
 set.seed(2)
 
@@ -373,7 +384,7 @@ length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_C2_100cellsout_detection03.csv",
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_B2_2000cellsout.csv",
 # quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree
@@ -397,7 +408,7 @@ phylip.out$Cell <-
 colnames(phylip.out) <- c(nrow(phylip.out), ncol(phylip.out.array))
 phylip.scar.conversion <- data.frame(Scar.order = 1:ncol(phylip.out.array),
                                      Scar = colnames(phylip.out.array))
-# write.table(phylip.out, "./Data/Simulations/Tree_C2_100cellsout_phylip_detection03_0.txt",
+# write.table(phylip.out, "./Data/Simulations/Tree_B2_2000cellsout_phylip_0.txt",
 # sep = " ", row.names = F, quote = F)
-# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_C2_scar_conversion.csv",
+# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_B2_scar_conversion.csv",
 #           row.names = F, quote = F)
