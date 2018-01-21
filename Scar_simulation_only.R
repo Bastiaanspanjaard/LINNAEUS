@@ -10,19 +10,19 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 6 # Number of developmental generations while scarring takes place
+generations <- 3 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
-generations.post <- 8 # Number of cell divisions a single cell undergoes after scarring
+generations.post <- 9 # Number of cell divisions a single cell undergoes after scarring
 # takes place
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.1 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.15 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
                                stringsAsFactors = F)[, 1:2] # NB In the scar creation
 # section there is currently a line that ensures uniqueness of all scars created.
-scar.probabilities <- scar.probabilities[1:999, ] # Use this to select only a few scars with lower numbers
+scar.probabilities <- scar.probabilities[1:99, ] # Use this to select only a few scars with lower numbers
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
 # scar.probabilities$p <- 
 #   c(0.5, rep(0.5/(nrow(scar.probabilities) - 1), nrow(scar.probabilities) - 1))
@@ -31,19 +31,19 @@ scar.probabilities <- scar.probabilities[order(-scar.probabilities$p), ]
 scar.probabilities$Scar <- 1:nrow(scar.probabilities)
 scar.probabilities$Cum.p <- cumsum(scar.probabilities$p)
 # colors.hm <- rev(colorRampPalette(c("Red", "Yellow", "Blue"))(100))
-# cell.types <- data.frame(Cell.type = c("Medium"),
-#                          Detection.rate = 0.3,
-#                          Abundance = 1)
-cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
-Detection.rate = c(0.7, 0.3, 0.15),
-Abundance = c(0.15, 0.25, 0.6))
+cell.types <- data.frame(Cell.type = c("Medium"),
+                         Detection.rate = 0.3,
+                         Abundance = 1)
+# cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
+# Detection.rate = c(0.7, 0.3, 0.15),
+# Abundance = c(0.15, 0.25, 0.6))
 # cell.types$Cum.abundance <- cumsum(cell.types$Abundance)
-integration.types <- data.frame(Integration = c("Strong", "Weak"),
-Detection.rate = c(1, 0.05),
-Abundance = c(0.85, 0.15))
-# integration.types <- data.frame(Integration = c("Strong"),
-#                                 Detection.rate = c(1),
-#                                 Abundance = c(1))
+# integration.types <- data.frame(Integration = c("Strong", "Weak"),
+# Detection.rate = c(1, 0.05),
+# Abundance = c(0.85, 0.15))
+integration.types <- data.frame(Integration = c("Strong"),
+                                Detection.rate = c(1),
+                                Abundance = c(1))
 
 # Create tree ####
 # Parameters: generations
@@ -85,7 +85,7 @@ scar.cells$Cell <- cells$Cell
 scar.cells$Parent <- cells$Parent
 scar.cells$Generation <- rep(1:generations, 2^(0:(generations - 1)))
 
-set.seed(1)
+set.seed(2)
 
 cells$Scar.acquisition <- ""
 all.scars.created <- integer()
@@ -131,7 +131,7 @@ for(cell.in.question in 1:nrow(scar.cells)){
   }
   # Below line ensures uniqueness of all scars created by removing all scars,
   # once created, from the pool of scars to choose from.
-  scar.probabilities <- scar.probabilities[!(scar.probabilities$Scar %in% scars), ]
+  # scar.probabilities <- scar.probabilities[!(scar.probabilities$Scar %in% scars), ]
   # scar.propagation.time.2 <- proc.time() - ptm
 
     #
@@ -197,6 +197,8 @@ edges.scars <- merge(edges, cells[, c("phylo.number", "Scar.acquisition")])
 edges.scars <- edges.scars[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
 edges.scars <- edges.scars[order(edges.scars$parent.phylo, edges.scars$phylo.number), ]
 
+
+
 # write.csv(edges.scars,
 #           "./Data/Simulations/tree_A_dev_tree.csv", quote = F, row.names = F)
 
@@ -210,6 +212,18 @@ edgelabels(edges.scars$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
 dev.tree.edges <- cells[, c("parent.phylo", "phylo.number", "Scar.acquisition")]
 colnames(dev.tree.edges)[1:2] <- c("Parent", "Child")
 dev.tree.edges$Parent[is.na(dev.tree.edges$Parent)] <- 0
+
+dev.tree.edges$fill <- "black"
+dev.tree.edges$size <- 1
+dev_tree <- generate_tree(dev.tree.edges)
+dev_tree_wg <- collapsibleTree(dev_tree, root = dev_tree$scar, collapsed = F,
+                               fontSize = 8, width = 300, height = 200,
+                               fill = "fill", nodeSize = "size")
+dev_tree_wg
+# htmlwidgets::saveWidget(dev_tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_dev_tree.html")
+
+
 # write.table(dev.tree.edges,
 #           "./Data/Simulations/tree_B2_dev_tree.txt", quote = F, row.names = F,
 #           sep = " ")
@@ -279,19 +293,19 @@ while(index <= nrow(edges.scars.collapse.2)){
 #           "./Data/Simulations/tree_B2_scar_tree.csv", quote = F, row.names = F,
 #           sep = " ")
 
-scar.tree <- list(
-  edge = as.matrix(edges.scars.collapse.2[, c("V1", "V2")]),
-  tip.label = as.character(tip.converter$New.name),
-  root.edge = 1,
-  Nnode = length(unique(edges.scars.collapse.2$V1)),
-  edge.length = rep(1, nrow(edges.scars.collapse.2))
-)
-class(scar.tree) <- "phylo"
-checkValidPhylo(scar.tree)
+# scar.tree <- list(
+#   edge = as.matrix(edges.scars.collapse.2[, c("Parent", "Child")]),
+#   tip.label = as.character(tip.converter$New.name),
+#   root.edge = 1,
+#   Nnode = length(unique(edges.scars.collapse.2$V1)),
+#   edge.length = rep(1, nrow(edges.scars.collapse.2))
+# )
+# class(scar.tree) <- "phylo"
+# checkValidPhylo(scar.tree)
 # pdf("Images/Simulations/Collapsed_scartree_C.pdf",
 #            width = 24, height = 14)
-plot(scar.tree, edge.width = 3, no.margin = T, root.edge = T)
-edgelabels(edges.scars.collapse.2$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
+# plot(scar.tree, edge.width = 3, no.margin = T, root.edge = T)
+# edgelabels(edges.scars.collapse.2$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
 # dev.off()
 
 # Expand cells after scarring ####
@@ -377,38 +391,48 @@ set.seed(2)
 
 # Sample cells and scars
 readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites,
-                          doublet.rate = 0)
+                          doublet.rate = 0.05)
 cells.in.tree <- readout.wt[readout.wt$Scar != 0, ]
 
 length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_B2_2000cellsout.csv",
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_B2_2000cellsout_d005.csv",
 # quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree
 cells.in.tree.phylip$Presence <- 1
 phylip.out.array <- acast(cells.in.tree.phylip, Cell ~ Scar, value.var = "Presence")
-phylip.out.array[is.na(phylip.out.array)] <- "0"
+phylip.out.array[is.na(phylip.out.array)] <- "?"
 phylip.out <- data.frame(Cell = rownames(phylip.out.array),
                          Scar.vector = apply(phylip.out.array, 1,
-                                             function(x) paste(x, collapse = "")))
+                                             function(x) paste(x, collapse = "")),
+                         stringsAsFactors = F)
 # x <- as.character(phylip.out$Cell[1])
 # y <- paste(x, paste(rep("x", 10 - nchar(x)), collapse = ""), sep = "")
+if(sum(grepl(";", phylip.out$Cell)) > 0){
+  # Doublet formatting does not work for PHYLIP: too long and ";" is forbidden.
+  doublets <- data.frame(Doublet = phylip.out$Cell[grepl(";", phylip.out$Cell)])
+  doublets$New.name <- paste("d_", 1:nrow(doublets), sep = "")
+  phylip.out$Cell <- 
+    mapvalues(phylip.out$Cell, from = doublets$Doublet, to = doublets$New.name)
+}
 phylip.out$Cell <-
-  sapply(as.character(phylip.out$Cell), function(x){
-    name.length = nchar(x)
-    if(name.length < 10){
-      y <- paste(x, paste(rep("x", 10 - nchar(x)), collapse = ""), sep = "")
-    }
-    return(y)
+    sapply(as.character(phylip.out$Cell), function(x){
+      name.length = nchar(x)
+      if(name.length < 10){
+        y <- paste(x, paste(rep("x", 10 - nchar(x)), collapse = ""), sep = "")
+      }
+      return(y)
     })
-      
+
 colnames(phylip.out) <- c(nrow(phylip.out), ncol(phylip.out.array))
 phylip.scar.conversion <- data.frame(Scar.order = 1:ncol(phylip.out.array),
                                      Scar = colnames(phylip.out.array))
-# write.table(phylip.out, "./Data/Simulations/Tree_B2_2000cellsout_phylip_0.txt",
+# write.table(phylip.out, "./Data/Simulations/Tree_B2_2000cellsout_d005_phylip_?.txt",
 # sep = " ", row.names = F, quote = F)
-# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_B2_scar_conversion.csv",
+# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_B2_scar_conversion_d005.csv",
 #           row.names = F, quote = F)
+# write.table(doublets, "./Data/Simulations/Tree_B2_2000cellsout_d005_doublets.csv",
+#           row.name = F, quote = F, sep = ",")

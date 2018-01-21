@@ -150,7 +150,7 @@ phylip.edges.collapse$size <-
            if(grepl("_", x)){
              return(0.5)
            }else{
-             return(1.5)
+             return(1)
            }
          })
 # Add entries for nodesize and fill; get fields into tree (fill has to be named
@@ -159,7 +159,7 @@ phylip.edges.collapse$size <-
 phylip.tree <- generate_tree(phylip.edges.collapse)
 phylip.tree_wg <- 
   collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
-                  fontSize = 12, width = 300, height = 800, fill = "fill",
+                  fontSize = 8, width = 300, height = 800, fill = "fill",
                   nodeSize = "size")
 phylip.tree_wg
 # htmlwidgets::saveWidget(phylip.tree_wg,
@@ -185,13 +185,13 @@ iterative.edges$size <-
            if(substring(x, 1, 1) != 0){
              return(0.5)
            }else{
-             return(1.5)
+             return(1)
            }
          })
 iterative.tree <- generate_tree(iterative.edges)
 iterative.tree_wg <- 
   collapsibleTree(iterative.tree, root = iterative.tree$scar, collapsed = F,
-                  fontSize = 12, width = 300, height = 500, fill = "fill",
+                  fontSize = 8, width = 300, height = 500, fill = "fill",
                   nodeSize = "size")
 iterative.tree_wg
 # htmlwidgets::saveWidget(iterative.tree_wg,

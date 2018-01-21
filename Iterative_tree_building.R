@@ -28,7 +28,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # number of doublets is binomially distributed.
 doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.05 # Default value is 0.1
+min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
@@ -54,15 +54,14 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000 # 125
+N <- 125 # 3000
 # N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
-  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
-  read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
-  # read.csv("./Data/Simulations/Tree_B_3k_cells_3celltypes_2sites.csv")
-  # read.csv("./Data/Simulations/Tree_Bd005_3k_cells_3celltypes_2sites.csv")
+  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
@@ -676,8 +675,71 @@ cells.to.place <- cells.to.place[, c("Parent", "Child")]
 cells.to.place$Scar.acquisition <- ""
 
 collapsed.tree <- rbind(tree.summary.c, cells.to.place)
-write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
-          row.names = F, quote = F, sep = " ")
+# write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
+#           row.names = F, quote = F, sep = " ")
+
+# Visualize tree ####
+# Without cells
+tree.summary.c.plot <- tree.summary.c
+tree.summary.c.plot$fill <- "black"
+tree.summary.c.plot$size <- 1
+# Order in scar_tree order
+# scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv", 
+#                         header = T, fill = T, stringsAsFactors = F)
+# tentative.reorder <- data.frame(Scar.acquisition = tree.summary.c.plot$Scar.acquisition)
+# tentative.reorder$Order <- 
+#   sapply(tentative.reorder$Scar.acquisition,
+#          function(x) {
+#            if(x %in% scar_tree$Scar.acquisition){
+#              which(scar_tree$Scar.acquisition == x)
+#            }else{0}
+#          }
+#   )
+# tentative.reorder$Order[tentative.reorder$Order == 0] <-
+#   c(11, 22, 13)
+# tree.summary.c.plot <- merge(tree.summary.c.plot, tentative.reorder)
+# tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Order),
+#                                    c("Parent", "Child", "Scar.acquisition", 
+#                                      "fill", "size")]
+tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
+LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
+LINNAEUS.tree_wg <- 
+  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
+                  fontSize = 8, width = 300, height = 400, fill = "fill",
+                  nodeSize = "size")
+LINNAEUS.tree_wg
+# htmlwidgets::saveWidget(LINNAEUS.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
+
+# With cells
+tree.cells.c.plot <- collapsed.tree
+tree.cells.c.plot$fill <-  
+  sapply(tree.cells.c.plot$Child,
+         function(x){
+           if(grepl("_", x)){
+             return("lightgrey")
+           }else{
+             return("black")
+           }
+         })
+tree.cells.c.plot$size <- 
+  sapply(tree.cells.c.plot$Child,
+         function(x){
+           if(grepl("_", x)){
+             return(0.5)
+           }else{
+             return(1)
+           }
+         })
+tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
+LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
+LINNAEUS.cell.tree_wg <- 
+  collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar, collapsed = F,
+                  fontSize = 8, width = 300, height = 600, fill = "fill",
+                  nodeSize = "size")
+LINNAEUS.cell.tree_wg
+htmlwidgets::saveWidget(LINNAEUS.tree_wg,
+                        file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
 
 # Investigate tree building ####
 # View(tree.summary.old)
