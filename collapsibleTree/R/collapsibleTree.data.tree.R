@@ -23,7 +23,8 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  linkLength = NULL, fontSize = 10, tooltip = FALSE,
                                  tooltipHtml = NULL,nodeSize = NULL, collapsed = TRUE,
 				# PO
-				pieNode = FALSE, nCell.types=1:60,
+				colors = NULL, 
+				pieNode = FALSE, nCell.types=ifelse(!is.null(colors, length(colors), 1:60)), 
                                  zoomable = TRUE, width = NULL, height = NULL, ...) {
 
   # acceptable inherent node attributes
@@ -44,6 +45,11 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   hierarchy <- unique(ToDataFrameTree(df, hierarchy_attribute)[[hierarchy_attribute]])
   if(length(hierarchy) <= 1) stop("hierarchy vector must be greater than length 1")
 
+  # PO create colors
+  if(is.null(colors)){
+	colors = c('red', colorRampPalette(c('#fa9fb5','#f768a1','#ae017e','#4400d9', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8' ))(nCell.types))
+  }
+
   # create a list that contains the options
   options <- list(
     hierarchy = hierarchy,
@@ -53,8 +59,9 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     fontSize = fontSize,
     tooltip = tooltip,
     collapsed = collapsed,
-# PO
-    pieNode = pieNode,
+    pieNode = pieNode, #PO 
+    useColors = !is.null(colors), #PO 
+    colors = colors, #PO
     zoomable = zoomable,
     margin = list(
       top = 20,
@@ -75,6 +82,12 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     # default to using fill value as literal color name
     options$fill <- fill
   }
+  
+  # PO tmp code for dealing with ctype colour attribution
+  ctypes = sort(unique(df$Get("Cell.type")))
+  # if next line commented, we are keeping NAs
+  #cytpes = cytpes[!is.na(ctypes)]
+
 
   # PO adding cell type counts 
   if(pieNode){
@@ -83,11 +96,12 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 #message(x$levelName)
         xpieNode =  data.tree::Aggregate(x, 'Cell.type', function(j){
 	#	message(collapse = " ", j)
-		return(array(j))
+		return(array(match(j, ctypes)))
 		})
 	
 	x$pieNode = table(c(nCell.types, unlist(xpieNode))) -1 
 	x$SizeOfNode = sum(x$pieNode)
+#browser()
 	})
     jsonFields <- c(jsonFields, "pieNode")
     jsonFields <- c(jsonFields, "SizeOfNode")

@@ -9,7 +9,7 @@ HTMLWidgets.widget({
 //                                       "#0fbbea","#0dcfe1","#54aa0f","#157bbf"]);
 //
   // PO define colors
-  var color = d3.scaleOrdinal().range(["#000023", "#03002C", "#070035", "#0A003E", "#0E0047", "#120050", "#150059", "#190063", "#1D006C", "#200075", "#24007E", "#280087", "#2B0090", "#2F0099", "#3300A3", "#3700AA", "#3C00AD", "#4200B1", "#4700B4", "#4D00B7", "#5200BA", "#5800BD", "#5D00C0", "#6300C3", "#6800C6", "#6E00C9", "#7300CD", "#7900D0", "#7E00D3", "#8400D6", "#8901D1", "#8F03C5", "#9406B8", "#9A08AC", "#A00A9F", "#A50D93", "#AB0F86", "#B0127A", "#B6146D", "#BB1761", "#C11955", "#C61C48", "#CC1E3C", "#D2202F", "#D72323", "#DA2E20", "#DD3D20", "#E04B20", "#E25920", "#E56720", "#E77620", "#EA8420", "#EC9220", "#EFA120", "#F2AF20", "#F4BD20", "#F7CC20", "#F9DA20", "#FCE820", "#FFF721"])
+  var fixed_colors = d3.scaleOrdinal().range(["#000023", "#03002C", "#070035", "#0A003E", "#0E0047", "#120050", "#150059", "#190063", "#1D006C", "#200075", "#24007E", "#280087", "#2B0090", "#2F0099", "#3300A3", "#3700AA", "#3C00AD", "#4200B1", "#4700B4", "#4D00B7", "#5200BA", "#5800BD", "#5D00C0", "#6300C3", "#6800C6", "#6E00C9", "#7300CD", "#7900D0", "#7E00D3", "#8400D6", "#8901D1", "#8F03C5", "#9406B8", "#9A08AC", "#A00A9F", "#A50D93", "#AB0F86", "#B0127A", "#B6146D", "#BB1761", "#C11955", "#C61C48", "#CC1E3C", "#D2202F", "#D72323", "#DA2E20", "#DD3D20", "#E04B20", "#E25920", "#E56720", "#E77620", "#EA8420", "#EC9220", "#EFA120", "#F2AF20", "#F4BD20", "#F7CC20", "#F9DA20", "#FCE820", "#FFF721"])
 
 
     var i = 0,
@@ -19,7 +19,7 @@ HTMLWidgets.widget({
     treemap;
 
   // PO define pieNode size
-     var pieNodeOut = 15,
+     var pieNodeOut = 10,
 	pieNodeInner= pieNodeOut/1e6
   // PO define pie and arc PO
   // TODO
@@ -49,6 +49,13 @@ HTMLWidgets.widget({
 
     function update(source) {
 
+      // PO If colors provided, use them
+      var color;
+      if(options.useColors){
+	color = d3.scaleOrdinal().range(options.colors)
+	}else{
+	color = d3.scaleOrdinal().range(fixed_colors)
+	}
       // Assigns the x and y position for the nodes
       var treeData = treemap(root);
 
@@ -106,6 +113,7 @@ HTMLWidgets.widget({
        .attr('class', 'node')
        .attr('r', 1e-6)
        .style('fill', function(d) {
+         //return d.data.fill || (d._children ? options.fill : color[1]);
          return d.data.fill || (d._children ? options.fill : '#fff');
        })
        .style('stroke-width', function(d) {
