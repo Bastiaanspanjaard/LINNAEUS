@@ -12,42 +12,49 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Load data ####
 # Scars
-scars.in.1 <- read.csv("./Data/2017_10X_6/all_16/H6_scar_filtered_scars.csv",
+scars.in.1 <- read.csv("./Data/2017_10X_6/all_16/B6_scar_filtered_scars.csv",
+                       stringsAsFactors = F, sep = "\t")
+scars.in.1$Library <- "B6"
+scars.in.2 <- read.csv("./Data/2017_10X_6/all_16/H6_scar_filtered_scars.csv",
                      stringsAsFactors = F, sep = "\t")
-scars.in.1$Library <- "H6"
-scars.in.2 <- read.csv("./Data/2017_10X_6/all_16/P6_scar_filtered_scars.csv",
+scars.in.2$Library <- "H6"
+scars.in.3 <- read.csv("./Data/2017_10X_6/all_16/P6_scar_filtered_scars.csv",
                        stringsAsFactors = F, sep = "\t")
-scars.in.2$Library <- "P6"
-# There are no scars found in B6
-scars.in.3 <- read.csv("./Data/2017_10X_6/all_16/B6_scar_filtered_scars.csv",
-                       stringsAsFactors = F, sep = "\t")
-scars.in.3$Library <- "B6"
+scars.in.3$Library <- "P6"
 scars.in <- rbind(scars.in.1, scars.in.2, scars.in.3)
 scars.in$Cell <- paste(scars.in$Library, scars.in$Barcode, sep = "_")
 
 # Select only cells that exist in the mRNA data
-wt.all.cells <- read.csv("./Data/Adult_data/Adults_Seurat_batch_r_out_cells.csv",
-                        stringsAsFactors = F, sep = ",")
-wt.cells <- wt.all.cells[wt.all.cells$Library %in% c("B6", "H6", "P6"), ]
-scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cluster")])
+wt.all.cells.1 <- read.csv("./Data/Adult_data/Adults567_Seurat_batch_r_out_brain_subset_types.csv",
+                           stringsAsFactors = F, sep = ",")
+wt.cells.1 <- wt.all.cells.1[wt.all.cells.1$Library == "B6", ]
+wt.all.cells.2 <- read.csv("./Data/Adult_data/Adults567_Seurat_batch_r_out_heart_subset_types.csv",
+                           stringsAsFactors = F, sep = ",")
+wt.cells.2 <- wt.all.cells.2[wt.all.cells.2$Library == "H6", ]
+wt.all.cells.3 <- read.csv("./Data/Adult_data/Adults567_Seurat_batch_r_out_pancreas_subset_types.csv",
+                           stringsAsFactors = F, sep = ",")
+wt.cells.3 <- wt.all.cells.3[wt.all.cells.3$Library == "P6", ]
+wt.cells <- rbind(wt.cells.1, wt.cells.2, wt.cells.3)
+
+scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cell.type")])
 scars.unfiltered$Scar.id <- 1:nrow(scars.unfiltered)
 scars.unfiltered$Keep <- T
 scars.unfiltered$Pair <- "With"
 cells <- unique(scars.unfiltered$Cell)
 
 # Read in all >1 read sequences (all UMIs)
-all.scars.g1.1 <- read.table("./Data/2017_10X_6/all_16/H6_scar_reads_over1.txt",
+all.scars.g1.1 <- read.table("./Data/2017_10X_7/H5_scar_reads_over1.txt",
                              sep = "\t", stringsAsFactors = F)
 colnames(all.scars.g1.1)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
-all.scars.g1.1$Library <- "H6"
-all.scars.g1.2 <- read.table("./Data/2017_10X_6/all_16/P6_scar_reads_over1.txt",
+all.scars.g1.1$Library <- "H5"
+all.scars.g1.2 <- read.table("./Data/2017_10X_7/P5_scar_reads_over1.txt",
                              sep = "\t", stringsAsFactors = F)
 colnames(all.scars.g1.2)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
-all.scars.g1.2$Library <- "P6"
-all.scars.g1.3 <- read.table("./Data/2017_10X_6/all_16/B6_scar_reads_over1.txt",
+all.scars.g1.2$Library <- "P5"
+all.scars.g1.3 <- read.table("./Data/2017_10X_7/B5_scar_reads_over1.txt",
                              sep = "\t", stringsAsFactors = F)
 colnames(all.scars.g1.3)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
-all.scars.g1.3$Library <- "B6"
+all.scars.g1.3$Library <- "B5"
 all.scars.g1 <- rbind(all.scars.g1.1, all.scars.g1.2, all.scars.g1.3)
 all.scars.g1$Cell <- paste(all.scars.g1$Library, all.scars.g1$Barcode, sep = "_")
 
@@ -224,7 +231,7 @@ sequencing.error.scars <-
   c(scars.assess.2.out$Scar.id, 
     scars.assess.2.maybe$Scar.id[scars.assess.2.maybe$Out])
 scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.scars),
-                               1:6]
+                               c(1:6, 8)]
 
 # Write filtered results ####
 # write.csv(scars.output, "./Data/2017_10X_1/Z1_preprocessed_scars_allreads_7Larvae.csv",
@@ -236,22 +243,22 @@ scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.sc
 # cutoff is determined based on the histogram of reads per observed scar. 
 
 # Undersequencing filter
-ggplot(scars.output[scars.output$Library == "H6", ]) +
-  geom_histogram(aes(x = Reads), binwidth = 10) +
-  scale_x_continuous(limits = c(-10, 1000))
-min.scar.reads.H6 <- 300
-scars.output.2.H6 <- scars.output[scars.output$Reads >= min.scar.reads.H6 & 
-                                    scars.output$Library == "H6", ]
 ggplot(scars.output[scars.output$Library == "B6", ]) +
-  geom_histogram(aes(x = Reads), binwidth = 50) +
-  scale_x_continuous(limits = c(-50, 2000))
+  geom_histogram(aes(x = Reads), binwidth = 10) +
+  scale_x_continuous(limits = c(-10, 2000))
 min.scar.reads.B6 <- 500
 scars.output.2.B6 <- scars.output[scars.output$Reads >= min.scar.reads.B6 & 
                                     scars.output$Library == "B6", ]
+ggplot(scars.output[scars.output$Library == "H6", ]) +
+  geom_histogram(aes(x = Reads), binwidth = 10) +
+  scale_x_continuous(limits = c(-10, 1000))
+min.scar.reads.H6 <- 250
+scars.output.2.H6 <- scars.output[scars.output$Reads >= min.scar.reads.H6 & 
+                                    scars.output$Library == "H6", ]
 ggplot(scars.output[scars.output$Library == "P6", ]) +
   geom_histogram(aes(x = Reads), binwidth = 10) +
   scale_x_continuous(limits = c(-10, 2000))
-min.scar.reads.P6 <- 600
+min.scar.reads.P6 <- 500
 scars.output.2.P6 <- scars.output[scars.output$Reads >= min.scar.reads.P6 & 
                                     scars.output$Library == "P6", ]
 scars.output.2 <- rbind(scars.output.2.B6, scars.output.2.H6, scars.output.2.P6)
@@ -266,39 +273,41 @@ cell.scar.count <-
   data.frame(table(scars.output.2$Cell))
 colnames(cell.scar.count) <- c("Cell", "Scars")
 cell.scar.count$Cell <- as.character(cell.scar.count$Cell)
-cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Cell", "Cluster")])
+cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Cell", "Cell.type")])
 
-maximum.scars <- data.frame(Cluster = unique(cell.scar.count$Cluster),
+maximum.scars <- data.frame(Cell.type = unique(cell.scar.count$Cell.type),
                             Maximum = NA)
 
 for(c.row in 1:nrow(maximum.scars)){
-  c.cluster <- maximum.scars$Cluster[c.row]
+  c.cell.type <- maximum.scars$Cell.type[c.row]
   print(
-    ggplot(cell.scar.count[cell.scar.count$Cluster == c.cluster, ]) +
+    ggplot(cell.scar.count[cell.scar.count$Cell.type == c.cell.type, ]) +
       geom_histogram(aes(x = Scars), binwidth = 1) +
-      labs(title = c.cluster)
+      labs(title = c.cell.type)
   )
   maximum.scars$Maximum[c.row] <-
-    readline(prompt = paste("Max number scars for cell in cluster ", 
-                            c.cluster, "? ", sep = ""))
+    readline(prompt = paste("Max number scars for cell in cell.type ", 
+                            c.cell.type, "? ", sep = ""))
 }
 maximum.scars$Maximum <- as.integer(maximum.scars$Maximum)
 
-# postscript("./Images/2017_10X_2/Z2_cell_type_scar_counts_with_cutoff.eps",
+# postscript("./Images/2017_10X_6/A6_cell_type_scar_counts_with_cutoff.eps",
 #     width = 7, height = 4.5)
 ggplot() +
   geom_histogram(data = cell.scar.count, aes(x = Scars), binwidth = 1) +
   geom_vline(data = maximum.scars, aes(xintercept = Maximum + 0.5), color = "red") +
-  facet_wrap(~ Cluster) +
+  facet_wrap(~ Cell.type) +
   labs(y = "Count") +
   theme(axis.title = element_text(size = 12),
         axis.text = element_text(size = 6),
-        strip.text = element_text(size = 6))
+        strip.text = element_text(size = 4))
 # dev.off()
 
+# maximum.scars <- read.csv("./Data/2017_10X_6/A6_max_scars_3Adults.csv",
+#                           stringsAsFactors = F)
 cell.scar.count <- merge(cell.scar.count, maximum.scars)
 
-cells.too.many.scars <- 
+cells.too.many.scars <-
   cell.scar.count$Cell[cell.scar.count$Scars > cell.scar.count$Maximum]
 scars.output.2 <- scars.output.2[!(scars.output.2$Cell %in% cells.too.many.scars), ]
 

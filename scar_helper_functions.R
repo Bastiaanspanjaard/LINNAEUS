@@ -18,8 +18,9 @@ require(poisbinom)
 require(plyr)
 require(data.tree)
 require(treemap)
-source("./Scripts/linnaeus-scripts/collapsibleTree.R")
-source("./Scripts/linnaeus-scripts/collapsibleTree.data.tree.R")
+require(collapsibleTree)
+# source("./Scripts/linnaeus-scripts/collapsibleTree.R")
+# source("./Scripts/linnaeus-scripts/collapsibleTree.data.tree.R")
 
 
 # Parameters ####

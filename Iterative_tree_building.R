@@ -26,7 +26,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
@@ -43,10 +43,10 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA
-# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv")
+tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L2", c("Barcode", "Cluster")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
 # For Z5
@@ -54,24 +54,24 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 125 # 3000
-# N <- nrow(tsne.coord)
+# N <- 125 # 3000
+N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
-  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
 # scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")],
 #                     tsne.coord)
-colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
-  "Cell.type"
-colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
-  "Cell"
+# colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
+#   "Cell.type"
+# colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
+#   "Cell"
 
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
@@ -391,50 +391,50 @@ tree.summary <- tree.summary.collapse
 # Create phylogenetic tree ####
 # Create a list that includes edges, tips, nodes and possibly labels,
 # then turn that into an object of class "phylo", then plot.
-tips <- data.frame(Name = setdiff(tree.summary$Node.2, tree.summary$Node.1),
-                   stringsAsFactors = F)
-tips$Index <- 1:nrow(tips)
-nodes <- data.frame(
-  Name = setdiff(c(tree.summary$Node.1, tree.summary$Node.2), tips$Name),
-  stringsAsFactors = F)
-nodes$Index <- NA
-nodes$Index[grep("Root", nodes$Name)] <- nrow(tips) + 1
-nodes <- nodes[order(nodes$Index), ]
-nodes$Index[-1] <- (nrow(tips) + 2):(nrow(tips) + nrow(nodes))
-nodes$Index <- as.integer(nodes$Index)
-nodestips <- rbind(nodes, tips)
-phylo.edges <- merge(tree.summary[, c("Node.1", "Node.2")], nodestips,
-                     by.x = "Node.1", by.y = "Name")
-colnames(phylo.edges)[3] <- "V1"
-phylo.edges <- merge(phylo.edges, nodestips,
-                     by.x = "Node.2", by.y = "Name")
-colnames(phylo.edges)[4] <- "V2"
-
-nodes.2 <- nodes
-nodes.2$Name[grep("Root", nodes.2$Name)] <-
-  sub("Root,", "", nodes.2$Name[grep("Root", nodes.2$Name)])
-
-scar.phylo <-
-  list(
-    edge = as.matrix(phylo.edges[, c("V1", "V2")]),
-    tip.label = tips$Name,
-    edge.length = rep(1, nrow(phylo.edges)),
-    Nnode = nrow(nodes.2),
-    node.label = nodes.2$Name,
-    root.edge = 1)
-class(scar.phylo) <- "phylo"
+# tips <- data.frame(Name = setdiff(tree.summary$Node.2, tree.summary$Node.1),
+#                    stringsAsFactors = F)
+# tips$Index <- 1:nrow(tips)
+# nodes <- data.frame(
+#   Name = setdiff(c(tree.summary$Node.1, tree.summary$Node.2), tips$Name),
+#   stringsAsFactors = F)
+# nodes$Index <- NA
+# nodes$Index[grep("Root", nodes$Name)] <- nrow(tips) + 1
+# nodes <- nodes[order(nodes$Index), ]
+# nodes$Index[-1] <- (nrow(tips) + 2):(nrow(tips) + nrow(nodes))
+# nodes$Index <- as.integer(nodes$Index)
+# nodestips <- rbind(nodes, tips)
+# phylo.edges <- merge(tree.summary[, c("Node.1", "Node.2")], nodestips,
+#                      by.x = "Node.1", by.y = "Name")
+# colnames(phylo.edges)[3] <- "V1"
+# phylo.edges <- merge(phylo.edges, nodestips,
+#                      by.x = "Node.2", by.y = "Name")
+# colnames(phylo.edges)[4] <- "V2"
+# 
+# nodes.2 <- nodes
+# nodes.2$Name[grep("Root", nodes.2$Name)] <-
+#   sub("Root,", "", nodes.2$Name[grep("Root", nodes.2$Name)])
+# 
+# scar.phylo <-
+#   list(
+#     edge = as.matrix(phylo.edges[, c("V1", "V2")]),
+#     tip.label = tips$Name,
+#     edge.length = rep(1, nrow(phylo.edges)),
+#     Nnode = nrow(nodes.2),
+#     node.label = nodes.2$Name,
+#     root.edge = 1)
+# class(scar.phylo) <- "phylo"
 
 # Plot tree ####
 # pdf("Images/Simulations/tree_B_wdoublets_doubletrate009_detratio01_branchratio025.pdf",
 # width = 20, height = 10)
-plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
-     edge.width = 3, no.margin = T, direction = "leftward")
+# plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
+#      edge.width = 3, no.margin = T, direction = "leftward")
 # title(main = sub("Root,", "", nodes$Name[grep("Root", nodes$Name)]))
-edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
-           col = "red")
+# edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
+#            col = "red")
 # dev.off()
 
-View(it.tree.building[[1]]$LLS.unique)
+# View(it.tree.building[[1]]$LLS.unique)
 
 # Place cells in tree ####
 print("Placing cells")
@@ -595,28 +595,28 @@ cumulative.node.count$Ratio.all <-
 #           row.names = F, quote = F)
 
 # Plot pie charts main only
-ggplot(cumulative.node.count[cumulative.node.count$Main, ]) +
-  geom_bar(aes(x = "", y = Ratio.main, fill = as.factor(Cell.type)), stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  coord_polar("y", start = 0) +
-  facet_wrap(~ Node) +
-  labs(x = "", y = "") +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.x = element_blank(),
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank())
+# ggplot(cumulative.node.count[cumulative.node.count$Main, ]) +
+#   geom_bar(aes(x = "", y = Ratio.main, fill = as.factor(Cell.type)), stat = "identity") +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   coord_polar("y", start = 0) +
+#   facet_wrap(~ Node) +
+#   labs(x = "", y = "") +
+#   theme(axis.ticks.y = element_blank(),
+#         axis.text.x = element_blank(),
+#         panel.grid.major.x = element_blank(),
+#         panel.grid.major.y = element_blank())
 
 # Plot pie charts all
-ggplot(cumulative.node.count) +
-  geom_bar(aes(x = "", y = Ratio.all, fill = as.factor(Cell.type)), stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  coord_polar("y", start = 0) +
-  facet_wrap(~ Node) +
-  labs(x = "", y = "") +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.x = element_blank(),
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank())
+# ggplot(cumulative.node.count) +
+#   geom_bar(aes(x = "", y = Ratio.all, fill = as.factor(Cell.type)), stat = "identity") +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   coord_polar("y", start = 0) +
+#   facet_wrap(~ Node) +
+#   labs(x = "", y = "") +
+#   theme(axis.ticks.y = element_blank(),
+#         axis.text.x = element_blank(),
+#         panel.grid.major.x = element_blank(),
+#         panel.grid.major.y = element_blank())
 
 # Create edgelist of scars and cells ####
 # Create edgelist of scars
@@ -659,7 +659,7 @@ colnames(tree.summary.c)[4] <- "Child"
 tree.summary.c <- tree.summary.c[, c("Parent", "Child", "Node.2")]
 colnames(tree.summary.c)[3] <- "Scar.acquisition"
 # Place cells in tree
-cells.to.place <- correct.cell.placement[, c("Cell", "Scar")]
+cells.to.place <- correct.cell.placement[correct.cell.placement$Main, c("Cell", "Scar")]
 # x <- 70
 cells.to.place$Parent <-
   sapply(cells.to.place$Scar,
@@ -675,6 +675,10 @@ cells.to.place <- cells.to.place[, c("Parent", "Child")]
 cells.to.place$Scar.acquisition <- ""
 
 collapsed.tree <- rbind(tree.summary.c, cells.to.place)
+
+collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
+                        by.x = "Child", by.y = "Cell", all.x = T)
+
 # write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
 #           row.names = F, quote = F, sep = " ")
 
@@ -738,46 +742,10 @@ LINNAEUS.cell.tree_wg <-
                   fontSize = 8, width = 300, height = 600, fill = "fill",
                   nodeSize = "size")
 LINNAEUS.cell.tree_wg
-htmlwidgets::saveWidget(LINNAEUS.tree_wg,
-                        file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
+LINNAEUS.cell.tree.pie <-
+  collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar,
+                  collapsed = F, pieNode = F)
+LINNAEUS.cell.tree.pie
+# htmlwidgets::saveWidget(LINNAEUS.cell.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
 
-# Investigate tree building ####
-# View(tree.summary.old)
-# View(tree.summary)
-# # View(it.tree.building[[1]]$LLS)
-# # View(it.tree.building[[1]]$LLS.select.unique)
-# # View(it.tree.building[[5]]$LLS.unique)
-# detection.rate.progression <-
-#   data.frame(Scar = character(),
-#              Step = integer(),
-#              Detection.rate = numeric())
-# for(n.scar in 1:length(it.tree.building)){
-#   detection.rate.add <- it.tree.building[[n.scar]]$LLS.unique[, c("Scar", "Mean.p_A")]
-#   if(length(detection.rate.add) >= 1){
-#     colnames(detection.rate.add)[2] <- "Detection.rate"
-#     detection.rate.add$Step = n.scar
-#     
-#     detection.rate.progression <- rbind(detection.rate.progression,
-#                                         detection.rate.add)
-#   }
-# }
-# # print(ggplot(detection.rate.progression) +
-# #         geom_tile(aes(x = Step, y = Scar, fill = Detection.rate)) +
-# #         scale_fill_gradient(low = "grey", high = "red")
-# # )
-# # ggplot(detection.rate.progression) +
-# #   geom_line(aes(x = Step, y = Detection.rate, color = Scar)) +
-# #   scale_color_manual(values = rep("black", 9))
-# 
-# # Investigations ####
-# # scar.1 <- "515:39M7D2M10D34M"
-# # scar.2 <- "622:48M1D27M"
-# # cells.with.1 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.1]
-# # cells.with.2 <- cells.in.tree.f$Cell[cells.in.tree.f$Scar == scar.2]
-# # cells.with.12 <- intersect(cells.with.1, cells.with.2)
-# # View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.12, ])
-# # cs.with.1 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ]
-# # cs.with.2 <- cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.2, ]
-# # View(cells.in.tree.f[cells.in.tree.f$Cell %in% cells.with.1, ])
-# # View(scars.in.1[scars.in.1$Barcode %in% cells.with.12, ])
-# # View(scars.in.2[scars.in.2$Barcode %in% cells.with.12, ])

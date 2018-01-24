@@ -2,6 +2,8 @@
 # Pre-process scar output files: merge with succesful whole-transcriptome
 # barcodes, remove missequenced scars per cell, validate outcome by hand.
 
+# NB This version works for multiple libraries from the same organism.
+
 # Parameters ####
 log2.cutoff <- 3
 
@@ -12,43 +14,45 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Scars
 scars.in.1 <- read.csv("./Data/2017_10X_2/scar_2_filtered_scars.csv",
                      stringsAsFactors = F, sep = "\t")
+scars.in.1$Library <- "L21"
 scars.in.2 <- read.csv("./Data/2017_10X_2/scar_4_filtered_scars.csv",
                        stringsAsFactors = F, sep = "\t")
+scars.in.2$Library <- "L22"
 scars.in <- rbind(scars.in.1, scars.in.2)
-
-mixed.barcodes <- read.table("./Data/2017_10X_2/overlapping_bc.txt",
-                             stringsAsFactors = F)
-colnames(mixed.barcodes) <- "Barcode"
+scars.in$Cell <- paste(scars.in$Library, scars.in$Barcode, sep = "_")
 
 # Select only cells that exist in the mRNA data
-wt.all.cells <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv",
+wt.all.cells <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv",
                          stringsAsFactors = F, sep = ",")
-wt.cells <- wt.all.cells[wt.all.cells$Library == "L2", ]
-mixed.barcodes <- merge(mixed.barcodes, wt.cells)
+wt.cells <- wt.all.cells[wt.all.cells$Library %in% c("L21", "L22"), ]
 
-scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cluster")])
+scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cell.type")])
 scars.unfiltered$Scar.id <- 1:nrow(scars.unfiltered)
 scars.unfiltered$Keep <- T
 scars.unfiltered$Pair <- "With"
-cells <- unique(scars.unfiltered$Barcode)
+cells <- unique(scars.unfiltered$Cell)
 
 # Read in all >1 read sequences (all UMIs)
 all.scars.g1.1 <- read.table("./Data/2017_10X_2/scar_2_reads_over1.txt",
                              sep = "\t", stringsAsFactors = F)
 colnames(all.scars.g1.1)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
+all.scars.g1.1$Library <- "L21"
 all.scars.g1.2 <- read.table("./Data/2017_10X_2/scar_4_reads_over1.txt",
                            sep = "\t", stringsAsFactors = F)
 colnames(all.scars.g1.2)[-1] <- c("Barcode", "UMI", "Location", "Sequence")
+all.scars.g1.2$Library <- "L22"
 all.scars.g1 <- rbind(all.scars.g1.1, all.scars.g1.2)
+all.scars.g1$Cell <- paste(all.scars.g1$Library, all.scars.g1$Barcode, sep = "_")
+
 all.scars.g1$V11 <- trimws(all.scars.g1$V1)
 all.scars.g1$Reads <- sapply(all.scars.g1$V11,
                              function(x) unlist(strsplit(x, " "))[1])
 all.scars.g1$CIGAR <- sapply(all.scars.g1$V11,
                              function(x) unlist(strsplit(x, " "))[2])
 all.barcode.UMIs <-
-  data.frame(table(all.scars.g1$Sequence, all.scars.g1$Barcode))
+  data.frame(table(all.scars.g1$Sequence, all.scars.g1$Cell))
 all.barcode.UMIs <- all.barcode.UMIs[all.barcode.UMIs$Freq > 0, ]
-colnames(all.barcode.UMIs) <- c("Sequence", "Barcode", "UMIs")
+colnames(all.barcode.UMIs) <- c("Sequence", "Cell", "UMIs")
 
 # Filter scars per cell ####
 # Go through all cells one by one. Within each cell, calculate the Hamming
@@ -57,7 +61,7 @@ colnames(all.barcode.UMIs) <- c("Sequence", "Barcode", "UMIs")
 # removal.
 for(c in 1:length(cells)){
   cell <- cells[c]
-  cell.scars <- scars.unfiltered[scars.unfiltered$Barcode == cell, ]
+  cell.scars <- scars.unfiltered[scars.unfiltered$Cell == cell, ]
   if(nrow(cell.scars) < 2){next}
   cell.scars <- cell.scars[order(-cell.scars$Reads), ]
   n.scars <- nrow(cell.scars)
@@ -88,7 +92,7 @@ scars.filter.1 <- scars.unfiltered[scars.unfiltered$Keep, ]
 # If the HD is two and the read difference is high, mark the scars as suspect.
 for(c in 1:length(cells)){
   cell <- cells[c]
-  cell.scars <- scars.filter.1[scars.filter.1$Barcode == cell, ]
+  cell.scars <- scars.filter.1[scars.filter.1$Cell == cell, ]
   if(nrow(cell.scars) < 2){next}
   cell.scars <- cell.scars[order(-cell.scars$Reads), ]
   n.scars <- nrow(cell.scars)
@@ -188,17 +192,17 @@ scars.assess.2.maybe$Crit.3 <- NA
 for(c.s in 1:nrow(scars.assess.2.maybe)){
   print(paste(c.s, "out of", nrow(scars.assess.2.maybe)))
   c.sequence <- scars.assess.2.maybe$Sequence[c.s]
-  c.barcode <- scars.assess.2.maybe$Barcode[c.s]
+  c.cell <- scars.assess.2.maybe$Cell[c.s]
   c.scar <- scars.assess.2.maybe$Scar.id[c.s]
   c.parent.sequence <- 
     scars.assess$Sequence[grepl(paste(c.scar, "\\.", sep = ""), scars.assess$Pair) |
                               grepl(paste(c.scar, "$", sep = ""), scars.assess$Pair)]
   
   validate.seq <- 
-    all.scars.g1[all.scars.g1$Barcode == c.barcode &
+    all.scars.g1[all.scars.g1$Cell == c.cell &
                    all.scars.g1$Sequence %in% c.sequence, ]
   validate.parent <- 
-    all.scars.g1[all.scars.g1$Barcode == c.barcode &
+    all.scars.g1[all.scars.g1$Cell == c.cell &
                    all.scars.g1$Sequence %in% c.parent.sequence, ]
   validate.seq$Min.HD <-
     sapply(validate.seq$UMI,
@@ -213,7 +217,7 @@ sequencing.error.scars <-
   c(scars.assess.2.out$Scar.id, 
     scars.assess.2.maybe$Scar.id[scars.assess.2.maybe$Out])
 scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.scars),
-                               1:6]
+                               c(1:6, 8)]
 
 # Write filtered results ####
 # write.csv(scars.output, "./Data/2017_10X_2/Z2_preprocessed_scars_allreads_7Larvae.csv",
@@ -226,11 +230,19 @@ scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.sc
 # cutoff is determined based on the histogram of reads per observed scar. 
 
 # Undersequencing filter
-ggplot(scars.output) +
-  geom_histogram(aes(x = Reads), binwidth = 2) +
-  scale_x_continuous(limits = c(-10, 200))
-min.scar.reads <- 30
-scars.output.2 <- scars.output[scars.output$Reads >= min.scar.reads, ]
+ggplot(scars.output[scars.output$Library == "L21", ]) +
+  geom_histogram(aes(x = Reads), binwidth = 5) +
+  scale_x_continuous(limits = c(-10, 250))
+min.scar.reads.L21 <- 40
+scars.output.2.L21 <- scars.output[scars.output$Reads >= min.scar.reads.L21 & 
+                                    scars.output$Library == "L21", ]
+ggplot(scars.output[scars.output$Library == "L22", ]) +
+  geom_histogram(aes(x = Reads), binwidth = 5) +
+  scale_x_continuous(limits = c(-50, 100))
+min.scar.reads.L22 <- 40
+scars.output.2.L22 <- scars.output[scars.output$Reads >= min.scar.reads.L22 & 
+                                    scars.output$Library == "L22", ]
+scars.output.2 <- rbind(scars.output.2.L21, scars.output.2.L22)
 
 # Doublet filter ####
 # The second filter is a doublet/bleedthrough filter that removes cells that have
@@ -239,24 +251,24 @@ scars.output.2 <- scars.output[scars.output$Reads >= min.scar.reads, ]
 
 # Remove cells that have too many scars
 cell.scar.count <-
-  data.frame(table(scars.output.2$Barcode))
-colnames(cell.scar.count) <- c("Barcode", "Scars")
-cell.scar.count$Barcode <- as.character(cell.scar.count$Barcode)
-cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Barcode", "Cluster")])
+  data.frame(table(scars.output.2$Cell))
+colnames(cell.scar.count) <- c("Cell", "Scars")
+cell.scar.count$Barcode <- as.character(cell.scar.count$Cell)
+cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Cell", "Cell.type")])
 
-maximum.scars <- data.frame(Cluster = unique(cell.scar.count$Cluster),
+maximum.scars <- data.frame(Cell.type = unique(cell.scar.count$Cell.type),
                             Maximum = NA)
 
 for(c.row in 1:nrow(maximum.scars)){
-  c.cluster <- maximum.scars$Cluster[c.row]
+  c.cell.type <- maximum.scars$Cell.type[c.row]
   print(
-    ggplot(cell.scar.count[cell.scar.count$Cluster == c.cluster, ]) +
+    ggplot(cell.scar.count[cell.scar.count$Cell.type == c.cell.type, ]) +
       geom_histogram(aes(x = Scars), binwidth = 1) +
-      labs(title = c.cluster)
+      labs(title = c.cell.type)
   )
   maximum.scars$Maximum[c.row] <-
-    readline(prompt = paste("Max number scars for cell in cluster ", 
-                            c.cluster, "? ", sep = ""))
+    readline(prompt = paste("Max number scars for cell in cell.type ", 
+                            c.cell.type, "? ", sep = ""))
 }
 maximum.scars$Maximum <- as.integer(maximum.scars$Maximum)
 
@@ -265,21 +277,23 @@ maximum.scars$Maximum <- as.integer(maximum.scars$Maximum)
 ggplot() +
   geom_histogram(data = cell.scar.count, aes(x = Scars), binwidth = 1) +
   geom_vline(data = maximum.scars, aes(xintercept = Maximum + 0.5), color = "red") +
-  facet_wrap(~ Cluster) +
+  facet_wrap(~ Cell.type) +
   labs(y = "Count") +
   theme(axis.title = element_text(size = 12),
         axis.text = element_text(size = 6),
         strip.text = element_text(size = 6))
 # dev.off()
 
+# maximum.scars <- read.csv("./Data/2017_10X_2/Z2_max_scars_7Larvae.csv",
+                          # stringsAsFactors =F)
 cell.scar.count <- merge(cell.scar.count, maximum.scars)
 
 cells.too.many.scars <- 
-  cell.scar.count$Barcode[cell.scar.count$Scars > cell.scar.count$Maximum]
-scars.output.2 <- scars.output.2[!(scars.output.2$Barcode %in% cells.too.many.scars), ]
+  cell.scar.count$Cell[cell.scar.count$Scars > cell.scar.count$Maximum]
+scars.output.2 <- scars.output.2[!(scars.output.2$Cell %in% cells.too.many.scars), ]
 
 # Write final output ####
 # write.csv(scars.output.2, "./Data/2017_10X_2/Z2_used_scars_7Larvae.csv",
-#           row.names = F, quote = F)
+          # row.names = F, quote = F)
 # write.csv(maximum.scars, "./Data/2017_10X_2/Z2_max_scars_7Larvae.csv")
 

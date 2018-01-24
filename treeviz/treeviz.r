@@ -231,7 +231,7 @@ scar_tree_wg
 # htmlwidgets::saveWidget(scar_tree_wg,
 # file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_scar_tree.html")
 
-# Create LINNAEUS tree C ####
+# Create LINNAEUS tree B ####
 iterative.edges <- read.csv("./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
                             stringsAsFactors = F, sep = " ")
 iterative.edges$Scar.acquisition[is.na(iterative.edges$Scar.acquisition)] <- ""
@@ -269,3 +269,232 @@ iterative.tree_wg
 
 
 
+
+# Create CS 0 tree B ####
+phylip.edges <- read.table("./Data/Simulations/Tree_B2_2000cellsout_phylip_0_tree1",
+                           stringsAsFactors = F)
+phylip.scars <- read.csv("./Data/Simulations/Tree_B2_scar_conversion.csv",
+                         stringsAsFactors = F)
+
+# Add scar acquisition
+phylip.edges$Scars <- do.call(paste0, phylip.edges[-(1:3)])
+phylip.edges$Scar.acquisition <- 
+  sapply(phylip.edges$Scars,
+         function(x) paste(phylip.scars$Scar[unlist(strsplit(x, "")) == "1"], 
+                           collapse = ","))
+
+# Change cell names (remove x's)
+phylip.edges$Child <- 
+  sapply(phylip.edges$V2,
+         function(x){
+           if(grepl("_", x)){
+             return(unlist(strsplit(x, "x"))[1])
+           }else{
+             return(x)
+           }
+         }
+  )
+
+# Get correctly-formatted edge list with scars
+phylip.edges.f <- phylip.edges[, c("V1", "Child", "Scar.acquisition")]
+colnames(phylip.edges.f)[1] <- "Parent"
+
+# Collapse empty (i.e. scar-less) nodes, unless that node is a cell.
+phylip.edges.collapse <- phylip.edges.f
+# Loop over dataframe to find all nodes and tips that did not get a scar
+index <- 1
+while(index <= nrow(phylip.edges.collapse)){
+  if(phylip.edges.collapse$Scar.acquisition[index] == "" &
+     !grepl("_", phylip.edges.collapse$Child[index])){
+    cell.wo.scar.name <- phylip.edges.collapse$Child[index]
+    upstream.name <- phylip.edges.collapse$Parent[index]
+    phylip.edges.collapse$Parent[phylip.edges.collapse$Parent == 
+                                   cell.wo.scar.name] <-
+      upstream.name
+    phylip.edges.collapse <- phylip.edges.collapse[-index, ]
+  }else{index <- index + 1}
+}
+
+# Create nodes before cells if a scar is created in a cell
+e <- 1
+while(e <= nrow(phylip.edges.collapse)){
+  # For every edge, test if a scar is created in a cell. If so, create a new
+  # node to create the scar in that has the cell as daughter.
+  if(phylip.edges.collapse$Scar.acquisition[e] != "" & 
+     grepl("_", phylip.edges.collapse$Child[e])){
+    # Determine the cell
+    cell.child <- phylip.edges.collapse$Child[e]
+    
+    # Determine the new node number
+    numbered.parent.nodes <- 
+      as.integer(phylip.edges.collapse$Parent[which(phylip.edges.collapse$Parent != "root" & 
+                                                      !grepl("_", phylip.edges.collapse$Parent))])
+    numbered.child.nodes <- 
+      as.integer(phylip.edges.collapse$Child[which(phylip.edges.collapse$Child != "root" & 
+                                                     !grepl("_", phylip.edges.collapse$Child))])
+    new.node <- max(c(numbered.child.nodes, numbered.parent.nodes)) + 1
+    
+    # Determine scar
+    node.scar <- phylip.edges.collapse$Scar.acquisition[e]
+    
+    # Create and add new edge
+    new.edge <- data.frame(Parent = new.node,
+                           Child = cell.child,
+                           Scar.acquisition = "")
+    phylip.edges.collapse <- rbind(phylip.edges.collapse, new.edge)
+    
+    # Change old edge
+    phylip.edges.collapse$Child[e] <- new.node
+  }
+  e <- e + 1
+}
+
+phylip.edges.collapse <- 
+  rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
+        phylip.edges.collapse)
+phylip.edges.collapse$fill <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return("lightgrey")
+           }else{
+             return("black")
+           }
+         })
+phylip.edges.collapse$size <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return(0.5)
+           }else{
+             return(1)
+           }
+         })
+# Add entries for nodesize and fill; get fields into tree (fill has to be named
+# "fill", nodesize can be anything but its name has to be supplied in the 
+# collapsibleTree functioncall.
+phylip.tree <- 
+  generate_tree(phylip.edges.collapse[!grepl("_", phylip.edges.collapse$Child), ])
+phylip.tree_wg <- 
+  collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
+                  fontSize = 8, width = 300, height = 800, fill = "fill",
+                  nodeSize = "size")
+phylip.tree_wg
+# htmlwidgets::saveWidget(phylip.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_CamSok0.html")
+
+
+
+
+# Create doublet CS 0 tree B ####
+phylip.edges <- read.table("./Data/Simulations/Tree_B2_2000cellsout_d005_phylip_tree1",
+                           stringsAsFactors = F)
+phylip.scars <- read.csv("./Data/Simulations/Tree_B2_scar_conversion.csv",
+                         stringsAsFactors = F)
+
+# Add scar acquisition
+phylip.edges$Scars <- do.call(paste0, phylip.edges[-(1:3)])
+phylip.edges$Scar.acquisition <- 
+  sapply(phylip.edges$Scars,
+         function(x) paste(phylip.scars$Scar[unlist(strsplit(x, "")) == "1"], 
+                           collapse = ","))
+
+# Change cell names (remove x's)
+phylip.edges$Child <- 
+  sapply(phylip.edges$V2,
+         function(x){
+           if(grepl("_", x)){
+             return(unlist(strsplit(x, "x"))[1])
+           }else{
+             return(x)
+           }
+         }
+  )
+
+# Get correctly-formatted edge list with scars
+phylip.edges.f <- phylip.edges[, c("V1", "Child", "Scar.acquisition")]
+colnames(phylip.edges.f)[1] <- "Parent"
+
+# Collapse empty (i.e. scar-less) nodes, unless that node is a cell.
+phylip.edges.collapse <- phylip.edges.f
+# Loop over dataframe to find all nodes and tips that did not get a scar
+index <- 1
+while(index <= nrow(phylip.edges.collapse)){
+  if(phylip.edges.collapse$Scar.acquisition[index] == "" &
+     !grepl("_", phylip.edges.collapse$Child[index])){
+    cell.wo.scar.name <- phylip.edges.collapse$Child[index]
+    upstream.name <- phylip.edges.collapse$Parent[index]
+    phylip.edges.collapse$Parent[phylip.edges.collapse$Parent == 
+                                   cell.wo.scar.name] <-
+      upstream.name
+    phylip.edges.collapse <- phylip.edges.collapse[-index, ]
+  }else{index <- index + 1}
+}
+
+# Create nodes before cells if a scar is created in a cell
+e <- 1
+while(e <= nrow(phylip.edges.collapse)){
+  # For every edge, test if a scar is created in a cell. If so, create a new
+  # node to create the scar in that has the cell as daughter.
+  if(phylip.edges.collapse$Scar.acquisition[e] != "" & 
+     grepl("_", phylip.edges.collapse$Child[e])){
+    # Determine the cell
+    cell.child <- phylip.edges.collapse$Child[e]
+    
+    # Determine the new node number
+    numbered.parent.nodes <- 
+      as.integer(phylip.edges.collapse$Parent[which(phylip.edges.collapse$Parent != "root" & 
+                                                      !grepl("_", phylip.edges.collapse$Parent))])
+    numbered.child.nodes <- 
+      as.integer(phylip.edges.collapse$Child[which(phylip.edges.collapse$Child != "root" & 
+                                                     !grepl("_", phylip.edges.collapse$Child))])
+    new.node <- max(c(numbered.child.nodes, numbered.parent.nodes)) + 1
+    
+    # Determine scar
+    node.scar <- phylip.edges.collapse$Scar.acquisition[e]
+    
+    # Create and add new edge
+    new.edge <- data.frame(Parent = new.node,
+                           Child = cell.child,
+                           Scar.acquisition = "")
+    phylip.edges.collapse <- rbind(phylip.edges.collapse, new.edge)
+    
+    # Change old edge
+    phylip.edges.collapse$Child[e] <- new.node
+  }
+  e <- e + 1
+}
+
+phylip.edges.collapse <- 
+  rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
+        phylip.edges.collapse)
+phylip.edges.collapse$fill <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return("lightgrey")
+           }else{
+             return("black")
+           }
+         })
+phylip.edges.collapse$size <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return(0.5)
+           }else{
+             return(1)
+           }
+         })
+# Add entries for nodesize and fill; get fields into tree (fill has to be named
+# "fill", nodesize can be anything but its name has to be supplied in the 
+# collapsibleTree functioncall.
+phylip.tree <- 
+  generate_tree(phylip.edges.collapse[!grepl("_", phylip.edges.collapse$Child), ])
+phylip.tree_wg <- 
+  collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
+                  fontSize = 8, width = 300, height = 800, fill = "fill",
+                  nodeSize = "size")
+phylip.tree_wg
+# htmlwidgets::saveWidget(phylip.tree_wg,
+#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_CamSok0.html")

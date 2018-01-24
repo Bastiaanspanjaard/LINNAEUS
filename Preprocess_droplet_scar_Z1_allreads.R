@@ -14,10 +14,10 @@ scars.in <- read.csv("./Data/2017_10X_1/scar_filtered_scars.csv",
                      stringsAsFactors = F, sep = "\t")
 
 # Select only cells that exist in the mRNA data
-wt.all.cells <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv",
+wt.all.cells <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv",
                         stringsAsFactors = F, sep = ",")
 wt.cells <- wt.all.cells[wt.all.cells$Library == "L1", ]
-scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cluster")])
+scars.unfiltered <- merge(scars.in, wt.cells[, c("Cell", "Library", "Barcode", "Cell.type")])
 scars.unfiltered$Scar.id <- 1:nrow(scars.unfiltered)
 scars.unfiltered$Keep <- T
 scars.unfiltered$Pair <- "With"
@@ -215,7 +215,7 @@ scars.output <- scars.filter.1[!(scars.filter.1$Scar.id %in% sequencing.error.sc
 ggplot(scars.output) +
   geom_histogram(aes(x = Reads), binwidth = 10) +
   scale_x_continuous(limits = c(-10, 2000))
-min.scar.reads <- 100
+min.scar.reads <- 400
 scars.output.2 <- scars.output[scars.output$Reads >= min.scar.reads, ]
 
 # Doublet filter ####
@@ -228,21 +228,21 @@ cell.scar.count <-
   data.frame(table(scars.output.2$Barcode))
 colnames(cell.scar.count) <- c("Barcode", "Scars")
 cell.scar.count$Barcode <- as.character(cell.scar.count$Barcode)
-cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Barcode", "Cluster")])
+cell.scar.count <- merge(cell.scar.count, wt.cells[, c("Barcode", "Cell.type")])
 
-maximum.scars <- data.frame(Cluster = unique(cell.scar.count$Cluster),
+maximum.scars <- data.frame(Cell.type = unique(cell.scar.count$Cell.type),
                             Maximum = NA)
 
 for(c.row in 1:nrow(maximum.scars)){
-  c.cluster <- maximum.scars$Cluster[c.row]
+  c.cell.type <- maximum.scars$Cell.type[c.row]
   print(
-    ggplot(cell.scar.count[cell.scar.count$Cluster == c.cluster, ]) +
+    ggplot(cell.scar.count[cell.scar.count$Cell.type == c.cell.type, ]) +
       geom_histogram(aes(x = Scars), binwidth = 1) +
-      labs(title = c.cluster)
+      labs(title = c.cell.type)
   )
   maximum.scars$Maximum[c.row] <-
-    readline(prompt = paste("Max number scars for cell in cluster ", 
-                            c.cluster, "? ", sep = ""))
+    readline(prompt = paste("Max number scars for cell in cell.type ", 
+                            c.cell.type, "? ", sep = ""))
 }
 maximum.scars$Maximum <- as.integer(maximum.scars$Maximum)
 
@@ -251,7 +251,7 @@ maximum.scars$Maximum <- as.integer(maximum.scars$Maximum)
 ggplot() +
   geom_histogram(data = cell.scar.count, aes(x = Scars), binwidth = 1) +
   geom_vline(data = maximum.scars, aes(xintercept = Maximum + 0.5), color = "red") +
-  facet_wrap(~ Cluster) +
+  facet_wrap(~ Cell.type) +
   labs(y = "Count") +
   theme(axis.title = element_text(size = 12),
         axis.text = element_text(size = 6),

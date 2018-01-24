@@ -10,7 +10,7 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 3 # Number of developmental generations while scarring takes place
+generations <- 8 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
 generations.post <- 9 # Number of cell divisions a single cell undergoes after scarring
@@ -18,11 +18,11 @@ generations.post <- 9 # Number of cell divisions a single cell undergoes after s
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.15 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.1 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
                                stringsAsFactors = F)[, 1:2] # NB In the scar creation
 # section there is currently a line that ensures uniqueness of all scars created.
-scar.probabilities <- scar.probabilities[1:99, ] # Use this to select only a few scars with lower numbers
+scar.probabilities <- scar.probabilities[, ] # Use this to select only a few scars with lower numbers
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
 # scar.probabilities$p <- 
 #   c(0.5, rep(0.5/(nrow(scar.probabilities) - 1), nrow(scar.probabilities) - 1))
@@ -158,13 +158,16 @@ for(g in 1:generations){
 time.step <- 0.25
 wt.dynamics$Time <- wt.dynamics$Generation * time.step
 extend.time.to <- 2
-total.generations <- extend.time.to/time.step
-wt.dynamics.extended <- 
-  data.frame(Generation = (max(wt.dynamics$Generation) + 1):total.generations,
-             WT.perc = wt.dynamics$WT.perc[generations + 1],
-             Scars = wt.dynamics$Scars[generations + 1])
-wt.dynamics.extended$Time <- wt.dynamics.extended$Generation * time.step
-wt.dynamics <- rbind(wt.dynamics, wt.dynamics.extended)
+if(cell.generation < extend.time.to/time.step){
+  total.generations <- extend.time.to/time.step
+  wt.dynamics.extended <- 
+    data.frame(Generation = (max(wt.dynamics$Generation) + 1):total.generations,
+               WT.perc = wt.dynamics$WT.perc[generations + 1],
+               Scars = wt.dynamics$Scars[generations + 1])
+  wt.dynamics.extended$Time <- wt.dynamics.extended$Generation * time.step
+  wt.dynamics <- rbind(wt.dynamics, wt.dynamics.extended)
+}
+extend.time.to <- max(wt.dynamics$Time)
 
 ggplot(wt.dynamics) +
   geom_point(aes(x = Time, y = WT.perc)) +
@@ -191,6 +194,25 @@ ggplot(wt.dynamics) +
         axis.text = element_text(size = 6))
 # dev.off()
 
+# Calculate scars generated per division
+scars.created <- wt.dynamics
+scars.created$Scars.lastgen <- c(0, scars.created$Scars[-nrow(scars.created)])
+scars.created$Scars.this.gen <- scars.created$Scars - scars.created$Scars.lastgen
+# postscript("./Images/Scars_created_per_division_figure_version.eps",
+#     width = 2.5, height = 1.75)
+ggplot(scars.created[scars.created$Time > 0, ]) +
+  geom_point(aes(x = Time, y = Scars.this.gen), size = 1) +
+  # scale_y_log10(limits = c(1, NA),
+  #               breaks = c(1, 10, 100, 1000)) +
+  # geom_smooth(aes(x = Time, y = Scars.this.gen), se = F, color = "black",
+  #             method = "glm") +
+  labs(x = "Time (h)",
+       y = "New scars created") +
+  theme(text = element_text(size = 10),
+        axis.text = element_text(size = 8))
+# dev.off()
+
+
 # Plot developmental and scar tree ####
 # Developmental tree
 edges.scars <- merge(edges, cells[, c("phylo.number", "Scar.acquisition")])
@@ -204,8 +226,8 @@ edges.scars <- edges.scars[order(edges.scars$parent.phylo, edges.scars$phylo.num
 
 # pdf("Images/Simulations/Input_scartree_C.pdf",
 #            width = 24, height = 10)
-plot(tree, show.node.label = F, show.tip.label = F, edge.width = 3, no.margin = T)
-edgelabels(edges.scars$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
+# plot(tree, show.node.label = F, show.tip.label = F, edge.width = 3, no.margin = T)
+# edgelabels(edges.scars$Scar.acquisition, frame = "none", adj = c(0.5, -0.2))
 # title(main = cells$Scar.acquisition[is.na(cells$parent.phylo)])
 # dev.off()
 
