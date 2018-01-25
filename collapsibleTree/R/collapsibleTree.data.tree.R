@@ -23,9 +23,9 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  linkLength = NULL, fontSize = 10, tooltip = FALSE,
                                  tooltipHtml = NULL,nodeSize = NULL, collapsed = TRUE,
 				# PO
-				colors = NULL, 
+				colors = NULL, ctypes = NULL, 
 				pieSummary = TRUE,
-				pieNode = FALSE, nCell.types=ifelse(!is.null(colors, length(colors), 1:60)), 
+				pieNode = FALSE,  
                                  zoomable = TRUE, width = NULL, height = NULL, ...) {
 
   # acceptable inherent node attributes
@@ -45,11 +45,21 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   # Deriving hierarchy variable from data.tree input
   hierarchy <- unique(ToDataFrameTree(df, hierarchy_attribute)[[hierarchy_attribute]])
   if(length(hierarchy) <= 1) stop("hierarchy vector must be greater than length 1")
-
+  # PO tmp code for dealing with ctype colour attribution
+  # PO TODO, something still looks weird on the pie charts. Colors are not sorted.
+  # ctypes = sort(unique(df$Get("Cell.type")))
   # PO create colors
   if(is.null(colors)){
-	colors = c( colorRampPalette(c('#fa9fb5','#f768a1','#ae017e','#4400d9', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8' ))(nCell.types))
+	colors = c('#7400C2', '#8E14E0', '#A929FF', '#BB56FF', '#CD82FF', '#DFAEFF', '#F1DBFF', '#844420', '#904A23', '#9D5126', '#A85A2D', '#AE673D', '#B5734D', '#BB805D', '#C28C6D', '#C9997E', '#944D72', '#DF74AC', '#F89ACB', '#FABFDE', '#FDE5F2', '#173416', '#214B1F', '#2B6229', '#357933', '#3F913D', '#4AA847', '#57B354', '#66BA64', '#75C173', '#84C782', '#93CE91', '#A2D5A0', '#B1DCAF', '#C0E2BE', '#CFE9CD', '#DEF0DC', '#EDF7EC', '#B75B01', '#ED7600', '#FF9833', '#FFBE7F', '#FFE5CC', '#99991E', '#E6E62D', '#FFFF57', '#FFFF8C', '#FFFFC1', '#9F1213', '#B91516', '#D31819', '#E52729', '#EA4E4F', '#EE7475', '#F39B9B', '#F7C1C1', '#FCE8E8', '#214B6E', '#265780', '#2C6493', '#3171A6', '#377EB8', '#4E8DC0', '#649BC7', '#7BA9CF', '#91B8D7', '#A7C6DF', '#BED5E7', '#D4E3EF', '#EBF2F7')
   }
+
+  if(is.null(ctypes)){
+	ctypes = c('Hepatocytes A', 'Intestinal cells A', 'Epithelial cells (Mucosa)', 'Intestinal cells B (Exocrine)', 'Pancreas exocrine cells', 'Hepatocytes B', 'Hepatocytes C', 'Erythrocytes A', 'Erythrocytes B', 'Lymphocytes A', 'Nephric duct cells', 'Endothelial cells', 'Macrophages', 'Neutrophils', 'Kidney cells', 'Lymphocytes B', 'Pigment cells (Xantophores)', 'Pigment cells (Melanocytes)', 'Pigment cells (Iridophores)', 'Glial cells (Peripheral)', 'Neurons E (Peripheral)', 'Neurons A (Brain)', 'Neuronal precursors A', 'Neurons B (Proliferating)', 'Cone cells', 'Retinal cells A', 'Neuronal precursors B', 'Neurons C (Spinal cord)', 'Retinal cells B', 'Rod cells', 'Neurons D (Brain)', 'Radial glia A', 'Retinal pigment epithelial cells', 'Radial glia B', 'Olfactory receptor cells', 'Epithelial cells (Otic vesicle)', 'Oligodendrocytes', 'Inner ear cells', 'Chondrocytes A', 'Chondrocytes B', 'Chondrocytes C', 'Osteoblasts', 'Chondrocytes D', 'Undifferentiated mesodermal cells', 'Fibroblasts A', 'Fibroblasts B (Fin)', 'Fibroblasts C', 'Fibroblasts D', 'Skeletal muscle cells A', 'Muscle cells (Pectoral fin)', 'Skeletal muscle cells B', 'Satellite cells', 'Smooth muscle cells A (Vasculature)', 'Skeletal muscle cells C', 'Skeletal muscle cells D', 'Smooth muscle B', 'Skeletal muscle cells E (slow)', 'Epidermal cells A', 'Epithelial cells (Fin)', 'Epidermal cells B', 'Lens cells A', 'Keratinocytes A', 'Epidermal cells C', 'Lens cells B', 'Epidermal cells D', 'Neuromast cells', 'Epidermal precursors', 'Corneal cells', 'Epithelial cells (other)', 'Keratinocytes B')
+  }
+  ctypes = ctypes[!is.na(ctypes)]
+  ctypes = ctypes[is.na(match(ctypes, "NA"))]
+
+
 
   # create a list that contains the options
   options <- list(
@@ -84,46 +94,36 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     options$fill <- fill
   }
   # PO determine size classes
-  nodeSize_class = c(  2,2, 15, 20, 35)
-  nodeSize_breaks = c(-1,0, 5, 20, 100,1e6)
-  # PO tmp code for dealing with ctype colour attribution
-  ctypes = sort(unique(df$Get("Cell.type")))
-  # if next line commented, we are keeping NAs
-  ctypes = ctypes[!is.na(ctypes)]
+  nodeSize_class = c(   10, 15, 20, 35)
+  nodeSize_breaks = c( 0, 5, 20, 100, 1e6)
+  
+  if(pieSummary){
+    df = Clone(df)
+  }
 
-	# PO
-	if(pieSummary){
-		df = Clone(df)
-	}
-  # PO adding cell type counts 
   if(pieNode){
     t <- data.tree::Traverse(df, 'level')
     data.tree::Do(t, function(x) {
-    #message(x$levelName)
-		x$isScar = !x$isLeaf & !x$isRoot
-		if(x$isRoot) {x$isScar = TRUE}
-        xpieNode =  data.tree::Aggregate(x, 'Cell.type', function(j){
-	#	message(collapse = " ", j)
-		return(array(match(j, ctypes)))
-		})
-	
-	x$pieNode = table(c(nCell.types, unlist(xpieNode))) -1 
-	# for raw size	x$SizeOfNode = sum(x$pieNode)
+	x$isScar = !x$isLeaf & !x$isRoot
+	if(x$isRoot) {x$isScar = TRUE}
+	xpieNode = x$Get("Cell.type")
+	x$pieNode = table(factor(array(xpieNode), levels=ctypes))
 	x$SizeOfNode = nodeSize_class[cut(sum(x$pieNode), breaks=nodeSize_breaks, include.lowest=T, labels=F )]
-	})
+    })
     jsonFields <- c(jsonFields, "pieNode")
     jsonFields <- c(jsonFields, "SizeOfNode")
     jsonFields <- c(jsonFields, "isScar")
   }
-	if(pieSummary){
-	# Only after collecting the statistics for the scar nodes we get rid of the scells
-    		t <- data.tree::Traverse(df, 'post-order')
-    		data.tree::Do(t, function(x) {
-			if(x$isLeaf & !x$isRoot & !x$isScar){	
-				x$parent$RemoveChild(x$name)
-			}
-		})
-	}
+
+  if(pieSummary){
+   # Only after collecting the statistics for the scar nodes we get rid of the scells
+   	t <- data.tree::Traverse(df, 'post-order')
+   	data.tree::Do(t, function(x) {
+		if(x$isLeaf & !x$isRoot & !x$isScar){	
+			x$parent$RemoveChild(x$name)
+		}
+	})
+  }
 
   # only necessary to perform these calculations if there is a tooltip
   if(tooltip & is.null(tooltipHtml)) {
@@ -186,4 +186,9 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     "collapsibleTree", x, width = width, height = height,
     htmlwidgets::sizingPolicy(viewer.padding = 0)
   )
+}
+
+# PO helper function left for the record
+pieProportions <- function(node) {
+  return(c(node$Cell.type, sapply(node$children, pieProportions)))
 }

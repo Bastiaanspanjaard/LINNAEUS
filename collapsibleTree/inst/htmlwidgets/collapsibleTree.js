@@ -17,7 +17,7 @@ HTMLWidgets.widget({
   // PO define pieNode size
      var pieNodeOut = 10,
 	pieNodeInner= pieNodeOut/1e6,
-	scSize = 2;
+	scSize = 4;
   // PO define pie and arc PO
   // TODO
      var arc = d3.arc().innerRadius(pieNodeInner),
@@ -96,9 +96,9 @@ HTMLWidgets.widget({
        var arcGs = nodeEnter.selectAll("g.arc")
         .data(function(d) {
 	var proportions = (d.data.isScar?  d.data.pieNode : [1]) 
-	var pieProp = pie(proportions).map(function(m){
-		m.r = d.data.SizeOfNode
+	var pieProp = pie(d.data.pieNode).map(function(m){
 		m.isScar = JSON.parse(d.data.isScar)
+		m.r = (m.isScar, d.data.SizeOfNode, d.data.SizeOfNode)
 		return m;
 		})
           return pieProp;
@@ -137,18 +137,18 @@ HTMLWidgets.widget({
       .attr('dy', '.35em')
       .attr('x', function(d) {
         // Scale padding for label to the size of node
-        //var padding = (d.data.SizeOfNode || 10) + 3
+        var padding = (d.data.SizeOfNode || 10) + 3
         // PO
-         var padding = 10 + 3
+        // var padding = 10 + 3
         return d.children || d._children ? -1 * padding : padding;
       })
       .attr('text-anchor', function(d) {
         return d.children || d._children ? 'end' : 'start';
       })
       .style('font-size', options.fontSize + 'px')
-      //.text(function(d) { return d.data.name; }); 
+      .text(function(d) { return d.data.name; }); 
       // PO
-      .text(function(d) { return " "; });
+      //.text(function(d) { return " "; });
 
       // UPDATE
       var nodeUpdate = nodeEnter.merge(node);
