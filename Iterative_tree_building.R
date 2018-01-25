@@ -744,8 +744,54 @@ LINNAEUS.cell.tree_wg <-
 LINNAEUS.cell.tree_wg
 LINNAEUS.cell.tree.pie <-
   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar,
-                  collapsed = F, pieNode = F)
+                  collapsed = F, pieNode = T)
 LINNAEUS.cell.tree.pie
 # htmlwidgets::saveWidget(LINNAEUS.cell.tree_wg,
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
+# save(tree.cells.c.plot, file = "./Data/2017_10X_2/Z2_tree.Robj")
+# save(LINNAEUS.cell.tree, file = "./Data/2017_10X_2/Z2_Ltree.Robj")
 
+# Extract subtree ####
+get.node.comp <- function(node, tree.edges){
+  # Return the cell type composition of a node, including its subnodes (recursive function)
+  node.children <- extracted.tree$Child[is.na(extracted.tree$Cell.type) & 
+                                          extracted.tree$Parent == node]
+  cell.children <- extracted.tree$Child[!is.na(extracted.tree$Cell.type) & 
+                                          extracted.tree$Parent == node]
+  comp.this.node <-
+    data.frame(table(extracted.tree$Cell.type[extracted.tree$Child %in% 
+                                                cell.children]))
+  colnames(comp.this.node) <- c("Cell.type", "Count")
+  if(length(node.children) > 0){
+    for(n in 1:length(node.children)){
+      comp.below <- get.node.comp(node.children[n], tree.edges)
+      colnames(comp.below)[2] <- "Count.1"
+      comp.this.node <- merge(comp.this.node, comp.below)
+      comp.this.node$Count <- comp.this.node$Count + comp.this.node$Count.1
+      comp.this.node <- comp.this.node[, c("Cell.type", "Count")]
+    }
+  }
+  
+  return(comp.this.node)
+}
+
+celltypes.to.extract <- c("Chondrocytes A", "Retinal cells A", "Erythrocytes B",
+                          "Epidermal cells B", "Fibroblasts B (Fin)", "Hepatocytes A")
+extracted.tree <- tree.cells.c.plot
+extracted.tree <- extracted.tree[is.na(extracted.tree$Cell.type) | 
+                                   extracted.tree$Cell.type %in% celltypes.to.extract, ]
+extracted.tree$Keep <-
+  sapply(extracted.tree$Child,
+         function(x){
+           if(grepl("_", x)){
+             return(T)
+           }else{
+             node.comp <- get.node.comp(x, extracted.tree)
+             node.comp <- node.comp[node.comp$Cell.type %in% celltypes.to.extract, ]
+             
+             return(sum(node.comp$Count) > 0)
+           }
+         }
+  )
+
+extracted.tree <- extracted.tree[extracted.tree$Keep, ]
