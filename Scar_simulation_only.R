@@ -10,7 +10,7 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 8 # Number of developmental generations while scarring takes place
+generations <- 3 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
 generations.post <- 9 # Number of cell divisions a single cell undergoes after scarring
@@ -18,11 +18,11 @@ generations.post <- 9 # Number of cell divisions a single cell undergoes after s
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.1 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.15 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
                                stringsAsFactors = F)[, 1:2] # NB In the scar creation
 # section there is currently a line that ensures uniqueness of all scars created.
-scar.probabilities <- scar.probabilities[, ] # Use this to select only a few scars with lower numbers
+scar.probabilities <- scar.probabilities[1:99, ] # Use this to select only a few scars with lower numbers
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
 # scar.probabilities$p <- 
 #   c(0.5, rep(0.5/(nrow(scar.probabilities) - 1), nrow(scar.probabilities) - 1))
@@ -35,8 +35,8 @@ cell.types <- data.frame(Cell.type = c("Medium"),
                          Detection.rate = 0.3,
                          Abundance = 1)
 # cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
-# Detection.rate = c(0.7, 0.3, 0.15),
-# Abundance = c(0.15, 0.25, 0.6))
+#                          Detection.rate = c(0.7, 0.3, 0.15),
+#                          Abundance = c(0.15, 0.25, 0.6))
 # cell.types$Cum.abundance <- cumsum(cell.types$Abundance)
 # integration.types <- data.frame(Integration = c("Strong", "Weak"),
 # Detection.rate = c(1, 0.05),
@@ -237,6 +237,7 @@ dev.tree.edges$Parent[is.na(dev.tree.edges$Parent)] <- 0
 
 dev.tree.edges$fill <- "black"
 dev.tree.edges$size <- 1
+dev.tree.edges$Cell.type <- NA
 dev_tree <- generate_tree(dev.tree.edges)
 dev_tree_wg <- collapsibleTree(dev_tree, root = dev_tree$scar, collapsed = F,
                                fontSize = 8, width = 300, height = 200,
@@ -407,13 +408,13 @@ integration.sites <- merge(integration.sites, integration.types[, c("Integration
 
 # Sample cells and scars ####
 # Parameters 
-cells.sampled <- 3000
+cells.sampled <- 125
 # detection.rate <- 0.5
 set.seed(2)
 
 # Sample cells and scars
 readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites,
-                          doublet.rate = 0.05)
+                          doublet.rate = 0)
 cells.in.tree <- readout.wt[readout.wt$Scar != 0, ]
 
 length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.

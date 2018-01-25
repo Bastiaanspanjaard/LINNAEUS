@@ -12,14 +12,10 @@ F11.scars$Library <- "F11"
 F12.scars <- read.csv("./Data/2017_10X_10_CR/F1_2_used_scars_7Larvae.csv",
                       stringsAsFactors = F)
 F12.scars$Library <- "F12"
-# Scar probabilities?
+
 # Cell types
-cell.types <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells.csv",
+cell.types <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv",
                        stringsAsFactors = F)
-clusters <- read.csv("./Data/Larvae_data/Preliminary_celltypes.csv",
-                     stringsAsFactors = F)
-colnames(clusters)[1] <- "Cluster"
-cell.types <- merge(cell.types, clusters)
 
 # Determine scar content of F1 datasets ####
 # Filter data for duplicates and number of reads
@@ -36,61 +32,14 @@ F12.scar.freqs <- F12.scar.freqs[F12.scar.freqs$Freq > 0, ]
 scar.freqs <- merge(F11.scar.freqs, F12.scar.freqs, all = T)
 scar.freqs[is.na(scar.freqs)] <- 0
 
-# N.F11 <- sum(cell.types$Library == "F11")
-# N.F12 <- sum(cell.types$Library == "F12")
-# 
-# scar.freqs$Detection.rate.1 <- scar.freqs$Freq.1/N.F11
-# scar.freqs$Detection.rate.2 <- scar.freqs$Freq.2/N.F12
-# scar.freqs$Max.det.rate <- 
-#   apply(scar.freqs[, c("Detection.rate.1", "Detection.rate.2")], 1, max)
-# scar.freqs$Scar <- 
-#   apply(scar.freqs[, c("CIGAR", "Max.det.rate")], 1,
-#         function(x){
-#           if(as.numeric(x[2]) >= 0.01){
-#             return(x[1])
-#           }else{
-#             return("Other")
-#           }
-#         }
-#   )
-# scar.freqs.F11 <- aggregate(scar.freqs$Detection.rate.1,
-#                             by = list(Scar = scar.freqs$Scar),
-#                             sum)
-# colnames(scar.freqs.F11)[2] <- "Detection"
-# scar.freqs.F11$Larva <- "F1_1"
-# scar.freqs.F12 <- aggregate(scar.freqs$Detection.rate.2,
-#                             by = list(Scar = scar.freqs$Scar),
-#                             sum)
-# colnames(scar.freqs.F12)[2] <- "Detection"
-# scar.freqs.F12$Larva <- "F1_2"
-# scar.freqs.plot <- rbind(scar.freqs.F11, scar.freqs.F12)
-# 
-# ggplot(scar.freqs.plot) +
-#   geom_col(aes(x = Scar, y = Detection)) +
-#   facet_wrap(~Larva)
-# 
-# scar.freqs.s <- 
-#   melt(scar.freqs[scar.freqs$Max.det.rate >= 0.01, 
-#                   c("CIGAR", "Detection.rate.1", "Detection.rate.2")])
-# colnames(scar.freqs.s) <- c("Scar", "Larva", "Detection.rate")
-
-
-# scar.freqs$Perc.1 <- 100 * scar.freqs$Freq.1/sum(scar.freqs$Freq.1, na.rm = T)
-# scar.freqs$Perc.2 <- 100 * scar.freqs$Freq.2/sum(scar.freqs$Freq.2, na.rm = T)
 scar.freqs$Rate.1 <- scar.freqs$Freq.1/sum(scar.freqs$Freq.1, na.rm = T)
 scar.freqs$Rate.2 <- scar.freqs$Freq.2/sum(scar.freqs$Freq.2, na.rm = T)
-# scar.freqs$Mean.perc <- rowMeans(scar.freqs[, c("Perc.1", "Perc.2")])
 scar.freqs$Max.rate <- 
     apply(scar.freqs[, c("Rate.1", "Rate.2")], 1, max)
-# scar.freqs <- scar.freqs[order(-scar.freqs$Mean.perc), ]
 scar.freqs <- scar.freqs[order(-scar.freqs$Max.rate), ]
 scar.freqs$Scar <- paste(1:nrow(scar.freqs), scar.freqs$CIGAR, sep = ":")
-# Make cutoff and piechart of 'real' scars
-# scar.freqs$Scar.1 <-
-#   ifelse(apply(scar.freqs[, c("Perc.1", "Perc.2")], 1, max) >= 0.5,
-#          scar.freqs$Scar, "Other")
 scar.freqs$Scar.1 <-
-  ifelse(scar.freqs$Max.det.rate >= 0.01,
+  ifelse(scar.freqs$Max.rate >= 0.01,
          scar.freqs$Scar, "Other")
 scar.freqs$Scar.1[scar.freqs$Scar.1 == "Other"] <- 
   paste(sum(scar.freqs$Scar.1 != "Other") + 1, ":Other", sep = "")
@@ -164,27 +113,11 @@ celltype.scar.detected.F11 <-
                                c("1:47M6D28M", "2:47M3D28M", "3:45M30S",
                                  "6:46M3D29M", "7:48M1I1M9D25M", "8:49M1I25M",
                                  "9:Other"), ]
-# celltype.counts.F11 <- celltype.counts[celltype.counts$Library == "F11", ]
-# celltype.counts.F11 <- celltype.counts.F11[order(celltype.counts.F11$Cells), ]
 celltype.all.counts <- celltype.all.counts[order(celltype.all.counts$Cells), ]
 celltype.scar.detected.F11$Cell.type <-
   factor(celltype.scar.detected.F11$Cell.type, levels = celltype.all.counts$Cell.type)
-# celltype.scar.detected.F11$Det.min.95 <-
-#   apply(celltype.scar.detected.F11[, 4:5], 1,
-#         function(x){
-#           xt <- prop.test(as.integer(x[1]), as.integer(x[2]))
-#           return(xt$conf.int[1])
-#         }
-#   )
-# celltype.scar.detected.F11$Det.max.95 <-
-#   apply(celltype.scar.detected.F11[, 4:5], 1,
-#         function(x){
-#           xt <- prop.test(as.integer(x[1]), as.integer(x[2]))
-#           return(xt$conf.int[2])
-#         }
-#   )
 
-# pdf("./Images/2017_10X_10/F1_1_detection_rates_2.pdf",
+# pdf("./Images/2017_10X_10/F1_1_detection_rates_3.pdf",
 #         width = 5, height = 8)
 ggplot(celltype.scar.detected.F11) +
   geom_tile(aes(x = Scar.CIGAR, y = Cell.type, fill = Detection)) +
@@ -199,22 +132,6 @@ ggplot(celltype.scar.detected.F11) +
         text = element_text(size = 16),
         axis.text.y = element_text(size = 8))
 # dev.off()
-# ggplot(celltype.scar.detected.F11) +
-#   geom_bar(stat = "identity", position = "dodge",
-#            aes(x = F1.ident, fill = Scar, y = Detection)) +
-#   theme(axis.text.x=element_text(angle = -90, hjust = 0))
-# F11.detection.examples <- 
-#   celltype.scar.detected.F11[celltype.scar.detected.F11$F1.ident %in% 
-#                                c("Fibroblasts A", "Skeletal muscle A", "Brain neurons"), ]
-# pdf("./Images/2017_10X_10/F1_1_detection_rates_selection.pdf",
-#         width = 12, height = 9)
-# ggplot(F11.detection.examples,
-#        aes(x = F1.ident, fill = Scar)) +
-#   geom_bar(stat = "identity", position = "dodge", aes(y = Detection)) +
-#   geom_errorbar(aes(ymin = Det.min.95, ymax = Det.max.95), position = "dodge") +
-#   theme(axis.text.x=element_text(angle = -90, hjust = 0, vjust = 0.25)) +
-#   labs(x = "")
-# dev.off()
 
 celltype.scar.detected.F12 <- 
   celltype.scar.detected[celltype.scar.detected$Library == "F12", ]
@@ -222,26 +139,10 @@ celltype.scar.detected.F12 <-
   celltype.scar.detected.F12[celltype.scar.detected.F12$Scar %in% 
                                c("1:47M6D28M", "2:47M3D28M", "4:49M4I2M4D20M",
                                  "5:48M4D27M", "8:49M1I25M", "9:Other"), ]
-# celltype.counts.F12 <- celltype.counts[celltype.counts$Library == "F12", ]
-# celltype.counts.F12 <- celltype.counts.F12[order(celltype.counts.F12$Cells), ]
 celltype.scar.detected.F12$Cell.type <-
   factor(celltype.scar.detected.F12$Cell.type, levels = celltype.all.counts$Cell.type)
-# celltype.scar.detected.F12$Det.min.95 <-
-#   apply(celltype.scar.detected.F12[, 4:5], 1,
-#         function(x){
-#           xt <- prop.test(as.integer(x[1]), as.integer(x[2]))
-#           return(xt$conf.int[1])
-#         }
-#   )
-# celltype.scar.detected.F12$Det.max.95 <-
-#   apply(celltype.scar.detected.F12[, 4:5], 1,
-#         function(x){
-#           xt <- prop.test(as.integer(x[1]), as.integer(x[2]))
-#           return(xt$conf.int[2])
-#         }
-#   )
 
-# pdf("./Images/2017_10X_10/F1_2_detection_rates_2.pdf",
+# pdf("./Images/2017_10X_10/F1_2_detection_rates_3.pdf",
 #     width = 5.5, height = 8)
 ggplot(celltype.scar.detected.F12) +
   geom_tile(aes(x = Scar.CIGAR, y = Cell.type, fill = Detection)) +
@@ -260,7 +161,7 @@ ggplot(celltype.scar.detected.F12) +
 celltype.scar.detected.2 <- celltype.scar.detected
 celltype.scar.detected.2$Library <- ifelse(celltype.scar.detected.2$Library == "F11", 1, 2)
 
-# pdf("./Images/2017_10X_10/F1_detection_rates_2.pdf",
+# pdf("./Images/2017_10X_10/F1_detection_rates_3.pdf",
 #     width = 8.5, height = 8)
 ggplot(celltype.scar.detected.2) +
   geom_tile(aes(x = Scar.CIGAR, y = Cell.type, fill = Detection)) +

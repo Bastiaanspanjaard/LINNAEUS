@@ -719,10 +719,11 @@ generate_tree = function(df){
     parent = paste0('nd', as.character(df$Parent[i]))
     child = paste0('nd', as.character(df$Child[i]))
     scar <- df$Scar.acquisition[i]
-    
-    if(!exists(child)){ 
-      eval_txt = sprintf('%s <<- Node$new("%s", name="%s", scar = "%s")', 
-                         child, child, child, scar)
+    cell.type <- df$Cell.type[i]
+
+    if(!exists(child)){
+      eval_txt = sprintf('%s <<- Node$new("%s", name="%s", scar = "%s", Cell.type = "%s")',
+                         child, child, child, scar, cell.type)
       eval(parse(text=eval_txt))
       if("fill" %in% colnames(df)){
         eval_txt <- paste(child, "$fill <- \"", df$fill[i], "\"", sep = "")
@@ -738,12 +739,12 @@ generate_tree = function(df){
       eval(parse(text=add_txt))
     }
   }
-  
+
   return_tree <- eval(parse(text=sprintf('%s$root', ls(envir=globalenv(), pattern='^nd')[1])))
   rm(list=ls(envir=globalenv(), pattern='^nd'), envir=globalenv())
-  
+
   return(return_tree)
-}  
+}
 
 
 get.dist.index <- function(k, n){
