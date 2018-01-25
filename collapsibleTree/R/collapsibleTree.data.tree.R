@@ -24,6 +24,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  tooltipHtml = NULL,nodeSize = NULL, collapsed = TRUE,
 				# PO
 				colors = NULL, 
+				pieSummary = TRUE,
 				pieNode = FALSE, nCell.types=ifelse(!is.null(colors, length(colors), 1:60)), 
                                  zoomable = TRUE, width = NULL, height = NULL, ...) {
 
@@ -47,7 +48,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 
   # PO create colors
   if(is.null(colors)){
-	colors = c('red', colorRampPalette(c('#fa9fb5','#f768a1','#ae017e','#4400d9', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8' ))(nCell.types))
+	colors = c( colorRampPalette(c('#fa9fb5','#f768a1','#ae017e','#4400d9', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8' ))(nCell.types))
   }
 
   # create a list that contains the options
@@ -82,30 +83,47 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     # default to using fill value as literal color name
     options$fill <- fill
   }
-  
+  # PO determine size classes
+  nodeSize_class = c(  2,2, 15, 20, 35)
+  nodeSize_breaks = c(-1,0, 5, 20, 100,1e6)
   # PO tmp code for dealing with ctype colour attribution
   ctypes = sort(unique(df$Get("Cell.type")))
   # if next line commented, we are keeping NAs
-  #cytpes = cytpes[!is.na(ctypes)]
+  ctypes = ctypes[!is.na(ctypes)]
 
-
+	# PO
+	if(pieSummary){
+		df = Clone(df)
+	}
   # PO adding cell type counts 
   if(pieNode){
     t <- data.tree::Traverse(df, 'level')
     data.tree::Do(t, function(x) {
-#message(x$levelName)
+    #message(x$levelName)
+		x$isScar = !x$isLeaf & !x$isRoot
+		if(x$isRoot) {x$isScar = TRUE}
         xpieNode =  data.tree::Aggregate(x, 'Cell.type', function(j){
 	#	message(collapse = " ", j)
 		return(array(match(j, ctypes)))
 		})
 	
 	x$pieNode = table(c(nCell.types, unlist(xpieNode))) -1 
-	x$SizeOfNode = sum(x$pieNode)
-#browser()
+	# for raw size	x$SizeOfNode = sum(x$pieNode)
+	x$SizeOfNode = nodeSize_class[cut(sum(x$pieNode), breaks=nodeSize_breaks, include.lowest=T, labels=F )]
 	})
     jsonFields <- c(jsonFields, "pieNode")
     jsonFields <- c(jsonFields, "SizeOfNode")
+    jsonFields <- c(jsonFields, "isScar")
   }
+	if(pieSummary){
+	# Only after collecting the statistics for the scar nodes we get rid of the scells
+    		t <- data.tree::Traverse(df, 'post-order')
+    		data.tree::Do(t, function(x) {
+			if(x$isLeaf & !x$isRoot & !x$isScar){	
+				x$parent$RemoveChild(x$name)
+			}
+		})
+	}
 
   # only necessary to perform these calculations if there is a tooltip
   if(tooltip & is.null(tooltipHtml)) {
@@ -149,7 +167,6 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
       x$SizeOfNode <- round(sqrt(x$SizeOfNode)*pi, 2)
     })
     # update left margin based on new root size
-    options$margin$left <- options$margin$left + df$SizeOfNode - 10
     jsonFields <- c(jsonFields, "SizeOfNode")
   }
 

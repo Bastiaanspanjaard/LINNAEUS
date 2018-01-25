@@ -1,26 +1,23 @@
 HTMLWidgets.widget({
-
   name: 'collapsibleTree',
   type: 'output',
 
   factory: function(el, width, height) {
 
-//  var color = d3.scaleOrdinal().range(["#000000","#bdc9e1","#74a9cf","#0570b0",
-//                                       "#0fbbea","#0dcfe1","#54aa0f","#157bbf"]);
-//
   // PO define colors
   var fixed_colors = d3.scaleOrdinal().range(["#000023", "#03002C", "#070035", "#0A003E", "#0E0047", "#120050", "#150059", "#190063", "#1D006C", "#200075", "#24007E", "#280087", "#2B0090", "#2F0099", "#3300A3", "#3700AA", "#3C00AD", "#4200B1", "#4700B4", "#4D00B7", "#5200BA", "#5800BD", "#5D00C0", "#6300C3", "#6800C6", "#6E00C9", "#7300CD", "#7900D0", "#7E00D3", "#8400D6", "#8901D1", "#8F03C5", "#9406B8", "#9A08AC", "#A00A9F", "#A50D93", "#AB0F86", "#B0127A", "#B6146D", "#BB1761", "#C11955", "#C61C48", "#CC1E3C", "#D2202F", "#D72323", "#DA2E20", "#DD3D20", "#E04B20", "#E25920", "#E56720", "#E77620", "#EA8420", "#EC9220", "#EFA120", "#F2AF20", "#F4BD20", "#F7CC20", "#F9DA20", "#FCE820", "#FFF721"])
 
 
     var i = 0,
-    duration = 1750,
+    duration = 750,
     root = {},
     options = {},
     treemap;
 
   // PO define pieNode size
      var pieNodeOut = 10,
-	pieNodeInner= pieNodeOut/1e6
+	pieNodeInner= pieNodeOut/1e6,
+	scSize = 2;
   // PO define pie and arc PO
   // TODO
      var arc = d3.arc().innerRadius(pieNodeInner),
@@ -28,7 +25,7 @@ HTMLWidgets.widget({
   
     // Optionally enable zooming, and limit to 1/5x or 5x of the original viewport
     var zoom = d3.zoom()
-    .scaleExtent([1/5, 5])
+    .scaleExtent([1/10, 10])
     .on('zoom', function () {
       if (options.zoomable) svg.attr('transform', d3.event.transform)
     })
@@ -75,6 +72,13 @@ HTMLWidgets.widget({
       // Enter any new modes at the parent's previous position.
       var nodeEnter = node.enter().append('g')
       .attr('class', 'node')
+       .attr('size', function(d) {
+        return d.data.SizeOfNode;
+      })
+       .attr('isScar', function(d) {
+        return d.data.isScar;
+      })
+
       .attr('transform', function(d) {
         return 'translate(' + source.y0 + ',' + source.x0 + ')';
       })
@@ -91,16 +95,24 @@ HTMLWidgets.widget({
       if(options.pieNode){
        var arcGs = nodeEnter.selectAll("g.arc")
         .data(function(d) {
-          var pieProp = d.data.pieNode;     
-          return pie(pieProp);
+	var proportions = (d.data.isScar?  d.data.pieNode : [1]) 
+	var pieProp = pie(proportions).map(function(m){
+		m.r = d.data.SizeOfNode
+		m.isScar = JSON.parse(d.data.isScar)
+		return m;
+		})
+          return pieProp;
         });
 
         var arcEnter = arcGs.enter().append("g").attr("class", "arc");
 
         arcEnter.append("path")
          .attr("d", function(d) {
-         arc.outerRadius(pieNodeOut);
-         return arc(d);
+        size = 	(d.isScar ? d.r  : scSize)
+         //arc.outerRadius(pieNodeOut);
+         arc.outerRadius(size);
+	var final_arc = arc(d);
+         return final_arc;
          })
          .style("fill", function(d, i) { return color(i); });
 
@@ -154,7 +166,7 @@ HTMLWidgets.widget({
       if(options.pieNode){
         nodeUpdate.select('arc.node')
         .attr('outerRadius', function(d){
-	    return pieNodeOut * d.data.SizeOfNode/10
+	    return pieNodeOut * d.data.SizeOfNode/150
 	})
 	// PO TODO verify action
         .style("fill", function(d) {
