@@ -22,11 +22,16 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  aggFun = sum, fill = "lightsteelblue",
                                  linkLength = NULL, fontSize = 10, tooltip = FALSE,
                                  tooltipHtml = NULL,nodeSize = NULL, collapsed = TRUE,
+                                 zoomable = TRUE, width = NULL, height = NULL,
 				# PO
+    				nodeSize_sc = 2, nodeLabel_sc = FALSE,
 				colors = NULL, ctypes = NULL, 
+				nodeSize_class = c(   10, 15, 20, 35),
+				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
 				pieSummary = TRUE,
 				pieNode = FALSE,  
-                                 zoomable = TRUE, width = NULL, height = NULL, ...) {
+				...) {
+
 
   # acceptable inherent node attributes
   nodeAttr <- c("leafCount", "count")
@@ -73,6 +78,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     pieNode = pieNode, #PO 
     useColors = !is.null(colors), #PO 
     colors = colors, #PO
+    nodeLabel_sc = ifelse(is.null(nodeLabel_sc), TRUE, nodeLabel_sc ),
     zoomable = zoomable,
     margin = list(
       top = 20,
@@ -94,23 +100,30 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     options$fill <- fill
   }
   # PO determine size classes
-  nodeSize_class = c(   10, 15, 20, 35)
-  nodeSize_breaks = c( 0, 5, 20, 100, 1e6)
-  
-  if(pieSummary){
-    df = Clone(df)
-  }
+  df = Clone(df)
+  #if(pieSummary){
+  #  df = Clone(df)
+  #}
+  SortNumeric(df, decreasing=T, recursive=T,  attribute = function(x){ifelse(x$Cell.type == "NA", "1e4", as.numeric(match(x$Cell.type, ctypes)))})
 
   if(pieNode){
     t <- data.tree::Traverse(df, 'level')
     data.tree::Do(t, function(x) {
 	x$isScar = !x$isLeaf & !x$isRoot
-	if(x$isRoot) {x$isScar = TRUE}
+	if(x$isRoot) {x$isScar = TRUE; x$Cell.type = "_"}
 	xpieNode = x$Get("Cell.type")
+	x$ct = x$Cell.type
 	x$pieNode = table(factor(array(xpieNode), levels=ctypes))
 	x$SizeOfNode = nodeSize_class[cut(sum(x$pieNode), breaks=nodeSize_breaks, include.lowest=T, labels=F )]
+	if(!x$isScar) {
+		x$SizeOfNode = nodeSize_sc
+	}else{
+		sapply(x$children, function(child){child$parSize = length(x$children)}) 
+	}
     })
     jsonFields <- c(jsonFields, "pieNode")
+    jsonFields <- c(jsonFields, "parSize") # keeps memory of the size of parent; used to decide wheter to show cell type of single cell
+    jsonFields <- c(jsonFields, "ct")
     jsonFields <- c(jsonFields, "SizeOfNode")
     jsonFields <- c(jsonFields, "isScar")
   }
@@ -191,4 +204,27 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 # PO helper function left for the record
 pieProportions <- function(node) {
   return(c(node$Cell.type, sapply(node$children, pieProportions)))
+}
+
+# color legend
+#plot_color_map <- function(colors, ctypes){
+#	pdf('color_map.pdf', width=2.5, height=10)
+#	par(mar=c(1.1, 10, 1.1, 1.1))
+#		image(y=1:length(colors), x=1, t(as.matrix(1:length(colors))), col= colors, axes=F, ylab='', xlab=''); axis(2, at=1:length(colors), las=2, labels = ctypes, cex.axis=0.5)
+#	dev.off()
+#}
+# helper function to sort children by attribute, casting the given value to numeric
+SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TRUE)
+{
+    if (node$isLeaf)
+        return()
+    ChildL <- sapply(node$children, function(x) GetAttribute(x,
+        attribute, ...))
+    names(ChildL) <- names(node$children)
+    node$children <- node$children[order(as.numeric(ChildL), decreasing = decreasing,
+        na.last = TRUE)]
+    if (recursive)
+        for (child in node$children) SortNumeric(child, attribute, ...,
+            decreasing = decreasing, recursive = recursive)
+    invisible(node)
 }

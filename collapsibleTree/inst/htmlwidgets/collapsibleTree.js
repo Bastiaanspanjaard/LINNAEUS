@@ -97,8 +97,9 @@ HTMLWidgets.widget({
         .data(function(d) {
 	var proportions = (d.data.isScar?  d.data.pieNode : [1]) 
 	var pieProp = pie(d.data.pieNode).map(function(m){
-		m.isScar = JSON.parse(d.data.isScar)
-		m.r = (m.isScar, d.data.SizeOfNode, d.data.SizeOfNode)
+		m.isScar = JSON.parse(d.data.isScar);
+		m.r = d.data.SizeOfNode;
+		m.ct = (m.isScar? d.data.name : d.data.ct);
 		return m;
 		})
           return pieProp;
@@ -146,9 +147,20 @@ HTMLWidgets.widget({
         return d.children || d._children ? 'end' : 'start';
       })
       .style('font-size', options.fontSize + 'px')
-      .text(function(d) { return d.data.name; }); 
+      //.text(function(d) { return d.data.name; }); 
       // PO
       //.text(function(d) { return " "; });
+      .text(function(d) { 
+		isScar = JSON.parse(d.data.isScar);
+		nodeLabel_sc = JSON.parse(options.nodeLabel_sc);
+		if(isScar){return d.data.name;}
+			if(nodeLabel_sc){ 
+				if(d.data.parSize < options.nodeLabel_sc){ // TODO deprecate and adapt to show labels according to global layout 
+		 			return d.data.ct;
+			}
+		}
+		 return " ";
+	 }); 
 
       // UPDATE
       var nodeUpdate = nodeEnter.merge(node);
