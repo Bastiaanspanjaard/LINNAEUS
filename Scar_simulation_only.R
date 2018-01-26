@@ -10,19 +10,19 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-generations <- 3 # Number of developmental generations while scarring takes place
+generations <- 6 # Number of developmental generations while scarring takes place
 # Note that the first generation consists of one cell, meaning the nth generation
 # consists of 2^(n-1) cells.
-generations.post <- 9 # Number of cell divisions a single cell undergoes after scarring
+generations.post <- 8 # Number of cell divisions a single cell undergoes after scarring
 # takes place
 expansion <- 2^generations.post # Expansion size of a single cell after scarring due to
 # [generations.post] divisions.
 sites <- 10
-scar.speed <- 0.15 # Speed is average chance of transforming a site per cell cycle.
+scar.speed <- 0.1 # Speed is average chance of transforming a site per cell cycle.
 scar.probabilities <- read.csv("./Data/scar_Probs.csv",
                                stringsAsFactors = F)[, 1:2] # NB In the scar creation
 # section there is currently a line that ensures uniqueness of all scars created.
-scar.probabilities <- scar.probabilities[1:99, ] # Use this to select only a few scars with lower numbers
+scar.probabilities <- scar.probabilities[1:999, ] # Use this to select only a few scars with lower numbers
 scar.probabilities$p <- 1/nrow(scar.probabilities) # Use this to set all probabilities equal
 # scar.probabilities$p <- 
 #   c(0.5, rep(0.5/(nrow(scar.probabilities) - 1), nrow(scar.probabilities) - 1))
@@ -31,19 +31,19 @@ scar.probabilities <- scar.probabilities[order(-scar.probabilities$p), ]
 scar.probabilities$Scar <- 1:nrow(scar.probabilities)
 scar.probabilities$Cum.p <- cumsum(scar.probabilities$p)
 # colors.hm <- rev(colorRampPalette(c("Red", "Yellow", "Blue"))(100))
-cell.types <- data.frame(Cell.type = c("Medium"),
-                         Detection.rate = 0.3,
-                         Abundance = 1)
-# cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
-#                          Detection.rate = c(0.7, 0.3, 0.15),
-#                          Abundance = c(0.15, 0.25, 0.6))
+# cell.types <- data.frame(Cell.type = c("Medium"),
+#                          Detection.rate = 0.3,
+#                          Abundance = 1)
+cell.types <- data.frame(Cell.type = c("High", "Medium", "Low"),
+                         Detection.rate = c(0.7, 0.3, 0.15),
+                         Abundance = c(0.15, 0.25, 0.6))
 # cell.types$Cum.abundance <- cumsum(cell.types$Abundance)
-# integration.types <- data.frame(Integration = c("Strong", "Weak"),
-# Detection.rate = c(1, 0.05),
-# Abundance = c(0.85, 0.15))
-integration.types <- data.frame(Integration = c("Strong"),
-                                Detection.rate = c(1),
-                                Abundance = c(1))
+integration.types <- data.frame(Integration = c("Strong", "Weak"),
+                                Detection.rate = c(1, 0.05),
+                                Abundance = c(0.85, 0.15))
+# integration.types <- data.frame(Integration = c("Strong"),
+#                                 Detection.rate = c(1),
+#                                 Abundance = c(1))
 
 # Create tree ####
 # Parameters: generations
@@ -85,7 +85,7 @@ scar.cells$Cell <- cells$Cell
 scar.cells$Parent <- cells$Parent
 scar.cells$Generation <- rep(1:generations, 2^(0:(generations - 1)))
 
-set.seed(2)
+set.seed(1)
 
 cells$Scar.acquisition <- ""
 all.scars.created <- integer()
@@ -239,9 +239,12 @@ dev.tree.edges$fill <- "black"
 dev.tree.edges$size <- 1
 dev.tree.edges$Cell.type <- NA
 dev_tree <- generate_tree(dev.tree.edges)
+# save(dev_tree, file = "./Data/Simulations/dev_tree.Robj")
+# source("~/Documents/Scripts/collapsibleTree/R/collapsibleTree.data.tree.R")
 dev_tree_wg <- collapsibleTree(dev_tree, root = dev_tree$scar, collapsed = F,
                                fontSize = 8, width = 300, height = 200,
-                               fill = "fill", nodeSize = "size")
+                               fill = "fill", nodeSize = "size", nCell.types = 1,
+                               pieSummary = F)
 dev_tree_wg
 # htmlwidgets::saveWidget(dev_tree_wg,
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_dev_tree.html")
@@ -393,7 +396,7 @@ for(c in 1:sum(cells$Observed)){
 # dev.off()
 
 # Assign cell types and scar types ####
-set.seed(1)
+set.seed(6)
 scar.cells.final$Cell.type<- 
   sample(cell.types$Cell.type, nrow(scar.cells.final), replace = T, 
          prob = cell.types$Abundance)
@@ -408,21 +411,21 @@ integration.sites <- merge(integration.sites, integration.types[, c("Integration
 
 # Sample cells and scars ####
 # Parameters 
-cells.sampled <- 125
+cells.sampled <- 3000
 # detection.rate <- 0.5
 set.seed(2)
 
 # Sample cells and scars
 readout.wt <- get.readout(scar.cells.final, cells.sampled, integration.sites,
-                          doublet.rate = 0)
+                          doublet.rate = 0.05)
 cells.in.tree <- readout.wt[readout.wt$Scar != 0, ]
 
 length(unique(readout.wt$Cell)) # 1665 cells, including those with only wt.
 length(unique(cells.in.tree$Cell)) # 1203 cells with more than wt.
 
 # Write output ####
-# write.csv(cells.in.tree, "./Data/Simulations/Tree_B2_2000cellsout_d005.csv",
-# quote = F, row.names = F)
+# write.csv(cells.in.tree, "./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv",
+#           quote = F, row.names = F)
 # Write output for PHYLIP
 cells.in.tree.phylip <- cells.in.tree
 cells.in.tree.phylip$Presence <- 1
@@ -453,9 +456,9 @@ phylip.out$Cell <-
 colnames(phylip.out) <- c(nrow(phylip.out), ncol(phylip.out.array))
 phylip.scar.conversion <- data.frame(Scar.order = 1:ncol(phylip.out.array),
                                      Scar = colnames(phylip.out.array))
-# write.table(phylip.out, "./Data/Simulations/Tree_B2_2000cellsout_d005_phylip_?.txt",
+# write.table(phylip.out, "./Data/Simulations/Tree_C2_100cellsout_phylip_detection03_?.txt",
 # sep = " ", row.names = F, quote = F)
-# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_B2_scar_conversion_d005.csv",
+# write.csv(phylip.scar.conversion, "./Data/Simulations/Tree_C2_scar_conversion.csv",
 #           row.names = F, quote = F)
 # write.table(doublets, "./Data/Simulations/Tree_B2_2000cellsout_d005_doublets.csv",
 #           row.name = F, quote = F, sep = ",")

@@ -200,22 +200,53 @@ F11.medium <- celltype.scar.detected.F11[celltype.scar.detected.F11$Scar == "2:4
                                            celltype.scar.detected.F11$Detection > 0.2, ]
 F11.low <- celltype.scar.detected.F11[celltype.scar.detected.F11$Scar == "2:47M3D28M" &
                                            celltype.scar.detected.F11$Detection < 0.2, ]
-sum(F11.high$Cells) # 2000 -> 15%
-sum(F11.medium$Cells) # 3000 > 25%
-sum(F11.low$Cells) # 7000 -> 60%
-weighted.mean(F11.high$Detection, F11.high$Cells) # ~ 70%
-weighted.mean(F11.medium$Detection, F11.medium$Cells) # ~ 30%
-weighted.mean(F11.low$Detection, F11.low$Cells) # ~ 15%
+sum(F11.high$Cells, na.rm =T) # 1726 -> 15%
+sum(F11.medium$Cells, na.rm = T) # 2708 > 23%
+sum(F11.low$Cells, na.rm = T) # 7283 -> 62%
+weighted.mean(F11.high$Detection, F11.high$Cells, na.rm = T) # ~ 70%
+weighted.mean(F11.medium$Detection, F11.medium$Cells, na.rm = T) # ~ 30%
+weighted.mean(F11.low$Detection, F11.low$Cells, na.rm = T) # ~ 15%
 
 F11.high.8 <- 
   celltype.scar.detected.F11[celltype.scar.detected.F11$Scar == "8:49M1I25M" &
-                               celltype.scar.detected.F11$F1.ident %in% F11.high$F1.ident, ]
+                               celltype.scar.detected.F11$Cell.type %in% F11.high$Cell.type, ]
 F11.medium.8 <- 
   celltype.scar.detected.F11[celltype.scar.detected.F11$Scar == "8:49M1I25M" &
-                               celltype.scar.detected.F11$F1.ident %in% F11.medium$F1.ident, ]
+                               celltype.scar.detected.F11$Cell.type %in% F11.medium$Cell.type, ]
 F11.low.8 <-   
   celltype.scar.detected.F11[celltype.scar.detected.F11$Scar == "8:49M1I25M" &
-                               celltype.scar.detected.F11$F1.ident %in% F11.low$F1.ident, ]
-weighted.mean(F11.high.8$Detection, F11.high.8$Cells) # ~ 11%
+                               celltype.scar.detected.F11$Cell.type %in% F11.low$Cell.type, ]
+weighted.mean(F11.high.8$Detection, F11.high.8$Cells) # ~ 10%
 weighted.mean(F11.medium.8$Detection, F11.medium.8$Cells) # ~ 1.5%
 weighted.mean(F11.low.8$Detection, F11.low.8$Cells) # ~ 0.4%
+
+F12.high <- celltype.scar.detected.F12[celltype.scar.detected.F12$Scar == "4:49M4I2M4D20M" &
+                                         celltype.scar.detected.F12$Detection > 0.5, ]
+F12.medium <- celltype.scar.detected.F12[celltype.scar.detected.F12$Scar == "4:49M4I2M4D20M" &
+                                           celltype.scar.detected.F12$Detection <= 0.5 &
+                                           celltype.scar.detected.F12$Detection > 0.2, ]
+F12.low <- celltype.scar.detected.F12[celltype.scar.detected.F12$Scar == "4:49M4I2M4D20M" &
+                                        celltype.scar.detected.F12$Detection < 0.2, ]
+sum(F12.high$Cells, na.rm =T) # 1381 -> 10%
+sum(F12.medium$Cells, na.rm = T) # 2365 > 18%
+sum(F12.low$Cells, na.rm = T) # 9656 -> 72%
+weighted.mean(F12.high$Detection, F12.high$Cells, na.rm = T) # ~ 79%
+weighted.mean(F12.medium$Detection, F12.medium$Cells, na.rm = T) # ~ 29%
+weighted.mean(F12.low$Detection, F12.low$Cells, na.rm = T) # ~ 10%
+
+F12.high.8 <- 
+  celltype.scar.detected.F12[celltype.scar.detected.F12$Scar == "8:49M1I25M" &
+                               celltype.scar.detected.F12$Cell.type %in% F12.high$Cell.type, ]
+F12.medium.8 <- 
+  celltype.scar.detected.F12[celltype.scar.detected.F12$Scar == "8:49M1I25M" &
+                               celltype.scar.detected.F12$Cell.type %in% F12.medium$Cell.type, ]
+F12.low.8 <-   
+  celltype.scar.detected.F12[celltype.scar.detected.F12$Scar == "8:49M1I25M" &
+                               celltype.scar.detected.F12$Cell.type %in% F12.low$Cell.type, ]
+weighted.mean(F12.high.8$Detection, F12.high.8$Cells) # ~ 6.3%
+weighted.mean(F12.medium.8$Detection, F12.medium.8$Cells) # ~ 0.34%
+weighted.mean(F12.low.8$Detection, F12.low.8$Cells) # ~ 0.1%
+
+# Based on these, we take conservative abundances 10, 20, 70. These have
+# detection rates 75, 30, 10 for high sites. A low site has 5% of that:
+# 3.75%, 1.5% and 0.5% for a cumulative detection of ~1%.

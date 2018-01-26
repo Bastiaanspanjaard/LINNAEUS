@@ -26,9 +26,9 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.05 # Default value is 0.05
+min.detection.rate <- 0.01 # Default value is 0.05
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
@@ -43,10 +43,10 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA
-tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), c("Cell", "Cluster", "Cell.type")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
 # For Z5
@@ -54,19 +54,21 @@ tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), c("Cell"
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-# N <- 125 # 3000
-N <- nrow(tsne.coord)
+N <- 3000 #125 #
+# N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
+  read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-# scar.input <- merge(scar.input[, c("Barcode", "Scar", "Presence", "p")],
+# scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
 #                     tsne.coord)
 # colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
 #   "Cell.type"
@@ -112,6 +114,9 @@ only.once.connections <-
   merge(only.once.connections, 
         scar.connections)
 
+# NEW
+only.once.connections <- only.once.connections[only.once.connections$x_AB > 0, ]
+
 # Investigate difference between dataset with doublets and without
 # cells.in.tree.no.d <- cells.in.tree[cells.in.tree$Cell.type != "Doublet", ]
 # scar.connections.no.d <- connections.for.graph(cells.in.tree.no.d)
@@ -123,18 +128,14 @@ only.once.connections <-
 # colnames(only.once.connections.no.d)[3:5] <- c("xnd_A", "xnd_B", "xnd_AB")
 
 
-# Calculate how many doublets we'd expect given a doublet rate, and (under
-# assumption that the number of doublets is binomially distributed) calculate
-# an expected value + 2*sigma threshold
+# Calculate how many doublets we'd expect given a general doublet rate, and 
+# calculate the doublet rate for every scar connection.
 only.once.connections$AB.doublets <- 
   2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
 only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
-# only.once.connections$AB.doublet.sd <- 
-#   sqrt(N * only.once.connections$AB.doublet.rate * 
-#          (1 - only.once.connections$AB.doublet.rate))
-# only.once.connections$AB.doublet.threshold <- 
-#   only.once.connections$AB.doublets + 2 * only.once.connections$AB.doublet.sd
 
+# Calculate the probability that the connections we see can all be explained by
+# doublets.
 only.once.connections$Doublet.p <-
   apply(only.once.connections[, c("x_AB", "AB.doublet.rate")], 1,
         function(x){
@@ -146,84 +147,11 @@ only.once.connections$Doublet.p <-
 only.once.connections$Doublet.padj <-
   p.adjust(only.once.connections$Doublet.p, "fdr")
 
-# only.once.connections.no.d <- merge(only.once.connections, only.once.connections.no.d)
-# only.once.connections.no.d$Doublet.diff <- 
-#   only.once.connections.no.d$x_AB - only.once.connections.no.d$xnd_AB
-# interesting.doublet.cases <- 
-#   only.once.connections.no.d[only.once.connections.no.d$x_AB != only.once.connections.no.d$xnd_AB,
-#                              c("Scar.A", "Scar.B", "x_A", "x_B", "x_AB", 
-#                                "xnd_A", "xnd_B", "xnd_AB", "AB.doublets",
-#                                "Doublet.diff")]
-# ggplot(interesting.doublet.cases) +
-#   geom_point(aes(x = x_A, y = Doublet.diff))
-# ggplot(interesting.doublet.cases) +
-#   geom_point(aes(x = AB.doublets, y = Doublet.diff))
-# doublet.fit <- lm(Doublet.diff ~ AB.doublets + 0, data = interesting.doublet.cases)
-# plot(density(resid(doublet.fit)))
-# # qqnorm(resid(doublet.fit))
-# qqline(resid(doublet.fit))
-# 
-# # Generate binomial distribution for different probabilities.
-# row.n <- 621
-# d.rate.plot <- only.once.connections.no.d$AB.doublet.rate[row.n]
-# calc.doublets.plot <- only.once.connections.no.d$AB.doublets[row.n]
-# calc.threshold.plot <- only.once.connections.no.d$AB.doublet.threshold[row.n]
-# obs.doublets.plot <- only.once.connections.no.d$Doublet.diff[row.n]
-# binom.1 <- data.frame(Measurement = rbinom(1000, N, d.rate.plot))
-# ggplot(binom.1) +
-#   geom_histogram(aes(x = Measurement)) +
-#   geom_vline(xintercept = calc.doublets.plot) +
-#   geom_vline(xintercept = calc.threshold.plot, color = "blue") +
-#   geom_vline(xintercept = obs.doublets.plot, color = "red") +
-#   labs(title = d.rate.plot)
-# 
-# # Test doublet rates
-# only.once.connections.no.d$Doublet.p <-
-#   apply(only.once.connections.no.d[, c("x_AB", "AB.doublet.rate")], 1,
-#         function(x){
-#           x_d <- as.integer(x[1])
-#           p_d <- as.numeric(x[2])
-#           binom.test(x_d, N, p_d, alternative = "greater")$p.value
-#         }
-#   )
-# 
-# pure.doublets <- only.once.connections.no.d[only.once.connections.no.d$x_AB > 0 &
-#                                               only.once.connections.no.d$xnd_AB == 0, ]
-# real.connections <- only.once.connections.no.d[only.once.connections.no.d$xnd_AB > 0, ]
-# 
-# doublets.qmark <- only.once.connections.no.d[only.once.connections.no.d$Doublet.p > 0.01, ]
-# 
-# x <- only.once.connections.no.d[1, c("x_AB", "AB.doublet.rate")]
-# x_d <- as.integer(x[1])
-# p_d <- as.numeric(x[2])
-# binom.test(x_d, N, p_d, alternative = "greater")$p.value
-# 
-# dscars <- c("10264", "8798")
-# dscar.cells.1 <- as.character(cells.in.tree$Cell[cells.in.tree$Cell.type == "Doublet" &
-#                                cells.in.tree$Scar == dscars[1]])
-# dscar.cells.2 <- as.character(cells.in.tree$Cell[cells.in.tree$Cell.type == "Doublet" &
-#                                                    cells.in.tree$Scar == dscars[2]])
-# dscar.cs <- cells.in.tree[cells.in.tree$Cell %in% intersect(dscar.cells.1, dscar.cells.2), ]
-
 ooc.cutoff <- 
-  # only.once.connections[only.once.connections$x_AB > 
-  #                         only.once.connections$AB.doublet.threshold, ]
   only.once.connections[only.once.connections$Doublet.padj > 0.01, ]
-
-# ooc.cutoff.graph <-
-#   graph_from_data_frame(ooc.cutoff[, c("Scar.A", "Scar.B")],
-#                         directed = F, vertices = union(ooc.cutoff$Scar.A, 
-#                                                        ooc.cutoff$Scar.B))
-# pdf("Images/Simulations/Z2_network_10scars_p01_coincr1_detratio01_branchratio0.pdf",
-#            width = 20, height = 10)
-# plot(ooc.cutoff.graph)
-# dev.off()
 
 # Identify incorrect connections
 incorrect.connections <- 
-  # only.once.connections[only.once.connections$x_AB > 0 & 
-  #                         only.once.connections$x_AB <= 
-  #                         only.once.connections$AB.doublet.threshold, ]
   only.once.connections[only.once.connections$Doublet.padj >= 0.01, ]
 
 # Identify and remove cells with incorrect connections
@@ -294,8 +222,8 @@ while(scar.index <= scar.amount){
   current.graph <- second.decomposition[[current.component]]
   current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
   
-  # cs <- current.cs.component
-  # graph <- current.graph
+  cs <- current.cs.component
+  graph <- current.graph
   
   if(length(V(current.graph)) == 1){
     # Condition for last scar in branch - this will have a graph without any
@@ -676,8 +604,22 @@ cells.to.place$Scar.acquisition <- ""
 
 collapsed.tree <- rbind(tree.summary.c, cells.to.place)
 
+if(exists("tsne.coord")){
 collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
                         by.x = "Child", by.y = "Cell", all.x = T)
+}else{
+  collapsed.tree$Cell.type <- 
+    sapply(collapsed.tree$Child,
+           function(x) {
+             if(grepl("_", x)){
+               type.output <- "Cell"
+             }else{
+               type.output <- NA
+             }
+             return(type.output)
+           }
+    )
+}
 
 # write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
 #           row.names = F, quote = F, sep = " ")
@@ -687,11 +629,12 @@ collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
 tree.summary.c.plot <- tree.summary.c
 tree.summary.c.plot$fill <- "black"
 tree.summary.c.plot$size <- 1
+tree.summary.c.plot$Cell.type <- "internal"
 # Order in scar_tree order
-# scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv", 
+# scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
 #                         header = T, fill = T, stringsAsFactors = F)
 # tentative.reorder <- data.frame(Scar.acquisition = tree.summary.c.plot$Scar.acquisition)
-# tentative.reorder$Order <- 
+# tentative.reorder$Order <-
 #   sapply(tentative.reorder$Scar.acquisition,
 #          function(x) {
 #            if(x %in% scar_tree$Scar.acquisition){
@@ -703,14 +646,17 @@ tree.summary.c.plot$size <- 1
 #   c(11, 22, 13)
 # tree.summary.c.plot <- merge(tree.summary.c.plot, tentative.reorder)
 # tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Order),
-#                                    c("Parent", "Child", "Scar.acquisition", 
-#                                      "fill", "size")]
+#                                    c("Parent", "Child", "Scar.acquisition",
+#                                      "fill", "size", "Cell.type")]
 tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
+# save(tree.summary.c.plot, file = "./Data/Simulations/B2_wweak_dlet0_edges.Robj")
 LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
+# save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
 LINNAEUS.tree_wg <- 
   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
                   fontSize = 8, width = 300, height = 400, fill = "fill",
-                  nodeSize = "size")
+                  nodeSize = "size", pieSummary = F)
+# save(LINNAEUS.tree_wg, file = "./Data/Simulations/B2_wweak_dlet0_widget.Robj")
 LINNAEUS.tree_wg
 # htmlwidgets::saveWidget(LINNAEUS.tree_wg,
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
@@ -739,8 +685,9 @@ tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
 LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
 LINNAEUS.cell.tree_wg <- 
   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar, collapsed = F,
-                  fontSize = 8, width = 300, height = 600, fill = "fill",
-                  nodeSize = "size")
+                  fontSize = 8, width = 300, height = 600)
+# , fill = "fill",
+#                   nodeSize = "size")
 LINNAEUS.cell.tree_wg
 LINNAEUS.cell.tree.pie <-
   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar,
@@ -748,8 +695,9 @@ LINNAEUS.cell.tree.pie <-
 LINNAEUS.cell.tree.pie
 # htmlwidgets::saveWidget(LINNAEUS.cell.tree_wg,
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
-# save(tree.cells.c.plot, file = "./Data/2017_10X_2/Z2_tree.Robj")
-# save(LINNAEUS.cell.tree, file = "./Data/2017_10X_2/Z2_Ltree.Robj")
+# save(tree.cells.c.plot, file = "./Data/2017_10X_2/Z2_tree_2.Robj")
+# save(LINNAEUS.cell.tree, file = "./Data/2017_10X_2/Z2_Ltree_2.Robj")
+# save(LINNAEUS.cell.tree.pie, file = "./Data/2017_10X_2/Z2_Ltree_pie.Robj")
 
 # Extract subtree ####
 get.node.comp <- function(node, tree.edges){

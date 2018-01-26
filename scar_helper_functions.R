@@ -382,39 +382,67 @@ create.degree.lls <- function(cs, graph){
                 data.frame(Presence = rep(1, nrow(cs)))), Scar ~ Cell,
           value.var = "Presence")
   scar.cell.matrix[is.na(scar.cell.matrix)] <- 0
+  # NEW
   all.scar.temp <- aggregate(cs$Cell,
-                             by = list(Scar = cs$Scar,
-                                       Cell.type = cs$Cell.type),
+                             by = list(Scar = cs$Scar),
                              length)
-  colnames(all.scar.temp)[3] <- "All.scar"
+  colnames(all.scar.temp)[2] <- "All.scar"
+  # OLD
+  # all.scar.temp <- aggregate(cs$Cell,
+                             # by = list(Scar = cs$Scar,
+                                       # Cell.type = cs$Cell.type),
+                             # length)
+  # colnames(all.scar.temp)[3] <- "All.scar"
+
   # To calculate how many cells only have a specific scar: these are the cells
   # that have that scar + have only one scar. So if we construct the list of
   # cells that only have one scar and then combine that with which cells have
   # which scars, we should get somewhere?
+  
+  # NEW
   cell.scar.counts <- aggregate(cs$Scar,
-                                by = list(Cell = cs$Cell,
-                                          Cell.type = cs$Cell.type),
+                                by = list(Cell = cs$Cell),
                                 length)
+  # OLD
+  # cell.scar.counts <- aggregate(cs$Scar,
+  #                               by = list(Cell = cs$Cell,
+  #                                         Cell.type = cs$Cell.type),
+  #                               length)
+
   only.scar <- cs[cs$Cell %in% cell.scar.counts$Cell[cell.scar.counts$x == 1], ]
   if(nrow(only.scar) == 0){
+    # NEW
     only.scar.count <- data.frame(Scar = character(),
                                   Cell.type = character(),
                                   Only.scar = integer())
+    # OLD
+    # only.scar.count <- data.frame(Scar = character(),
+    #                               Cell.type = character(),
+    #                               Only.scar = integer())
   }else{
+    # NEW
     only.scar.count <- aggregate(only.scar$Cell,
-                                 by = list(Scar = only.scar$Scar,
-                                           Cell.type = only.scar$Cell.type),
+                                 by = list(Scar = only.scar$Scar),
                                  length)
-    colnames(only.scar.count)[3] <- "Only.scar"
+    colnames(only.scar.count)[2] <- "Only.scar"
+    # OLD
+    # only.scar.count <- aggregate(only.scar$Cell,
+    #                              by = list(Scar = only.scar$Scar,
+    #                                        Cell.type = only.scar$Cell.type),
+    #                              length)
+    # colnames(only.scar.count)[3] <- "Only.scar"
   }
   all.scar.temp <- merge(all.scar.temp, only.scar.count, all = T)
   all.scar.temp[is.na(all.scar.temp)] <- 0
 
-  cell.type.cells <- unique(cs[, c("Cell", "Cell.type")])
-  cell.type.counts <- as.data.frame(table(cell.type.cells$Cell.type))
-  colnames(cell.type.counts) <- c("Cell.type", "Total")
-  all.scar.temp <- merge(all.scar.temp, cell.type.counts)
-
+  # NEW
+  all.scar.temp$Total <- length(unique(cs$Cell))
+  # OLD
+  # cell.type.cells <- unique(cs[, c("Cell", "Cell.type")])
+  # cell.type.counts <- as.data.frame(table(cell.type.cells$Cell.type))
+  # colnames(cell.type.counts) <- c("Cell.type", "Total")
+  # all.scar.temp <- merge(all.scar.temp, cell.type.counts)
+  
   all.scar.temp$Scar.other <-
     all.scar.temp$All.scar - all.scar.temp$Only.scar
   all.scar.temp$Only.other <-
@@ -460,38 +488,49 @@ create.degree.lls <- function(cs, graph){
   # p=1 (i.e. all scars y that do not occur in celltypes A with p_A(x) = 1).
   # Then identify which connections x <-> y are affected and change the p-values
   # for these in conn.p
+  
+  # NEW
+  # Column scar is the scar assumed to be the top scar
+  log.noconn.p <- all.scar.temp$All.scar %*% t(all.scar.temp$Log.one.minus.pA)
+  colnames(log.noconn.p) <- all.scar.temp$Scar
+  rownames(log.noconn.p) <- all.scar.temp$Scar
+  conn.p <- 1 - exp(log.noconn.p)
+  diag(conn.p) <- 0
+  
+  # OLD
   # celltype.scar.m <- acast(all.scar.temp[all.scar.temp$p_A != 1, ],
   #                          Scar ~ Cell.type, value.var = "All.scar")
-  celltype.scar.m <- acast(all.scar.temp,
-                           Scar ~ Cell.type, value.var = "All.scar")
-  celltype.scar.m[is.na(celltype.scar.m)] <- 0
-  lomp.m <- acast(all.scar.temp,
-                  Cell.type ~ Scar, value.var = "Log.one.minus.pA")
-  lomp.m[is.na(lomp.m)] <- 0
+  # celltype.scar.m <- acast(all.scar.temp,
+  #                          Scar ~ Cell.type, value.var = "All.scar")
+  # celltype.scar.m[is.na(celltype.scar.m)] <- 0
+  # lomp.m <- acast(all.scar.temp,
+  #                 Cell.type ~ Scar, value.var = "Log.one.minus.pA")
+  # lomp.m[is.na(lomp.m)] <- 0
 
   # Set the lomp.m-value for scars with p=1 to 0 to correctly compute all
   # entries except for the ones that do indeed have other scars in cells of
   # that cell type.
-  lomp.m[lomp.m < 0 & is.infinite(lomp.m)] <- 0
+  # lomp.m[lomp.m < 0 & is.infinite(lomp.m)] <- 0
   
   # Compute the connection p-values
-  log.noconn.p <- celltype.scar.m %*% lomp.m
+  # log.noconn.p <- celltype.scar.m %*% lomp.m
   # log.noconn.p[is.nan(log.noconn.p)] <- 0
-  conn.p <- 1 - exp(log.noconn.p)
-  diag(conn.p) <- 0
+  # conn.p <- 1 - exp(log.noconn.p)
+  # diag(conn.p) <- 0
   
   # This computation now has incorrect values for scar combinations affected
   # by p_A(x) = 1.
-  sure.shots <- all.scar.temp[all.scar.temp$p_A == 1, c("Scar", "Cell.type")]
-  sure.shot.partners <- merge(cs, sure.shots)
-  colnames(sure.shot.partners)[1] <- "Sure.shot.scar"
-  sure.shot.partners <- merge(sure.shot.partners, cs)
-  sure.shot.partners <- sure.shot.partners[sure.shot.partners$Sure.shot.scar !=
-                                             sure.shot.partners$Scar, ]
-  for(shot in 1:nrow(sure.shot.partners)){
-    conn.p[rownames(conn.p) == sure.shot.partners$Scar[shot],
-           colnames(conn.p) == sure.shot.partners$Sure.shot.scar[shot]] <- 1
-  }
+  # sure.shots <- all.scar.temp[all.scar.temp$p_A == 1, c("Scar", "Cell.type")]
+  # sure.shot.partners <- merge(cs, sure.shots)
+  # colnames(sure.shot.partners)[1] <- "Sure.shot.scar"
+  # sure.shot.partners <- merge(sure.shot.partners, cs)
+  # sure.shot.partners <- sure.shot.partners[sure.shot.partners$Sure.shot.scar !=
+  #                                            sure.shot.partners$Scar, ]
+  # for(shot in 1:nrow(sure.shot.partners)){
+  #   conn.p[rownames(conn.p) == sure.shot.partners$Scar[shot],
+  #          colnames(conn.p) == sure.shot.partners$Sure.shot.scar[shot]] <- 1
+  # }
+  # END OLD
   
   # Calculate expected degree
   exp.degree <- data.frame(Scar = colnames(conn.p),
@@ -519,7 +558,10 @@ create.degree.lls <- function(cs, graph){
           return(degree.p)
         })
 
-  scar.lls <- merge(scar.lls, all.scar.temp[, c("Scar", "Cell.type", "Total.other", "p_A")])
+  # NEW
+  scar.lls <- merge(scar.lls, all.scar.temp[, c("Scar", "Total.other", "p_A")])
+  # OLD
+  # scar.lls <- merge(scar.lls, all.scar.temp[, c("Scar", "Cell.type", "Total.other", "p_A")])
 
   scar.lls <- scar.lls[order(-scar.lls$Degree.p, -scar.lls$Degree, 
                              -scar.lls$Scar.count), ]
