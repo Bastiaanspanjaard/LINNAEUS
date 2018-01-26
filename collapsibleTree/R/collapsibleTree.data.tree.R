@@ -25,7 +25,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  zoomable = TRUE, width = NULL, height = NULL,
 				# PO
     				nodeSize_sc = 2, nodeLabel_sc = FALSE,
-				colors = NULL, ctypes = NULL, 
+				ct_colors = NULL, ctypes = NULL, 
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
 				pieSummary = TRUE,
@@ -54,8 +54,8 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   # PO TODO, something still looks weird on the pie charts. Colors are not sorted.
   # ctypes = sort(unique(df$Get("Cell.type")))
   # PO create colors
-  if(is.null(colors)){
-	colors = c('#7400C2', '#8E14E0', '#A929FF', '#BB56FF', '#CD82FF', '#DFAEFF', '#F1DBFF', '#844420', '#904A23', '#9D5126', '#A85A2D', '#AE673D', '#B5734D', '#BB805D', '#C28C6D', '#C9997E', '#944D72', '#DF74AC', '#F89ACB', '#FABFDE', '#FDE5F2', '#173416', '#214B1F', '#2B6229', '#357933', '#3F913D', '#4AA847', '#57B354', '#66BA64', '#75C173', '#84C782', '#93CE91', '#A2D5A0', '#B1DCAF', '#C0E2BE', '#CFE9CD', '#DEF0DC', '#EDF7EC', '#B75B01', '#ED7600', '#FF9833', '#FFBE7F', '#FFE5CC', '#99991E', '#E6E62D', '#FFFF57', '#FFFF8C', '#FFFFC1', '#9F1213', '#B91516', '#D31819', '#E52729', '#EA4E4F', '#EE7475', '#F39B9B', '#F7C1C1', '#FCE8E8', '#214B6E', '#265780', '#2C6493', '#3171A6', '#377EB8', '#4E8DC0', '#649BC7', '#7BA9CF', '#91B8D7', '#A7C6DF', '#BED5E7', '#D4E3EF', '#EBF2F7')
+  if(is.null(ct_colors)){
+	ct_colors = c('#7400C2', '#8E14E0', '#A929FF', '#BB56FF', '#CD82FF', '#DFAEFF', '#F1DBFF', '#844420', '#904A23', '#9D5126', '#A85A2D', '#AE673D', '#B5734D', '#BB805D', '#C28C6D', '#C9997E', '#944D72', '#DF74AC', '#F89ACB', '#FABFDE', '#FDE5F2', '#173416', '#214B1F', '#2B6229', '#357933', '#3F913D', '#4AA847', '#57B354', '#66BA64', '#75C173', '#84C782', '#93CE91', '#A2D5A0', '#B1DCAF', '#C0E2BE', '#CFE9CD', '#DEF0DC', '#EDF7EC', '#B75B01', '#ED7600', '#FF9833', '#FFBE7F', '#FFE5CC', '#99991E', '#E6E62D', '#FFFF57', '#FFFF8C', '#FFFFC1', '#9F1213', '#B91516', '#D31819', '#E52729', '#EA4E4F', '#EE7475', '#F39B9B', '#F7C1C1', '#FCE8E8', '#214B6E', '#265780', '#2C6493', '#3171A6', '#377EB8', '#4E8DC0', '#649BC7', '#7BA9CF', '#91B8D7', '#A7C6DF', '#BED5E7', '#D4E3EF', '#EBF2F7')
   }
 
   if(is.null(ctypes)){
@@ -76,8 +76,8 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     tooltip = tooltip,
     collapsed = collapsed,
     pieNode = pieNode, #PO 
-    useColors = !is.null(colors), #PO 
-    colors = colors, #PO
+    useColors = !is.null(ct_colors), #PO 
+    colors = ct_colors, #PO
     nodeLabel_sc = ifelse(is.null(nodeLabel_sc), TRUE, nodeLabel_sc ),
     zoomable = zoomable,
     margin = list(
@@ -109,7 +109,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   if(pieNode){
     t <- data.tree::Traverse(df, 'level')
     data.tree::Do(t, function(x) {
-	x$isScar = !x$isLeaf & !x$isRoot
+	x$isScar = !x$isLeaf & !x$isRoot & x$Cell.type == "NA" # This is a source of problems
 	if(x$isRoot) {x$isScar = TRUE; x$Cell.type = "_"}
 	xpieNode = x$Get("Cell.type")
 	x$ct = x$Cell.type
@@ -122,13 +122,13 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 	}
     })
     jsonFields <- c(jsonFields, "pieNode")
-    jsonFields <- c(jsonFields, "parSize") # keeps memory of the size of parent; used to decide wheter to show cell type of single cell
+    jsonFields <- c(jsonFields, "parSize") # keeps a record of the size of parent; used to decide wheter to show cell type of single cell
     jsonFields <- c(jsonFields, "ct")
     jsonFields <- c(jsonFields, "SizeOfNode")
     jsonFields <- c(jsonFields, "isScar")
   }
-
-  if(pieSummary){
+  
+if(pieSummary & pieNode){
    # Only after collecting the statistics for the scar nodes we get rid of the scells
    	t <- data.tree::Traverse(df, 'post-order')
    	data.tree::Do(t, function(x) {
@@ -207,10 +207,10 @@ pieProportions <- function(node) {
 }
 
 # color legend
-#plot_color_map <- function(colors, ctypes){
+#plot_color_map <- function(ct_colors, ctypes){
 #	pdf('color_map.pdf', width=2.5, height=10)
 #	par(mar=c(1.1, 10, 1.1, 1.1))
-#		image(y=1:length(colors), x=1, t(as.matrix(1:length(colors))), col= colors, axes=F, ylab='', xlab=''); axis(2, at=1:length(colors), las=2, labels = ctypes, cex.axis=0.5)
+#		image(y=1:length(ct_colors), x=1, t(as.matrix(1:length(ct_colors))), col= ct_colors, axes=F, ylab='', xlab=''); axis(2, at=1:length(ct_colors), las=2, labels = ctypes, cex.axis=0.5)
 #	dev.off()
 #}
 # helper function to sort children by attribute, casting the given value to numeric

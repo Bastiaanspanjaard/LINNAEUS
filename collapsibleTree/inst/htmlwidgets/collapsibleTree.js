@@ -76,7 +76,7 @@ HTMLWidgets.widget({
         return d.data.SizeOfNode;
       })
        .attr('isScar', function(d) {
-        return d.data.isScar;
+        return (options.pieNode? d.data.isScar : false);
       })
 
       .attr('transform', function(d) {
@@ -151,6 +151,8 @@ HTMLWidgets.widget({
       // PO
       //.text(function(d) { return " "; });
       .text(function(d) { 
+
+      		if(!options.pieNode){return d.data.name; } 
 		isScar = JSON.parse(d.data.isScar);
 		nodeLabel_sc = JSON.parse(options.nodeLabel_sc);
 		if(isScar){return d.data.name;}
