@@ -233,7 +233,17 @@ HTMLWidgets.widget({
       var linkEnter = link.enter().insert('path', 'g')
       .attr('class', 'link')
       // Potentially, this may one day be mappable
-      // .style('stroke-width', function(d) { return d.data.linkWidth || 1 })
+       .style('stroke-width', function(d) { return d.data.linkWidth || 1 })
+      .style('stroke', function(d) {
+        if(options.pieNode)
+      return (d.data.isScar ? "#555555" : "#999999")
+      return "#999999";
+      })
+      .style('stroke-width', function(d) {
+        if(options.pieNode)
+        	return (d.data.isScar ? 1.5 : 0.25)
+        return 1;
+      })
       .attr('d', function(d){
         var o = { x: source.x0, y: source.y0 }
         return diagonal(o, o)

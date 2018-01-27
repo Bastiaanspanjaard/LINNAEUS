@@ -25,7 +25,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  zoomable = TRUE, width = NULL, height = NULL,
 				# PO
     				nodeSize_sc = 2, nodeLabel_sc = FALSE,
-				ct_colors = NULL, ctypes = NULL, sort_by_ctype = FALSE, 
+				ct_colors = NULL, ctypes = NULL, sort_by_ctype = TRUE, 
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
 				pieSummary = TRUE,
