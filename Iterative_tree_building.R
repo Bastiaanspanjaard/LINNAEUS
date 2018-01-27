@@ -54,16 +54,16 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000 #125 #
+N <- 125 #3000 #
 # N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
-  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
-  read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
@@ -627,8 +627,8 @@ collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
 # Visualize tree ####
 # Without cells
 tree.summary.c.plot <- tree.summary.c
-# tree.summary.c.plot$fill <- "black"
-# tree.summary.c.plot$size <- 1
+tree.summary.c.plot$fill <- "black"
+tree.summary.c.plot$size <- 1
 tree.summary.c.plot$Cell.type <- NA
 # Order in scar_tree order
 # scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
@@ -688,6 +688,9 @@ tree.cells.c.plot$size <-
          })
 tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
 LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
+# save(LINNAEUS.cell.tree, 
+#      file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
+
 LINNAEUS.cell.tree_wg <- 
   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar, collapsed = F,
                   fontSize = 8, width = 300, height = 600)

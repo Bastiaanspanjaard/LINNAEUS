@@ -5,41 +5,41 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # source("./Scripts/linnaeus-scripts/collapsibleTree.R")
 # source("./Scripts/linnaeus-scripts/collapsibleTree.data.tree.R")
 # 
-generate_tree = function(df){
-  # columns.include <- c("Parent", "Child", "Scar.acquisition")
-  # if(!is.null(fill.col)){
-  #   columns.include <- c(columns.include, fill.col)
-  # }
-  # if(!is.null(size.col)){ columns.include <- c(columns.include, size.col)}
-  for(i in 1:nrow(df)){
-    parent = paste0('nd', as.character(df$Parent[i]))
-    child = paste0('nd', as.character(df$Child[i]))
-    scar <- df$Scar.acquisition[i]
-
-    if(!exists(child)){
-      eval_txt = sprintf('%s <<- Node$new("%s", name="%s", scar = "%s")',
-                         child, child, child, scar)
-      eval(parse(text=eval_txt))
-      if("fill" %in% colnames(df)){
-        eval_txt <- paste(child, "$fill <- \"", df$fill[i], "\"", sep = "")
-        eval(parse(text = eval_txt))
-      }
-      if("size" %in% colnames(df)){
-        eval_txt <- paste(child, "$size <- ", df$size[i], sep = "")
-        eval(parse(text = eval_txt))
-      }
-    }
-    if(exists(parent)){
-      add_txt = sprintf('%s$AddChildNode(%s)', parent, child)
-      eval(parse(text=add_txt))
-    }
-  }
-
-  return_tree <- eval(parse(text=sprintf('%s$root', ls(envir=globalenv(), pattern='^nd')[1])))
-  rm(list=ls(envir=globalenv(), pattern='^nd'), envir=globalenv())
-
-  return(return_tree)
-}
+# generate_tree = function(df){
+#   # columns.include <- c("Parent", "Child", "Scar.acquisition")
+#   # if(!is.null(fill.col)){
+#   #   columns.include <- c(columns.include, fill.col)
+#   # }
+#   # if(!is.null(size.col)){ columns.include <- c(columns.include, size.col)}
+#   for(i in 1:nrow(df)){
+#     parent = paste0('nd', as.character(df$Parent[i]))
+#     child = paste0('nd', as.character(df$Child[i]))
+#     scar <- df$Scar.acquisition[i]
+# 
+#     if(!exists(child)){
+#       eval_txt = sprintf('%s <<- Node$new("%s", name="%s", scar = "%s")',
+#                          child, child, child, scar)
+#       eval(parse(text=eval_txt))
+#       if("fill" %in% colnames(df)){
+#         eval_txt <- paste(child, "$fill <- \"", df$fill[i], "\"", sep = "")
+#         eval(parse(text = eval_txt))
+#       }
+#       if("size" %in% colnames(df)){
+#         eval_txt <- paste(child, "$size <- ", df$size[i], sep = "")
+#         eval(parse(text = eval_txt))
+#       }
+#     }
+#     if(exists(parent)){
+#       add_txt = sprintf('%s$AddChildNode(%s)', parent, child)
+#       eval(parse(text=add_txt))
+#     }
+#   }
+# 
+#   return_tree <- eval(parse(text=sprintf('%s$root', ls(envir=globalenv(), pattern='^nd')[1])))
+#   rm(list=ls(envir=globalenv(), pattern='^nd'), envir=globalenv())
+# 
+#   return(return_tree)
+# }
     
 # Create developmental tree C ####
 dev_tree <- read.table("./Data/Simulations/tree_C_dev_tree_2.txt", 
@@ -133,9 +133,9 @@ while(e <= nrow(phylip.edges.collapse)){
   e <- e + 1
 }
 
-phylip.edges.collapse <- 
-  rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
-        phylip.edges.collapse)
+# phylip.edges.collapse <- 
+#   rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
+#         phylip.edges.collapse)
 phylip.edges.collapse$fill <- 
   sapply(phylip.edges.collapse$Child,
          function(x){
@@ -154,10 +154,22 @@ phylip.edges.collapse$size <-
              return(1)
            }
          })
+phylip.edges.collapse$Cell.type <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return("Cell")
+           }else{
+             return(NA)
+           }
+         })
 # Add entries for nodesize and fill; get fields into tree (fill has to be named
 # "fill", nodesize can be anything but its name has to be supplied in the 
 # collapsibleTree functioncall.
 phylip.tree <- generate_tree(phylip.edges.collapse)
+# save(phylip.tree,
+     # file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj")
+
 phylip.tree_wg <- 
   collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
                   fontSize = 8, width = 300, height = 800, fill = "fill",
