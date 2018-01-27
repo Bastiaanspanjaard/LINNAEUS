@@ -26,7 +26,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected; number of connections has to be higher than
 # the expected number of doublets + 2sigma under the assumption that the
 # number of doublets is binomially distributed.
-doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.01 # Default value is 0.05
 # Minimum cell number ratio between branches.
@@ -54,15 +54,15 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000 #125 #
+N <- 125 #3000 #
 # N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
-  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
-  read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
@@ -319,47 +319,47 @@ tree.summary <- tree.summary.collapse
 # Create phylogenetic tree ####
 # Create a list that includes edges, tips, nodes and possibly labels,
 # then turn that into an object of class "phylo", then plot.
-tips <- data.frame(Name = setdiff(tree.summary$Node.2, tree.summary$Node.1),
-                   stringsAsFactors = F)
-tips$Index <- 1:nrow(tips)
-nodes <- data.frame(
-  Name = setdiff(c(tree.summary$Node.1, tree.summary$Node.2), tips$Name),
-  stringsAsFactors = F)
-nodes$Index <- NA
-nodes$Index[grep("Root", nodes$Name)] <- nrow(tips) + 1
-nodes <- nodes[order(nodes$Index), ]
-nodes$Index[-1] <- (nrow(tips) + 2):(nrow(tips) + nrow(nodes))
-nodes$Index <- as.integer(nodes$Index)
-nodestips <- rbind(nodes, tips)
-phylo.edges <- merge(tree.summary[, c("Node.1", "Node.2")], nodestips,
-                     by.x = "Node.1", by.y = "Name")
-colnames(phylo.edges)[3] <- "V1"
-phylo.edges <- merge(phylo.edges, nodestips,
-                     by.x = "Node.2", by.y = "Name")
-colnames(phylo.edges)[4] <- "V2"
-
-nodes.2 <- nodes
-nodes.2$Name[grep("Root", nodes.2$Name)] <-
-  sub("Root,", "", nodes.2$Name[grep("Root", nodes.2$Name)])
-
-scar.phylo <-
-  list(
-    edge = as.matrix(phylo.edges[, c("V1", "V2")]),
-    tip.label = tips$Name,
-    edge.length = rep(1, nrow(phylo.edges)),
-    Nnode = nrow(nodes.2),
-    node.label = nodes.2$Name,
-    root.edge = 1)
-class(scar.phylo) <- "phylo"
+# tips <- data.frame(Name = setdiff(tree.summary$Node.2, tree.summary$Node.1),
+#                    stringsAsFactors = F)
+# tips$Index <- 1:nrow(tips)
+# nodes <- data.frame(
+#   Name = setdiff(c(tree.summary$Node.1, tree.summary$Node.2), tips$Name),
+#   stringsAsFactors = F)
+# nodes$Index <- NA
+# nodes$Index[grep("Root", nodes$Name)] <- nrow(tips) + 1
+# nodes <- nodes[order(nodes$Index), ]
+# nodes$Index[-1] <- (nrow(tips) + 2):(nrow(tips) + nrow(nodes))
+# nodes$Index <- as.integer(nodes$Index)
+# nodestips <- rbind(nodes, tips)
+# phylo.edges <- merge(tree.summary[, c("Node.1", "Node.2")], nodestips,
+#                      by.x = "Node.1", by.y = "Name")
+# colnames(phylo.edges)[3] <- "V1"
+# phylo.edges <- merge(phylo.edges, nodestips,
+#                      by.x = "Node.2", by.y = "Name")
+# colnames(phylo.edges)[4] <- "V2"
+# 
+# nodes.2 <- nodes
+# nodes.2$Name[grep("Root", nodes.2$Name)] <-
+#   sub("Root,", "", nodes.2$Name[grep("Root", nodes.2$Name)])
+# 
+# scar.phylo <-
+#   list(
+#     edge = as.matrix(phylo.edges[, c("V1", "V2")]),
+#     tip.label = tips$Name,
+#     edge.length = rep(1, nrow(phylo.edges)),
+#     Nnode = nrow(nodes.2),
+#     node.label = nodes.2$Name,
+#     root.edge = 1)
+# class(scar.phylo) <- "phylo"
 
 # Plot tree ####
 # pdf("Images/Simulations/tree_B_wdoublets_doubletrate009_detratio01_branchratio025.pdf",
 # width = 20, height = 10)
-plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
-     edge.width = 3, no.margin = T, direction = "leftward")
+# plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
+#      edge.width = 3, no.margin = T, direction = "leftward")
 # title(main = sub("Root,", "", nodes$Name[grep("Root", nodes$Name)]))
-edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
-           col = "red")
+# edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
+#            col = "red")
 # dev.off()
 
 # View(it.tree.building[[1]]$LLS.unique)
@@ -629,7 +629,7 @@ collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
 tree.summary.c.plot <- tree.summary.c
 tree.summary.c.plot$fill <- "black"
 tree.summary.c.plot$size <- 1
-tree.summary.c.plot$Cell.type <- "internal"
+tree.summary.c.plot$Cell.type <- NA
 # Order in scar_tree order
 # scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
 #                         header = T, fill = T, stringsAsFactors = F)
@@ -652,6 +652,11 @@ tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
 # save(tree.summary.c.plot, file = "./Data/Simulations/B2_wweak_dlet0_edges.Robj")
 LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
 # save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
+LINNAEUS.tree_wg <-
+  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F, 
+                  collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
+LINNAEUS.tree_wg
+
 LINNAEUS.tree_wg <- 
   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
                   fontSize = 8, width = 300, height = 400, fill = "fill",
@@ -683,6 +688,9 @@ tree.cells.c.plot$size <-
          })
 tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
 LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
+# save(LINNAEUS.cell.tree, 
+#      file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
+
 LINNAEUS.cell.tree_wg <- 
   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar, collapsed = F,
                   fontSize = 8, width = 300, height = 600)
@@ -743,3 +751,24 @@ extracted.tree$Keep <-
   )
 
 extracted.tree <- extracted.tree[extracted.tree$Keep, ]
+
+# Tree vis tests ####
+tree.summary.c.plot <- tree.summary.c
+tree.summary.c.plot$fill <- "black"
+tree.summary.c.plot$size <- 1
+tree.summary.c.plot$Cell.type <- NA
+tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
+
+LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
+# save(LINNAEUS.tree, file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/B2_correct_tree.Robj")
+collapsibleTree(LINNAEUS.tree, pieNode=T, pieSummary=F, collapsed=F, 
+                width=500, height=300, ctypes=c('internal'))
+collapsibleTree(LINNAEUS.tree, pieNode=T, pieSummary=F, collapsed=F, 
+                width=1.5e3, height=1e3, nodeLabel_sc=40, ctypes=c('internal'))
+collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,  
+                pieNode=T, ctypes=unique(LINNAEUS.tree$Get("Cell.type")))
+
+LINNAEUS.tree_wg <-
+  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F, 
+                  collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
+LINNAEUS.tree_wg
