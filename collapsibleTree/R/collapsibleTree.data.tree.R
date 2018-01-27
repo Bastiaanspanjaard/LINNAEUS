@@ -28,6 +28,8 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 				ct_colors = NULL, ctypes = NULL, sort_by_ctype = TRUE, 
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
+				# PO test
+				hide_scars = FALSE,
 				pieSummary = TRUE,
 				pieNode = FALSE,  
 				...) {
@@ -63,7 +65,6 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   }
   ctypes = ctypes[!is.na(ctypes)]
   ctypes = ctypes[is.na(match(ctypes, "NA"))]
-
 
 
   # create a list that contains the options
@@ -136,6 +137,19 @@ if(pieSummary & pieNode){
 		}
 	})
   }
+  #PO Test feature HideScarnames -> show them on tooltip
+	if(hide_scars){		
+		df = Clone(df)
+		tra  = data.tree::Traverse(df, 'level')
+		sapply(tra, function(x){
+		#	x$tp <- sprintf('<h2 style="color: #2e6c80;">%s</h2>', ifelse(x$isScar, x$scar, x$Cell.type))
+			x$tp <- sprintf('<h3 style="color: #2e6c80;">%s</h3>', ifelse(x$isScar, x$scar, x$Cell.type))
+			x$scar = x$name}
+		)
+		options$tooltip=T
+		tooltip=T
+		tooltipHtml="tp"
+	}
 
   # only necessary to perform these calculations if there is a tooltip
   if(tooltip & is.null(tooltipHtml)) {
