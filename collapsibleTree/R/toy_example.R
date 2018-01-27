@@ -1,3 +1,4 @@
+do_toy_example = function(){
 master <- Node$new('master', Cell.type="NA")
  scarA <- master$AddChild('scarA', Cell.type='NA')
 	scarC <-  scarA$AddChild('scarC', Cell.type='NA')
@@ -34,3 +35,7 @@ master <- Node$new('master', Cell.type="NA")
  sc3 = master$AddChild('sc3', Cell.type="bone")
  sc4 = master$AddChild('sc4', Cell.type="bone")
 
+widget_sc = collapsibleTree(master, collapsed = F, pieSummary=F, pieNode=T, ctypes=unique(master$Get("Cell.type")), ct_colors=c("#00ffff","#cd00cd"))
+widget_summary = collapsibleTree(master, collapsed = F, pieSummary=F, pieNode=T, ctypes=unique(master$Get("Cell.type")), ct_colors=c("#00ffff","#cd00cd"))
+return(widget_sc, widget_summary)
+}
