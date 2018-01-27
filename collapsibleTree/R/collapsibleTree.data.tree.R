@@ -25,7 +25,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  zoomable = TRUE, width = NULL, height = NULL,
 				# PO
     				nodeSize_sc = 2, nodeLabel_sc = FALSE,
-				ct_colors = NULL, ctypes = NULL, 
+				ct_colors = NULL, ctypes = NULL, sort_by_ctype = FALSE, 
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
 				pieSummary = TRUE,
@@ -101,10 +101,9 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   }
   # PO determine size classes
   df = Clone(df)
-  #if(pieSummary){
-  #  df = Clone(df)
-  #}
-  SortNumeric(df, decreasing=T, recursive=T,  attribute = function(x){ifelse(x$Cell.type == "NA", "1e4", as.numeric(match(x$Cell.type, ctypes)))})
+  if(sort_by_ctype){ #  disable to keep original tree order
+  	SortNumeric(df, decreasing=T, recursive=T,  attribute = function(x){ifelse(is.na(x$Cell.type) |  x$Cell.type == "NA", "1e4", as.numeric(match(x$Cell.type, ctypes)))})
+	}
 
   if(pieNode){
     t <- data.tree::Traverse(df, 'level')
