@@ -82,6 +82,7 @@ phylip.edges$Child <-
 # Get correctly-formatted edge list with scars
 phylip.edges.f <- phylip.edges[, c("V1", "Child", "Scar.acquisition")]
 colnames(phylip.edges.f)[1] <- "Parent"
+# phylip.edges.f$Parent[phylip.edges.f$Parent == "root"] <- 0
 
 # Collapse empty (i.e. scar-less) nodes, unless that node is a cell.
 phylip.edges.collapse <- phylip.edges.f
@@ -133,9 +134,9 @@ while(e <= nrow(phylip.edges.collapse)){
   e <- e + 1
 }
 
-# phylip.edges.collapse <- 
-#   rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
-#         phylip.edges.collapse)
+phylip.edges.collapse <-
+  rbind(data.frame(Parent = 0, Child = "root", Scar.acquisition = ""),
+        phylip.edges.collapse)
 phylip.edges.collapse$fill <- 
   sapply(phylip.edges.collapse$Child,
          function(x){
@@ -160,15 +161,21 @@ phylip.edges.collapse$Cell.type <-
            if(grepl("_", x)){
              return("Cell")
            }else{
-             return(NA)
+             return("NA")
            }
          })
 # Add entries for nodesize and fill; get fields into tree (fill has to be named
 # "fill", nodesize can be anything but its name has to be supplied in the 
 # collapsibleTree functioncall.
+# phylip.edges.collapse$Parent <- as.integer(phylip.edges.collapse$Parent)
+# phylip.edges.collapse <- phylip.edges.collapse[order(phylip.edges.collapse$Parent), ]
 phylip.tree <- generate_tree(phylip.edges.collapse)
+collapsibleTree(phylip.tree, collapsed = F, pieSummary=F, pieNode=F, 
+                nodeSize='size', 
+                ctypes=unique(phylip.tree$Get("Cell.type")), 
+                fill='fill')
 # save(phylip.tree,
-     # file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj")
+# file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj")
 
 phylip.tree_wg <- 
   collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
