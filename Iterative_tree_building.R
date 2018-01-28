@@ -23,12 +23,10 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-# Fraction of doublets expected; number of connections has to be higher than
-# the expected number of doublets + 2sigma under the assumption that the
-# number of doublets is binomially distributed.
-doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
+# Fraction of doublets expected.
+doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.01 # Default value is 0.05
+min.detection.rate <- 0.01 # Default value is 0.01
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
@@ -46,27 +44,30 @@ print("Loading data")
 # tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), c("Cell", "Cluster", "Cell.type")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), 
+#                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 125 #3000 #
+N <- 3000 #125 #
 # N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
-  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
+  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
-  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
+  read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_B3_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
+# scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
   # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
 # scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
 #                     tsne.coord)
@@ -79,21 +80,21 @@ if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
 if("p" %in% names(scar.input)){
-  cells.in.tree <- scar.input[scar.input$p <= max.scar.p, 
+  cells.in.tree.pre.f <- scar.input[scar.input$p <= max.scar.p, 
                               c("Cell", "Scar", "Cell.type")]
   if("Presence" %in% names(scar.input)){
-    cells.in.tree <- 
+    cells.in.tree.pre.f <- 
       scar.input[scar.input$p <= max.scar.p & scar.input$Presence <= max.larvae, 
                  c("Cell", "Scar", "Cell.type")]
   }
 }else{
-  cells.in.tree <- scar.input
+  cells.in.tree.pre.f <- scar.input
 }
-cells.in.tree <- cells.in.tree[!duplicated(cells.in.tree), ]
+cells.in.tree.pre.f <- cells.in.tree.pre.f[!duplicated(cells.in.tree.pre.f), ]
 
 # cells.in.tree <- cells.in.tree[!grepl(";", cells.in.tree$Cell), ]
 
-scar.freqs <- data.frame(table(cells.in.tree$Scar))
+scar.freqs <- data.frame(table(cells.in.tree.pre.f$Scar))
 colnames(scar.freqs)[1] <- "Scar"
 scar.freqs <- scar.freqs[order(-scar.freqs$Freq), ]
 set.seed(1)
@@ -102,191 +103,267 @@ if(is.na(number.scars)){
 }else{
   include.scars <- scar.freqs$Scar[1:number.scars]
 }
-cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% include.scars, ]
-
-# Filter out low-frequency scar connections ####
-print("Filtering doublets")
-# Count how often every scar-scar connection is seen
-scar.connections <- connections.for.graph(cells.in.tree)
-only.once.connections <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
-colnames(only.once.connections) <- c("Scar.A", "Scar.B")
-only.once.connections <- 
-  merge(only.once.connections, 
-        scar.connections)
-
-# NEW
-only.once.connections <- only.once.connections[only.once.connections$x_AB > 0, ]
-
-# Investigate difference between dataset with doublets and without
-# cells.in.tree.no.d <- cells.in.tree[cells.in.tree$Cell.type != "Doublet", ]
-# scar.connections.no.d <- connections.for.graph(cells.in.tree.no.d)
-# only.once.connections.no.d <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
-# colnames(only.once.connections.no.d) <- c("Scar.A", "Scar.B")
-# only.once.connections.no.d <- 
-#   merge(only.once.connections.no.d, 
-#         scar.connections.no.d)
-# colnames(only.once.connections.no.d)[3:5] <- c("xnd_A", "xnd_B", "xnd_AB")
+cells.in.tree.pre.f <- cells.in.tree.pre.f[cells.in.tree.pre.f$Scar %in% include.scars, ]
 
 
-# Calculate how many doublets we'd expect given a general doublet rate, and 
-# calculate the doublet rate for every scar connection.
-only.once.connections$AB.doublets <- 
-  2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
-only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
-
-# Calculate the probability that the connections we see can all be explained by
-# doublets.
-only.once.connections$Doublet.p <-
-  apply(only.once.connections[, c("x_AB", "AB.doublet.rate")], 1,
-        function(x){
-          x_d <- as.integer(x[1])
-          p_d <- as.numeric(x[2])
-          binom.test(x_d, N, p_d, alternative = "greater")$p.value
-        }
-  )
-only.once.connections$Doublet.padj <-
-  p.adjust(only.once.connections$Doublet.p, "fdr")
-
-ooc.cutoff <- 
-  only.once.connections[only.once.connections$Doublet.padj > 0.01, ]
-
-# Identify incorrect connections
-incorrect.connections <- 
-  only.once.connections[only.once.connections$Doublet.padj >= 0.01, ]
-
-# Identify and remove cells with incorrect connections
-# ic <- 1
-inc.cells <- character()
-for(ic in 1:nrow(incorrect.connections)){
-  inc.scar.A <- incorrect.connections$Scar.A[ic]
-  inc.scar.B <- incorrect.connections$Scar.B[ic]
-  cells.scar.A <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.A]
-  cells.scar.B <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.B]
+# Start tree building ####
+# Try to build a tree and detect any weak scars until a tree has been built
+# without finding weak scars.
+weak.scars <- character()
+repeat{
+  print(paste("Tree building without scars", paste(weak.scars, collapse = ", ")))
+  weak.scar.found <- F
+  # Remove weak scars
+  # weak.scars <- NULL
+  # c(934, 206) weak scars for B2 with doublets.
+  cells.in.tree <- 
+    cells.in.tree.pre.f[!(cells.in.tree.pre.f$Scar %in% weak.scars), ]
   
-  inc.cells <- unique(c(inc.cells, intersect(cells.scar.A, cells.scar.B)))
-}
-cells.in.tree.f <- cells.in.tree[!(cells.in.tree$Cell %in% inc.cells), ]
-
-# Iteration start conditions ####
-scar.amount <- length(unique(cells.in.tree.f$Scar))
-it.tree.building <- vector("list", scar.amount)
-tree.summary <- 
-  initialize.branches(cells.in.tree.f, scar.remove = "Root",
-                      size.ratio = branch.size.ratio)
-
-# Iterative tree building ####
-scar.index <- 1
-while(scar.index <= scar.amount){
-  print(paste("Iterative tree building, identifying scar",
-              scar.index, "of", scar.amount))
   
-  # Select the topmost incomplete line in the tree summary to define the scar 
-  # graph branch for which to determine the first scar created. Deduce the other 
-  # scars removed for this branch and which component corresponds to the branch.
-  top.incomplete.edge.index <- min(which(is.na(tree.summary$Node.2)))
-  top.incomplete.edge <- tree.summary[top.incomplete.edge.index, ]
+  # Filter out low-frequency scar connections ####
+  print("Filtering doublets")
+  dfilter.start <- Sys.time()
   
-  # Determine which scars to remove
-  starting.scar <- as.character(top.incomplete.edge$Node.1)
-  scars.to.remove <- find.scars.to.remove(starting.scar, tree.summary)
+  # dataset.graph <- graph.and.decompose(cells.in.tree)
+  # dataset.degrees <-
+  #   data.frame(lapply(dataset.graph, function(x) degree(x, mode = "all", loops = F)))
+  # colnames(dataset.degrees) <- "Degree"
+  # dataset.degrees$Scar <- as.character(rownames(dataset.degrees))
+  # dataset.counts <- data.frame(table(cells.in.tree$Scar))
+  # colnames(dataset.counts) <- c("Scar", "Count")
+  # dataset.dc <- merge(dataset.counts, dataset.degrees)
+  # dataset.dc$scardeg.ratio <- dataset.dc$Count/dataset.dc$Degree
+  # ggplot(dataset.dc) +
+  #   geom_histogram(aes(x = scardeg.ratio))
+  # dataset.dc$degscar.ratio <- dataset.dc$Degree/dataset.dc$Count
+  # ggplot(dataset.dc) +
+  #   geom_histogram(aes(x = log(degscar.ratio)))
+  # dataset.dc$log.dsr <- log(dataset.dc$degscar.ratio)
+  # 
+  # 
+  # cd.lm <- lm(Degree ~ Count + 0, dataset.dc)
+  # dataset.dc$cd.lm.ratio <- cd.lm$residuals/dataset.dc$Degree
+  # dataset.dc$cd.lm <- cd.lm$residuals
+  # 
+  # dataset.dc$Exp.d.max <- dataset.dc$Count/20
+  # dataset.dc$exp.d.max.diff <- dataset.dc$Exp.d.max - dataset.dc$Degree
   
-  # Finding the correct component is not fully straightforward: it may be the
-  # second connected component of the third connected component of the seventh
-  # connected component, for example, when scars are removed starting from the 
-  # top. In tree.summary we only record the component number of the last 
-  # branching event, and we record that mostly to ensure we are covering all
-  # components. While this means the 'component history' of any connected
-  # component at any level can be reconstructed (simply follow the scars back up
-  # and read out the component numbers), this is not necessary.
-  # To select the correct component, we remove scars in two steps: we first 
-  # remove all scars but the bottommost one (the [starting.scar]) and create the
-  # graph with those scars removed. As a second step, we select the component
-  # that includes the [starting.scar], remove that scar, and find the correct
-  # component in the resulting disconnected graph.
-  preceding.scars <- setdiff(scars.to.remove, starting.scar)
-  current.cs <- cells.in.tree.f[!(cells.in.tree.f$Scar %in% preceding.scars), ]
-  first.decomposition <- graph.and.decompose(current.cs)
-  for(comp in 1:length(first.decomposition)){
-    if(starting.scar %in% V(first.decomposition[[comp]])$name){
-      break
+  # 
+  # scars.high.ratio <- dataset.dc$Scar[dataset.dc$scardeg.ratio > 3]
+  # 
+  # cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% scars.high.ratio, ]
+  
+  # dc.lm <- lm(Count ~ Degree + 0, dataset.dc)
+  # dataset.dc$LM.res <- dc.lm$residuals/dataset.dc$Count
+  # dataset.dc$Scaled.res <- dataset.dc$LM.res/dataset.dc$Count
+  
+  # Count how often every scar-scar connection is seen
+  scar.connections <- connections.for.graph(cells.in.tree)
+  only.once.connections <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
+  colnames(only.once.connections) <- c("Scar.A", "Scar.B")
+  only.once.connections <- 
+    merge(only.once.connections, 
+          scar.connections)
+  
+  # NEW
+  only.once.connections <- only.once.connections[only.once.connections$x_AB > 0, ]
+  
+  # Investigate difference between dataset with doublets and without
+  # cells.in.tree.no.d <- cells.in.tree[cells.in.tree$Cell.type != "Doublet", ]
+  # scar.connections.no.d <- connections.for.graph(cells.in.tree.no.d)
+  # only.once.connections.no.d <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
+  # colnames(only.once.connections.no.d) <- c("Scar.A", "Scar.B")
+  # only.once.connections.no.d <- 
+  #   merge(only.once.connections.no.d, 
+  #         scar.connections.no.d)
+  # colnames(only.once.connections.no.d)[3:5] <- c("xnd_A", "xnd_B", "xnd_AB")
+  
+  
+  # Calculate how many doublets we'd expect given a general doublet rate, and 
+  # calculate the doublet rate for every scar connection.
+  only.once.connections$AB.doublets <- 
+    2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
+  only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
+  
+  # Calculate the probability that the connections we see can all be explained by
+  # doublets.
+  only.once.connections$Doublet.p <-
+    apply(only.once.connections[, c("x_AB", "AB.doublet.rate")], 1,
+          function(x){
+            x_d <- as.integer(x[1])
+            p_d <- as.numeric(x[2])
+            binom.test(x_d, N, p_d, alternative = "greater")$p.value
+          }
+    )
+  only.once.connections$Doublet.padj <-
+    p.adjust(only.once.connections$Doublet.p, "fdr")
+  
+  ooc.cutoff <- 
+    only.once.connections[only.once.connections$Doublet.padj > 0.01, ]
+  
+  # Identify incorrect connections
+  incorrect.connections <- 
+    only.once.connections[only.once.connections$Doublet.padj >= 0.01, ]
+  
+  # Identify and remove cells with incorrect connections
+  # ic <- 1
+  inc.cells <- character()
+  for(ic in 1:nrow(incorrect.connections)){
+    inc.scar.A <- incorrect.connections$Scar.A[ic]
+    inc.scar.B <- incorrect.connections$Scar.B[ic]
+    cells.scar.A <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.A]
+    cells.scar.B <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.B]
+    
+    inc.cells <- unique(c(inc.cells, intersect(cells.scar.A, cells.scar.B)))
+  }
+  cells.in.tree.f <- cells.in.tree[!(cells.in.tree$Cell %in% inc.cells), ]
+  dfilter.end <- Sys.time()
+  dfilter.time <- dfilter.end - dfilter.start
+  print(dfilter.time)
+  
+  # Iteration start conditions ####
+  iterative.sc.start <- Sys.time()
+  scar.amount <- length(unique(cells.in.tree.f$Scar))
+  it.tree.building <- vector("list", scar.amount)
+  tree.summary <- 
+    initialize.branches(cells.in.tree.f, scar.remove = "Root",
+                        size.ratio = branch.size.ratio)
+  iterative.sc.end <- Sys.time()
+  iterative.sc.time <- iterative.sc.end - iterative.sc.start
+  print(iterative.sc.time)
+  
+  # Iterative tree building ####
+  scar.index <- 1
+  iterative.start <- Sys.time()
+  while(scar.index <= scar.amount & !weak.scar.found){
+    print(paste("Iterative tree building, identifying scar",
+                scar.index, "of", scar.amount))
+    
+    # Select the topmost incomplete line in the tree summary to define the scar 
+    # graph branch for which to determine the first scar created. Deduce the other 
+    # scars removed for this branch and which component corresponds to the branch.
+    top.incomplete.edge.index <- min(which(is.na(tree.summary$Node.2)))
+    top.incomplete.edge <- tree.summary[top.incomplete.edge.index, ]
+    
+    # Determine which scars to remove
+    starting.scar <- as.character(top.incomplete.edge$Node.1)
+    scars.to.remove <- find.scars.to.remove(starting.scar, tree.summary)
+    
+    # Finding the correct component is not fully straightforward: it may be the
+    # second connected component of the third connected component of the seventh
+    # connected component, for example, when scars are removed starting from the 
+    # top. In tree.summary we only record the component number of the last 
+    # branching event, and we record that mostly to ensure we are covering all
+    # components. While this means the 'component history' of any connected
+    # component at any level can be reconstructed (simply follow the scars back up
+    # and read out the component numbers), this is not necessary.
+    # To select the correct component, we remove scars in two steps: we first 
+    # remove all scars but the bottommost one (the [starting.scar]) and create the
+    # graph with those scars removed. As a second step, we select the component
+    # that includes the [starting.scar], remove that scar, and find the correct
+    # component in the resulting disconnected graph.
+    preceding.scars <- setdiff(scars.to.remove, starting.scar)
+    current.cs <- cells.in.tree.f[!(cells.in.tree.f$Scar %in% preceding.scars), ]
+    first.decomposition <- graph.and.decompose(current.cs)
+    for(comp in 1:length(first.decomposition)){
+      if(starting.scar %in% V(first.decomposition[[comp]])$name){
+        break
+      }
     }
-  }
-  if(starting.scar == "Root"){
-    second.decomposition <- 
-      first.decomposition
-  }else{
-    second.decomposition <- 
-      decompose(delete_vertices(first.decomposition[[comp]], starting.scar))
-  }
-  current.component <- top.incomplete.edge$Component
-  current.graph <- second.decomposition[[current.component]]
-  current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
-  
-  cs <- current.cs.component
-  graph <- current.graph
-  
-  if(length(V(current.graph)) == 1){
-    # Condition for last scar in branch - this will have a graph without any
-    # connections, and with one vertex.
-    scar.remove <- V(current.graph)$name
-    it.tree.element <- list(Scar = scar.remove)
-  }else{
-    # Test congruence of degree and detection efficiency of all scars, assuming
-    # they are the topmost scar of the current data.
-    scar.lls <- create.degree.lls(current.cs.component, 
-                                  current.graph)
-    
-    # Calculate the weighted average detection rate of all scars.
-    average.det.rates <- 
-      ddply(scar.lls, .(Scar),
-            function(x) data.frame(Mean.p_A = weighted.mean(x$p_A, x$Total.other)))
-    
-    # Select only scars whose average detection rate is higher than cutoff
-    scar.lls <- merge(scar.lls, average.det.rates)
-    scar.lls <- scar.lls[order(-scar.lls$Degree.p,
-                               -scar.lls$Degree,
-                               -scar.lls$Mean.p_A), ]
-    scar.lls.select <- scar.lls[scar.lls$Mean.p_A > min.detection.rate, ]
-    scar.lls.unique <- 
-      unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
-                          "Degree.p", "Mean.p_A")])
-    scar.lls.select.unique <- 
-      scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
-    
-    if(nrow(scar.lls.select) > 0){
-      scar.remove <- scar.lls.select.unique$Scar[1]
+    if(starting.scar == "Root"){
+      second.decomposition <- 
+        first.decomposition
     }else{
-      print("No scar above minimum detection rate. Taking best scar under minimum detection rate")
-      scar.remove <- scar.lls.unique$Scar[1]
+      second.decomposition <- 
+        decompose(delete_vertices(first.decomposition[[comp]], starting.scar))
+    }
+    current.component <- top.incomplete.edge$Component
+    current.graph <- second.decomposition[[current.component]]
+    current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
+    
+    cs <- current.cs.component
+    graph <- current.graph
+    
+    if(length(V(current.graph)) == 1){
+      # Condition for last scar in branch - this will have a graph without any
+      # connections, and with one vertex.
+      scar.remove <- V(current.graph)$name
+      it.tree.element <- list(Scar = scar.remove)
+    }else{
+      # Test congruence of degree and detection efficiency of all scars, assuming
+      # they are the topmost scar of the current data.
+      scar.lls <- create.degree.lls(current.cs.component, 
+                                    current.graph)
+      
+      # Calculate the weighted average detection rate of all scars.
+      average.det.rates <- 
+        ddply(scar.lls, .(Scar),
+              function(x) data.frame(Mean.p_A = weighted.mean(x$p_A, x$Total.other)))
+      
+      # Select only scars whose average detection rate is higher than cutoff
+      scar.lls <- merge(scar.lls, average.det.rates)
+      scar.lls <- scar.lls[order(-scar.lls$Degree.p,
+                                 -scar.lls$Degree,
+                                 -scar.lls$Mean.p_A), ]
+      scar.lls.select <- scar.lls[scar.lls$Mean.p_A > min.detection.rate, ]
+      scar.lls.unique <- 
+        unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
+                            "Degree.p", "Mean.p_A")])
+      scar.lls.select.unique <- 
+        scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
+      
+      if(nrow(scar.lls.select) > 0){
+        scar.remove <- scar.lls.select.unique$Scar[1]
+        difficult.scars <-
+          scar.lls$Scar[scar.lls$Degree.p >
+                          scar.lls$Degree.p[scar.lls$Scar == scar.remove]]
+        if(length(difficult.scars) > 0){
+          print(paste("Weak scar", difficult.scars[1], "found"))
+          weak.scar.found <- T
+          weak.scar <- difficult.scars[1]
+          # print(cat("Scars", difficult.scars, "will be difficult to place"))
+        }
+      }else{
+        # How to relate this to weak scars?
+        print("No scar above minimum detection rate. Taking best scar under minimum detection rate")
+        scar.remove <- scar.lls.unique$Scar[1]
+      }
+      
+      it.tree.element <- list(Scar = scar.remove,
+                              LLS = scar.lls,
+                              LLS.select = scar.lls.select,
+                              LLS.unique = scar.lls.unique,
+                              LLS.select.unique = scar.lls.select.unique)
+    }
+    it.tree.building[[scar.index]] <- it.tree.element
+    
+    # Add scar to tree.summary as Node.2
+    tree.summary$Node.2[top.incomplete.edge.index] <- scar.remove
+    
+    # Add newfound scar and components to tree.summary.
+    remaining.cs <- current.cs.component[current.cs.component$Scar != scar.remove, ]
+    if(nrow(remaining.cs) > 0){
+      tree.summary.add <- 
+        initialize.branches(remaining.cs, scar.remove = scar.remove, 
+                            size.ratio = branch.size.ratio)
+      tree.summary.add$Depth <- tree.summary$Depth[top.incomplete.edge.index] + 1
+      # If current branch was not a main branch, set non-main flags for all
+      # consecutive scars as well.
+      if(!tree.summary$Main[top.incomplete.edge.index]){
+        tree.summary.add$Main <- F
+      }
+      tree.summary <- rbind(tree.summary, tree.summary.add)
     }
     
-    it.tree.element <- list(Scar = scar.remove,
-                            LLS = scar.lls,
-                            LLS.select = scar.lls.select,
-                            LLS.unique = scar.lls.unique,
-                            LLS.select.unique = scar.lls.select.unique)
+    scar.index <- scar.index + 1
   }
-  it.tree.building[[scar.index]] <- it.tree.element
-  
-  # Add scar to tree.summary as Node.2
-  tree.summary$Node.2[top.incomplete.edge.index] <- scar.remove
-  
-  # Add newfound scar and components to tree.summary.
-  remaining.cs <- current.cs.component[current.cs.component$Scar != scar.remove, ]
-  if(nrow(remaining.cs) > 0){
-    tree.summary.add <- 
-      initialize.branches(remaining.cs, scar.remove = scar.remove, 
-                          size.ratio = branch.size.ratio)
-    tree.summary.add$Depth <- tree.summary$Depth[top.incomplete.edge.index] + 1
-    # If current branch was not a main branch, set non-main flags for all
-    # consecutive scars as well.
-    if(!tree.summary$Main[top.incomplete.edge.index]){
-      tree.summary.add$Main <- F
-    }
-    tree.summary <- rbind(tree.summary, tree.summary.add)
-  }
-  
-  scar.index <- scar.index + 1
+  iterative.end <- Sys.time()
+  iterative.time <- iterative.end - iterative.start
+  print(iterative.time)
+
+  weak.scars <- c(weak.scars, weak.scar)
+  weak.scar <- character()
+  if(!weak.scar.found){break}
 }
 
 # Collapse tree ####
@@ -652,16 +729,17 @@ tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
 LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
 # save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
 LINNAEUS.tree_wg <-
-  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F, 
+  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F,
+                  pieSummary = F, fill = "fill", nodeSize = "size",
                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
 LINNAEUS.tree_wg
 
-LINNAEUS.tree_wg <- 
-  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
-                  fontSize = 8, width = 300, height = 400, fill = "fill",
-                  nodeSize = "size", pieSummary = F)
+# LINNAEUS.tree_wg <- 
+#   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
+#                   fontSize = 8, width = 300, height = 400, fill = "fill",
+#                   nodeSize = "size", pieSummary = F)
 # save(LINNAEUS.tree_wg, file = "./Data/Simulations/B2_wweak_dlet0_widget.Robj")
-LINNAEUS.tree_wg
+# LINNAEUS.tree_wg
 # htmlwidgets::saveWidget(LINNAEUS.tree_wg,
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
 
@@ -689,11 +767,11 @@ tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
 LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
 # save(LINNAEUS.cell.tree, 
 #      file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
-load(file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
+# load(file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
 collapsibleTree(LINNAEUS.cell.tree, collapsed = F, pieSummary=F, pieNode=F, 
                 nodeSize='size', ctypes=unique(LINNAEUS.cell.tree$Get("Cell.type")), 
                 fill='fill')
-load("./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj");
+# load("./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj");
 collapsibleTree(phylip.tree, collapsed = F, pieSummary=F, pieNode=F, 
                 nodeSize='size', ctypes=unique(phylip.tree$Get("Cell.type")), 
                 fill='fill')
@@ -786,3 +864,11 @@ LINNAEUS.tree_wg
 # collapsibleTree(LINNAEUS.tree, collapsed = F, pieSummary=F, pieNode=F, 
 #                 nodeSize='size', ctypes=unique(LINNAEUS.tree$Get("Cell.type")), 
 #                 fill='fill')
+
+# Data structure tests ####
+basic.structure <- it.tree.building[[1]]$LLS
+ggplot(basic.structure) +
+  geom_point(aes(x = Scar.count, y = Degree))
+basic.structure$Scars.per.deg <- basic.structure$Scar.count/basic.structure$Degree
+ggplot(basic.structure) +
+  geom_histogram(aes(x = Scars.per.deg))

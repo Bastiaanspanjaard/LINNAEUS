@@ -19,6 +19,7 @@ require(plyr)
 require(data.tree)
 require(treemap)
 require(collapsibleTree)
+require(data.table)
 # source("./Scripts/linnaeus-scripts/collapsibleTree.R")
 # source("./Scripts/linnaeus-scripts/collapsibleTree.data.tree.R")
 
@@ -291,15 +292,37 @@ connections.for.graph <- function(current.cs){
   scars.in.tree <- data.frame(table(current.cs$Scar))
   colnames(scars.in.tree) <- c("Scar", "Count")
   
-  scar.cell <- acast(current.cs, Cell ~ Scar, fun.aggregate = length,
-                     value.var = "Scar")
-  scar.links <- t(scar.cell) %*% scar.cell
   
+  # OLD
+  # scar.cell <- acast(current.cs, Cell ~ Scar, fun.aggregate = length,
+  #                    value.var = "Scar")
+
+  # OLD
+  # current.cs$Presence <- 1
+  # scar.cell <- dcast(setDF(current.cs), Cell ~ Scar, value.var = "Presence")
+  # rownames(scar.cell) <- scar.cell$Cell
+  # scar.cell <- scar.cell[, -1]
+  # scar.cell[is.na(scar.cell)] <- 0
+  # scar.cell <- as.matrix(scar.cell)
+  # scar.links <- t(scar.cell) %*% scar.cell
   # Now create a list of all connections between scars.
-  scar.connections <- data.frame(melt(scar.links,
-                                      varnames = c("Scar.A", "Scar.B"),
-                                      value.name = "Link"))
-  colnames(scar.connections)[3] <- "x_AB"
+  # scar.connections <- data.frame(melt(scar.links,
+  #                                     varnames = c("Scar.A", "Scar.B"),
+  #                                     value.name = "Link"))
+  # colnames(scar.connections)[3] <- "x_AB"
+  
+  # NEW
+  # timer.start <- Sys.time()
+  current.cs.2 <- current.cs
+  colnames(current.cs.2)[2] <- "Scar.B"
+  connections.pre <- merge(current.cs[, c("Cell", "Scar")], 
+                       current.cs.2[, c("Cell", "Scar.B")], all= T)
+  scar.connections <- ddply(connections.pre[, c("Scar", "Scar.B")],
+                         .(Scar, Scar.B),nrow)
+  colnames(scar.connections) <- c("Scar.A", "Scar.B", "x_AB")
+  # timer.end <- Sys.time()
+  # timer.time <- timer.end - timer.start
+  # print(timer.time)
   
   scar.counts <- 
     scar.connections[scar.connections$Scar.A == scar.connections$Scar.B, 
