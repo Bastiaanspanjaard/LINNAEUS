@@ -26,9 +26,9 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected.
 doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.01 # Default value is 0.01
+min.detection.rate <- 0.05 # Default value is 0.01
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.125 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
@@ -44,7 +44,7 @@ print("Loading data")
 # tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), 
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
 #                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
@@ -59,11 +59,8 @@ N <- 3000 #125 #
 # Scars
 scar.input <- 
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
-  # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
-  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
-  # read.csv("./Data/Simulations/Tree_B3_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
@@ -122,7 +119,7 @@ repeat{
   
   # Filter out low-frequency scar connections ####
   print("Filtering doublets")
-  dfilter.start <- Sys.time()
+  # dfilter.start <- Sys.time()
   
   # dataset.graph <- graph.and.decompose(cells.in.tree)
   # dataset.degrees <-
@@ -217,27 +214,28 @@ repeat{
     inc.cells <- unique(c(inc.cells, intersect(cells.scar.A, cells.scar.B)))
   }
   cells.in.tree.f <- cells.in.tree[!(cells.in.tree$Cell %in% inc.cells), ]
-  dfilter.end <- Sys.time()
-  dfilter.time <- dfilter.end - dfilter.start
-  print(dfilter.time)
+  # dfilter.end <- Sys.time()
+  # dfilter.time <- dfilter.end - dfilter.start
+  # print(dfilter.time)
   
   # Iteration start conditions ####
-  iterative.sc.start <- Sys.time()
+  # iterative.sc.start <- Sys.time()
   scar.amount <- length(unique(cells.in.tree.f$Scar))
   it.tree.building <- vector("list", scar.amount)
   tree.summary <- 
     initialize.branches(cells.in.tree.f, scar.remove = "Root",
                         size.ratio = branch.size.ratio)
-  iterative.sc.end <- Sys.time()
-  iterative.sc.time <- iterative.sc.end - iterative.sc.start
-  print(iterative.sc.time)
+  # iterative.sc.end <- Sys.time()
+  # iterative.sc.time <- iterative.sc.end - iterative.sc.start
+  # print(iterative.sc.time)
   
   # Iterative tree building ####
   scar.index <- 1
-  iterative.start <- Sys.time()
-  while(scar.index <= scar.amount & !weak.scar.found){
+  # iterative.start <- Sys.time()
+  # remove.scar.too.weak <- character()
+  while(scar.index <= scar.amount & !weak.scar.found){ #(scar.amount - length(remove.scar.too.weak))){#
     print(paste("Iterative tree building, identifying scar",
-                scar.index, "of", scar.amount))
+                scar.index, "of", scar.amount)) # (scar.amount - length(remove.scar.too.weak))))
     
     # Select the topmost incomplete line in the tree summary to define the scar 
     # graph branch for which to determine the first scar created. Deduce the other 
@@ -263,7 +261,9 @@ repeat{
     # that includes the [starting.scar], remove that scar, and find the correct
     # component in the resulting disconnected graph.
     preceding.scars <- setdiff(scars.to.remove, starting.scar)
+    # ALSO REMOVE identified topology-influencing scars
     current.cs <- cells.in.tree.f[!(cells.in.tree.f$Scar %in% preceding.scars), ]
+                                      # c(preceding.scars, remove.scar.too.weak)), ]
     first.decomposition <- graph.and.decompose(current.cs)
     for(comp in 1:length(first.decomposition)){
       if(starting.scar %in% V(first.decomposition[[comp]])$name){
@@ -281,8 +281,8 @@ repeat{
     current.graph <- second.decomposition[[current.component]]
     current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
     
-    cs <- current.cs.component
-    graph <- current.graph
+    # cs <- current.cs.component
+    # graph <- current.graph
     
     if(length(V(current.graph)) == 1){
       # Condition for last scar in branch - this will have a graph without any
@@ -306,42 +306,174 @@ repeat{
                                  -scar.lls$Degree,
                                  -scar.lls$Mean.p_A), ]
       scar.lls.select <- scar.lls[scar.lls$Mean.p_A > min.detection.rate, ]
-      scar.lls.unique <- 
-        unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
-                            "Degree.p", "Mean.p_A")])
-      scar.lls.select.unique <- 
-        scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
+      # scar.lls.unique <- 
+      #   unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
+      #                       "Degree.p", "Mean.p_A")])
+      # scar.lls.select.unique <- 
+      #   scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
       
       if(nrow(scar.lls.select) > 0){
-        scar.remove <- scar.lls.select.unique$Scar[1]
+        scar.remove <- scar.lls.select$Scar[1]
         difficult.scars <-
           scar.lls$Scar[scar.lls$Degree.p >
                           scar.lls$Degree.p[scar.lls$Scar == scar.remove]]
-        if(length(difficult.scars) > 0){
-          print(paste("Weak scar", difficult.scars[1], "found"))
-          weak.scar.found <- T
-          weak.scar <- difficult.scars[1]
-          # print(cat("Scars", difficult.scars, "will be difficult to place"))
-        }
+        # if(length(difficult.scars) > 0){
+        #   print(paste("Weak scar", difficult.scars[1], "found"))
+        #   weak.scar.found <- T
+        #   weak.scar <- difficult.scars[1]
+        #   # print(cat("Scars", difficult.scars, "will be difficult to place"))
+        # }
       }else{
         # How to relate this to weak scars?
         print("No scar above minimum detection rate. Taking best scar under minimum detection rate")
-        scar.remove <- scar.lls.unique$Scar[1]
+        scar.remove <- scar.lls$Scar[1]
       }
       
       it.tree.element <- list(Scar = scar.remove,
                               LLS = scar.lls,
-                              LLS.select = scar.lls.select,
-                              LLS.unique = scar.lls.unique,
-                              LLS.select.unique = scar.lls.select.unique)
+                              LLS.select = scar.lls.select)
+      # ,
+      #                         LLS.unique = scar.lls.unique,
+      #                         LLS.select.unique = scar.lls.select.unique)
     }
     it.tree.building[[scar.index]] <- it.tree.element
     
     # Add scar to tree.summary as Node.2
     tree.summary$Node.2[top.incomplete.edge.index] <- scar.remove
     
-    # Add newfound scar and components to tree.summary.
+    ## Test if difficult scars would change the scar graph topology. Test for one
+    # scar at a time, remove if it would indeed change the topology.
     remaining.cs <- current.cs.component[current.cs.component$Scar != scar.remove, ]
+    # (note that current.cs.component already has earlier too-weak-scars
+    # removed).
+    
+    # NB !!!! We will update remaining.cs so we will need to change this if-
+    # statement or include it somewhere within the loop.
+    if(nrow(remaining.cs) > 0){
+      for(difficult.scar in difficult.scars){
+        # difficult.scar <- difficult.scars[1]
+        # remaining.cs <- 
+        #   remaining.cs[!(remaining.cs$Scar %in% remove.scar.too.weak), ]
+        # if(nrow(remaining.cs) == 0){
+        #   break}
+        graph.with <- graph.and.decompose(remaining.cs)
+        # 1: Calculate graph with and without difficult scars
+        remaining.cs.without <- 
+          remaining.cs[!(remaining.cs$Scar %in% difficult.scar), ]
+        graph.without <- graph.and.decompose(remaining.cs.without)
+        # Remove difficult scar from the graph made WITH that scar
+        graph.with.without <- 
+          lapply(graph.with, function(x) {
+            if(difficult.scar %in% names(V(x))){
+              vertex.to.remove <- which(names(V(x)) == difficult.scar)
+              return(delete.vertices(x, vertex.to.remove))
+            }else{
+              return(x)
+            }
+          })
+        # Remove possible 0-size components
+        list.i <- 1
+        while(list.i <= length(graph.with.without)){
+          if(vcount(graph.with.without[[list.i]]) == 0){
+            graph.with.without <- graph.with.without[-list.i]
+          }else{
+            list.i <- list.i + 1
+          }
+        }
+        
+        # graph.with.without <-
+        #   lapply(graph.with.without.1, 
+        #          function(x) {
+        #            if(vcount(x) == 0){
+        #              return(NULL)
+        #            }else{
+        #              return(x)
+        #            }
+        #          })
+        # graph.with.without <- 
+        #   graph.with.without[-(which(sapply(graph.with.without,is.null),arr.ind=TRUE))]
+        
+        # 2a: Test similarity of graphs - same number of components
+        if(length(graph.without) != length(graph.with.without)){
+          # remove.scar.too.weak <- c(remove.scar.too.weak, difficult.scar)
+          weak.scars <- c(weak.scars, difficult.scar)
+          weak.scar.found <- T
+          print(paste("Scar", difficult.scar, "influences topology and will be removed."))
+          # break # No need for further testing this scar
+        }else{
+          # 2b: Test similarity of graphs - same number of vertices per component
+          graph.comparison <- 
+            data.frame(Component.with = 1:length(graph.with.without),
+                       Component.without = 1:length(graph.without),
+                       Vcount.with = unlist(lapply(graph.with.without, vcount)),
+                       Vcount.without = unlist(lapply(graph.without, vcount)))
+          if(sum(sort(graph.comparison$Vcount.with) == 
+                 sort(graph.comparison$Vcount.without)) != 
+             nrow(graph.comparison)){
+            weak.scars <- c(weak.scars, difficult.scar)
+            weak.scar.found <- T
+            # remove.scar.too.weak <- c(remove.scar.too.weak, difficult.scar)
+            print(paste("Scar", difficult.scar, "influences topology and will be removed."))
+          # break # No need for further testing this scar
+          }else{
+            # 2c: Test similarity of graphs - same vertices per component
+            for(size in unique(graph.comparison$Vcount.with)){
+              # size <- 26 # Test case 1
+              # size <- 2 # Test case 2
+              found.wrong.component <- F
+              if(sum(graph.comparison$Vcount.with == size) == 1){
+                wwo.comps <- graph.comparison$Component.with[graph.comparison$Vcount.with == size]
+                wwo.graphs <- graph.with.without[[wwo.comps]]
+                vertices.with <- names(V(wwo.graphs))
+                wo.comps <- graph.comparison$Component.without[graph.comparison$Vcount.without == size]
+                wo.graphs <- graph.without[[wo.comps]]
+                vertices.without <- names(V(wo.graphs))
+                if(length(union(vertices.with, vertices.without)) != 
+                   length(intersect(vertices.with, vertices.without))){
+                  found.unequal.components <- T
+                  break
+                }
+              }else{
+                wwo.comps <- graph.comparison$Component.with[graph.comparison$Vcount.with == size]
+                wwo.graphs <- graph.with.without[wwo.comps]
+                wo.comps <- graph.comparison$Component.without[graph.comparison$Vcount.without == size]
+                wo.graphs <- graph.without[wo.comps]
+                matching.comps <- 0
+                for(wwo.c in 1:length(wwo.comps)){
+                  for(wo.c in 1:length(wo.comps)){
+                    wwo.graph <- wwo.graphs[[wwo.c]]
+                    wo.graph <- wo.graphs[[wo.c]]
+                    vertices.with <- names(V(wwo.graph))
+                    vertices.without <- names(V(wo.graph))
+                    if(length(union(vertices.with, vertices.without)) == 
+                       length(intersect(vertices.with, vertices.without))){
+                      matching.comps <- matching.comps + 1
+                      break
+                    }
+                  }
+                }
+            if(matching.comps != sum(graph.comparison$Vcount.with == size)){
+              found.unequal.components <- T
+              break
+            }
+          }
+          
+              if(found.wrong.component){
+                print(paste("Scar", difficult.scar, "influences topology and will be removed."))
+                weak.scars <- c(weak.scars, difficult.scar)
+                weak.scar.found <- T
+                # remove.scar.too.weak <- c(remove.scar.too.weak, difficult.scar)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    # Add newfound scar and components to tree.summary.
+    # UPDATE for topology-influencing scars
+    remaining.cs <- current.cs.component[!(current.cs.component$Scar %in% scar.remove), ]
+                                           # c(scar.remove, remove.scar.too.weak)), ]
     if(nrow(remaining.cs) > 0){
       tree.summary.add <- 
         initialize.branches(remaining.cs, scar.remove = scar.remove, 
@@ -357,12 +489,12 @@ repeat{
     
     scar.index <- scar.index + 1
   }
-  iterative.end <- Sys.time()
-  iterative.time <- iterative.end - iterative.start
-  print(iterative.time)
-
-  weak.scars <- c(weak.scars, weak.scar)
-  weak.scar <- character()
+#   iterative.end <- Sys.time()
+#   iterative.time <- iterative.end - iterative.start
+#   print(iterative.time)
+# 
+#   weak.scars <- c(weak.scars, weak.scar)
+#   weak.scar <- character()
   if(!weak.scar.found){break}
 }
 
