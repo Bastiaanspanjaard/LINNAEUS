@@ -26,7 +26,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 # Fraction of doublets expected.
 doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.05 # Default value is 0.01
+min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.125 # Default 0.25, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
@@ -41,33 +41,33 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA
-# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
 #                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000 #125 #
-# N <- nrow(tsne.coord)
+# N <- 3000 #125 #
+N <- nrow(tsne.coord)
 
 # Scars
 scar.input <- 
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
-  read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
-# scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
-  # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-# scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
-#                     tsne.coord)
+  read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
+scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
+# read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
+                    tsne.coord)
 # colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
 #   "Cell.type"
 # colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
@@ -350,130 +350,128 @@ repeat{
     # NB !!!! We will update remaining.cs so we will need to change this if-
     # statement or include it somewhere within the loop.
     if(nrow(remaining.cs) > 0){
+      graph.with <- graph.and.decompose(remaining.cs)
       for(difficult.scar in difficult.scars){
-        # difficult.scar <- difficult.scars[1]
-        # remaining.cs <- 
-        #   remaining.cs[!(remaining.cs$Scar %in% remove.scar.too.weak), ]
-        # if(nrow(remaining.cs) == 0){
-        #   break}
-        graph.with <- graph.and.decompose(remaining.cs)
-        # 1: Calculate graph with and without difficult scars
-        remaining.cs.without <- 
-          remaining.cs[!(remaining.cs$Scar %in% difficult.scar), ]
-        graph.without <- graph.and.decompose(remaining.cs.without)
-        # Remove difficult scar from the graph made WITH that scar
-        graph.with.without <- 
-          lapply(graph.with, function(x) {
-            if(difficult.scar %in% names(V(x))){
-              vertex.to.remove <- which(names(V(x)) == difficult.scar)
-              return(delete.vertices(x, vertex.to.remove))
-            }else{
-              return(x)
-            }
-          })
-        # Remove possible 0-size components
-        list.i <- 1
-        while(list.i <= length(graph.with.without)){
-          if(vcount(graph.with.without[[list.i]]) == 0){
-            graph.with.without <- graph.with.without[-list.i]
-          }else{
-            list.i <- list.i + 1
-          }
-        }
+        print(paste("Testing difficult scar", difficult.scar))
         
-        # graph.with.without <-
-        #   lapply(graph.with.without.1, 
-        #          function(x) {
-        #            if(vcount(x) == 0){
-        #              return(NULL)
-        #            }else{
-        #              return(x)
-        #            }
-        #          })
-        # graph.with.without <- 
-        #   graph.with.without[-(which(sapply(graph.with.without,is.null),arr.ind=TRUE))]
-        
-        # 2a: Test similarity of graphs - same number of components
-        if(length(graph.without) != length(graph.with.without)){
-          # remove.scar.too.weak <- c(remove.scar.too.weak, difficult.scar)
+        # NEW
+        # remove difficult scar from (sub)graph, see if it is still connected
+        difficult.subgraph <-
+          graph.with[[which(unlist(lapply(graph.with,
+                                          function(x) difficult.scar %in% names(V(x)))))]]
+        this.scar.weak <-
+          !is.connected(delete.vertices(difficult.subgraph,
+                        which(names(V(difficult.subgraph)) == difficult.scar)))
+        if(this.scar.weak){
+          # print("This scar weak!")
           weak.scars <- c(weak.scars, difficult.scar)
           weak.scar.found <- T
-          print(paste("Scar", difficult.scar, "influences topology and will be removed."))
-          # break # No need for further testing this scar
-        }else{
-          # 2b: Test similarity of graphs - same number of vertices per component
-          graph.comparison <- 
-            data.frame(Component.with = 1:length(graph.with.without),
-                       Component.without = 1:length(graph.without),
-                       Vcount.with = unlist(lapply(graph.with.without, vcount)),
-                       Vcount.without = unlist(lapply(graph.without, vcount)))
-          if(sum(sort(graph.comparison$Vcount.with) == 
-                 sort(graph.comparison$Vcount.without)) != 
-             nrow(graph.comparison)){
-            weak.scars <- c(weak.scars, difficult.scar)
-            weak.scar.found <- T
-            # remove.scar.too.weak <- c(remove.scar.too.weak, difficult.scar)
-            print(paste("Scar", difficult.scar, "influences topology and will be removed."))
-          # break # No need for further testing this scar
-          }else{
-            # 2c: Test similarity of graphs - same vertices per component
-            for(size in unique(graph.comparison$Vcount.with)){
-              # size <- 26 # Test case 1
-              # size <- 2 # Test case 2
-              found.wrong.component <- F
-              if(sum(graph.comparison$Vcount.with == size) == 1){
-                wwo.comps <- graph.comparison$Component.with[graph.comparison$Vcount.with == size]
-                wwo.graphs <- graph.with.without[[wwo.comps]]
-                vertices.with <- names(V(wwo.graphs))
-                wo.comps <- graph.comparison$Component.without[graph.comparison$Vcount.without == size]
-                wo.graphs <- graph.without[[wo.comps]]
-                vertices.without <- names(V(wo.graphs))
-                if(length(union(vertices.with, vertices.without)) != 
-                   length(intersect(vertices.with, vertices.without))){
-                  found.unequal.components <- T
-                  break
-                }
-              }else{
-                wwo.comps <- graph.comparison$Component.with[graph.comparison$Vcount.with == size]
-                wwo.graphs <- graph.with.without[wwo.comps]
-                wo.comps <- graph.comparison$Component.without[graph.comparison$Vcount.without == size]
-                wo.graphs <- graph.without[wo.comps]
-                matching.comps <- 0
-                for(wwo.c in 1:length(wwo.comps)){
-                  for(wo.c in 1:length(wo.comps)){
-                    wwo.graph <- wwo.graphs[[wwo.c]]
-                    wo.graph <- wo.graphs[[wo.c]]
-                    vertices.with <- names(V(wwo.graph))
-                    vertices.without <- names(V(wo.graph))
-                    if(length(union(vertices.with, vertices.without)) == 
-                       length(intersect(vertices.with, vertices.without))){
-                      matching.comps <- matching.comps + 1
-                      break
-                    }
-                  }
-                }
-            if(matching.comps != sum(graph.comparison$Vcount.with == size)){
-              found.unequal.components <- T
-              break
-            }
-          }
-          
-              if(found.wrong.component){
-                print(paste("Scar", difficult.scar, "influences topology and will be removed."))
-                weak.scars <- c(weak.scars, difficult.scar)
-                weak.scar.found <- T
-                # remove.scar.too.weak <- c(remove.scar.too.weak, difficult.scar)
-              }
-            }
-          }
         }
+        # END NEW
+        
+    #     #OLD
+    #     if(nrow(remaining.cs) == 0){
+    #       break}
+    #     # 1: Calculate graph with and without difficult scars
+    #     remaining.cs.without <-
+    #       remaining.cs[!(remaining.cs$Scar %in% difficult.scar), ]
+    #     graph.without <- graph.and.decompose(remaining.cs.without)
+    #     # Remove difficult scar from the graph made WITH that scar
+    #     graph.with.without <-
+    #       lapply(graph.with, function(x) {
+    #         if(difficult.scar %in% names(V(x))){
+    #           vertex.to.remove <- which(names(V(x)) == difficult.scar)
+    #           return(delete.vertices(x, vertex.to.remove))
+    #         }else{
+    #           return(x)
+    #         }
+    #       })
+    #     # Remove possible 0-size components
+    #     list.i <- 1
+    #     while(list.i <= length(graph.with.without)){
+    #       if(vcount(graph.with.without[[list.i]]) == 0){
+    #         graph.with.without <- graph.with.without[-list.i]
+    #       }else{
+    #         list.i <- list.i + 1
+    #       }
+    #     }
+    #     
+    #     # 2a: Test similarity of graphs - same number of components
+    #     if(length(graph.without) != length(graph.with.without)){
+    #       weak.scars <- c(weak.scars, difficult.scar)
+    #       weak.scar.found <- T
+    #       print(paste("Scar", difficult.scar, "influences topology and will be removed."))
+    # }else{
+    # # 2b: Test similarity of graphs - same number of vertices per component
+    # graph.comparison <-
+    #   data.frame(Component.with = 1:length(graph.with.without),
+    #              Component.without = 1:length(graph.without),
+    #              Vcount.with = unlist(lapply(graph.with.without, vcount)),
+    #              Vcount.without = unlist(lapply(graph.without, vcount)))
+    # if(sum(sort(graph.comparison$Vcount.with) ==
+    #        sort(graph.comparison$Vcount.without)) !=
+    #    nrow(graph.comparison)){
+    #   weak.scars <- c(weak.scars, difficult.scar)
+    #   weak.scar.found <- T
+    #   print(paste("Scar", difficult.scar, "influences topology and will be removed."))
+    # }else{
+    #   # 2c: Test similarity of graphs - same vertices per component
+    #   for(size in unique(graph.comparison$Vcount.with)){
+    #     # size <- 26 # Test case 1
+    #     # size <- 2 # Test case 2
+    #     found.wrong.component <- F
+    #     if(sum(graph.comparison$Vcount.with == size) == 1){
+    #       wwo.comps <- graph.comparison$Component.with[graph.comparison$Vcount.with == size]
+    #       wwo.graphs <- graph.with.without[[wwo.comps]]
+    #       vertices.with <- names(V(wwo.graphs))
+    #       wo.comps <- graph.comparison$Component.without[graph.comparison$Vcount.without == size]
+    #       wo.graphs <- graph.without[[wo.comps]]
+    #       vertices.without <- names(V(wo.graphs))
+    #       if(length(union(vertices.with, vertices.without)) !=
+    #          length(intersect(vertices.with, vertices.without))){
+    #         found.unequal.components <- T
+    #         break
+    #       }
+    #     }else{
+    #       wwo.comps <- graph.comparison$Component.with[graph.comparison$Vcount.with == size]
+    #       wwo.graphs <- graph.with.without[wwo.comps]
+    #       wo.comps <- graph.comparison$Component.without[graph.comparison$Vcount.without == size]
+    #       wo.graphs <- graph.without[wo.comps]
+    #       matching.comps <- 0
+    #       for(wwo.c in 1:length(wwo.comps)){
+    #         for(wo.c in 1:length(wo.comps)){
+    #           wwo.graph <- wwo.graphs[[wwo.c]]
+    #           wo.graph <- wo.graphs[[wo.c]]
+    #           vertices.with <- names(V(wwo.graph))
+    #           vertices.without <- names(V(wo.graph))
+    #           if(length(union(vertices.with, vertices.without)) ==
+    #              length(intersect(vertices.with, vertices.without))){
+    #             matching.comps <- matching.comps + 1
+    #             break
+    #           }
+    #         }
+    #       }
+    #   if(matching.comps != sum(graph.comparison$Vcount.with == size)){
+    #     found.unequal.components <- T
+    #     break
+    #   }
+    # }
+    # 
+    #     if(found.wrong.component){
+    #       print(paste("Scar", difficult.scar, "influences topology and will be removed."))
+    #       weak.scars <- c(weak.scars, difficult.scar)
+    #       weak.scar.found <- T
+    # }
+    # }
+    # }
+    # }
+    #     # END OLD
       }
     }
 
     # Add newfound scar and components to tree.summary.
     # UPDATE for topology-influencing scars
     remaining.cs <- current.cs.component[!(current.cs.component$Scar %in% scar.remove), ]
-                                           # c(scar.remove, remove.scar.too.weak)), ]
     if(nrow(remaining.cs) > 0){
       tree.summary.add <- 
         initialize.branches(remaining.cs, scar.remove = scar.remove, 

@@ -436,7 +436,7 @@ create.degree.lls <- function(cs, graph){
   if(nrow(only.scar) == 0){
     # NEW
     only.scar.count <- data.frame(Scar = character(),
-                                  Cell.type = character(),
+                                  # Cell.type = character(),
                                   Only.scar = integer())
     # OLD
     # only.scar.count <- data.frame(Scar = character(),
