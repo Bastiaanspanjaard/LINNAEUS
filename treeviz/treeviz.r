@@ -367,10 +367,22 @@ scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
 
 scar_tree$fill <- "black"
 scar_tree$size <- 1
-scar_tree_B <- generate_tree(scar_tree)
-scar_tree_wg <- collapsibleTree(scar_tree_B, root = scar_tree_B$scar, collapsed = F,
+scar_tree$Cell.type <- "NA"
+scar_tree$Order <-
+  c(1,2,8,11,5,
+    6,7,24,9,3,
+    4,17,18,19,21,
+    22,23,10,25,26,
+    27,12,13,14,15,
+    16,28,29,19,20,
+    31,32)
+scar_tree.2 <- scar_tree[order(scar_tree$Order), -7]
+scar_tree_B <- generate_tree(scar_tree.2)
+scar_tree_wg <- collapsibleTree(scar_tree_B, root = scar_tree_B$scar,
                                fontSize = 8, width = 300, height = 400,
-                               fill = "fill", nodeSize = "size")
+                               pieNode = F,
+                               pieSummary = F, fill = "fill", nodeSize = "size",
+                               collapsed = F, ctypes=unique(scar_tree_B$Get("Cell.types")))
 scar_tree_wg
 # htmlwidgets::saveWidget(scar_tree_wg,
 # file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_scar_tree.html")
