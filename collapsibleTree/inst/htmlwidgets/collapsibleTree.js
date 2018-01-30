@@ -49,9 +49,9 @@ HTMLWidgets.widget({
       // PO If colors provided, use them
       var color;
       if(options.useColors){
-	color = d3.scaleOrdinal().range(options.colors)
+	color = options.colors
 	}else{
-	color = d3.scaleOrdinal().range(fixed_colors)
+	color = fixed_colors
 	}
       // Assigns the x and y position for the nodes
       var treeData = treemap(root);
@@ -117,7 +117,9 @@ HTMLWidgets.widget({
 	var final_arc = arc(d);
          return final_arc;
          })
-         .style("fill", function(d, i) { return color(i); });
+         .style("fill", function(d, i) { 
+         var ii = color.length
+         return color[ii]; });
 
       }
 
