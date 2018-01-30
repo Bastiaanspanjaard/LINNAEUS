@@ -199,7 +199,7 @@ repeat{
   # Identify and remove cells with incorrect connections
   # ic <- 1
   inc.cells <- character()
-  if(length(inc.cells) > 0){
+  if(nrow(incorrect.connections) > 0){
     for(ic in 1:nrow(incorrect.connections)){
       inc.scar.A <- incorrect.connections$Scar.A[ic]
       inc.scar.B <- incorrect.connections$Scar.B[ic]
@@ -593,7 +593,7 @@ rm(scar.node.dictionary.1, scar.node.dictionary.2, i, collapsed.scars)
 root.name <-
   unique(tree.summary.collapse$Node.1[grepl("Root", 
                                             tree.summary.collapse$Node.1)])
-if(length(root.name) > 0){
+if(root.name != "Root"){
   collapsed.scars <- unlist(strsplit(as.character(root.name), ","))[-1]
   root.dictionary <- data.frame(Scar = collapsed.scars,
                                 Node = 0)
@@ -753,14 +753,16 @@ tree.plot$Parent <-
   )
 root.scars <- 
   unique(tree.summary.collapse.main$Node.1[grepl("Root", tree.summary.collapse.main$Node.1)])
-root.add <- data.frame(Parent = "Root",
-                       Child = 0,
-                       Scar.acquisition = root.scars,
-                       stringsAsFactors = F)
-root.add$Scar.acquisition <- 
-  sapply(root.add$Scar.acquisition,
-         function(x) paste(unlist(strsplit(x, ","))[-1], collapse = ","))
-tree.plot <- rbind(root.add, tree.plot)
+if(root.scars != "Root"){
+  root.add <- data.frame(Parent = "Root",
+                         Child = 0,
+                         Scar.acquisition = root.scars,
+                         stringsAsFactors = F)
+  root.add$Scar.acquisition <- 
+    sapply(root.add$Scar.acquisition,
+           function(x) paste(unlist(strsplit(x, ","))[-1], collapse = ","))
+  tree.plot <- rbind(root.add, tree.plot)
+}
 tree.plot$Cell.type <- "NA"
 tree.plot$fill <- "black"
 tree.plot$size <- 1
@@ -773,23 +775,35 @@ colnames(cells.add)[1:2] <- c("Parent", "Child")
 cells.add$fill <- "lightgrey"
 cells.add$size <- 0.5
 cells.add$Cell.type <- "Cell"
+cells.add$Child <- 
+  sapply(cells.add$Child,
+         function(x){
+           x <- as.character(x)
+           if(grepl(";", x)){
+             return(paste(unlist(strsplit(x, ";")), collapse = "d"))
+           }else{
+             return(x)
+           }
+         }
+  )
+
 tree.plot.cells <- rbind(tree.plot, cells.add)
 rm(cells.add)
 
 # Visualize trees ####
 # Without cells, no pie charts
-LINNAEUS.wo <- generate_tree(tree.plot)
-collapsibleTree(LINNAEUS.wo, root = LINNAEUS.wo$scar, pieNode = F,
-                pieSummary = F, fill = "fill", nodeSize = "size",
-                width = 800, height = 600,
-                collapsed = F, ctypes=unique(LINNAEUS.wo$Get("Cell.types")))
+# LINNAEUS.wo <- generate_tree(tree.plot)
+# collapsibleTree(LINNAEUS.wo, root = LINNAEUS.wo$scar, pieNode = F,
+#                 pieSummary = F, fill = "fill", nodeSize = "size",
+#                 width = 800, height = 600,
+#                 collapsed = F, ctypes=unique(LINNAEUS.wo$Get("Cell.types")))
 
 # With cells, no pie charts
-LINNAEUS.with <- generate_tree(tree.plot.cells)
-collapsibleTree(LINNAEUS.with, root = LINNAEUS.wo$scar, pieNode = F,
-                pieSummary = F, fill = "fill", nodeSize = "size",
-                width = 800, height = 600,
-                collapsed = F, ctypes=unique(LINNAEUS.with$Get("Cell.types")))
+# LINNAEUS.with <- generate_tree(tree.plot.cells)
+# collapsibleTree(LINNAEUS.with, root = LINNAEUS.wo$scar, pieNode = F,
+#                 pieSummary = F, fill = "fill", nodeSize = "size",
+#                 width = 800, height = 600,
+#                 collapsed = F, ctypes=unique(LINNAEUS.with$Get("Cell.types")))
 
 # Without cells, with pie charts
 
