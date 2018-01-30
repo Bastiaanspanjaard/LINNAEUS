@@ -837,13 +837,25 @@ rm(cells.add)
 #                 collapsed = F, ctypes=unique(LINNAEUS.with$Get("Cell.types")))
 
 ## With pie charts
-LINNAEUS.pie <- generate_tree(tree.plot.cells)
+tree.plot.cells.scar.blind <- tree.plot.cells
+tree.plot.cells.scar.blind$Scar.acquisition <- ""
+LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
 # Without cells
-collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
-                pieSummary = T,collapsed = F,
-                width = 800, height = 600,
-                ctypes = larvae.colors$Cell.type,
-                ct_colors = larvae.colors$color)
+LINNAEUS.pie.wg <-
+  collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 600, height = 600,
+                  ctypes = larvae.colors$Cell.type,
+                  ct_colors = larvae.colors$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_d005_LINNAEUS_pie_scb.html")
+
+node.sizes <-
+  merge(node.count.cumulative.agg.main[, c("Node", "Freq")], 
+        tree.summary.collapse.main[, c("Node", "Node.2")])
+
 # With cells
 # collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
 #                 pieSummary = F,collapsed = F,
@@ -858,10 +870,37 @@ collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
 #                   width = 800, height = 600,
 #                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
 
-# With cells, with pie charts
-
 # Extract tree ####
+# Easy mode 1: set all colors to lightgrey except the ones we want
+larvae.colors.zoom <- larvae.colors
+larvae.colors.zoom$color[larvae.colors.zoom$layer != "Neural crest"] <-
+  gplots::col2hex("lightgrey")
+# LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
+# Without cells
+LINNAEUS.pie.zoom.wg <-
+  collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 600, height = 600,
+                  ctypes = larvae.colors.zoom$Cell.type,
+                  ct_colors = larvae.colors.zoom$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.zoom.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_d005_LINNAEUS_pie_scb_nc.html")
 
+# Easy mode 2: remove all cells except the cell types we want
+tree.plot.cells.zoom <- tree.plot.cells.scar.blind
+cell.types.zoom <- 
+  c("NA", 
+    larvae.colors.zoom$Cell.type[larvae.colors.zoom$layer == "Neural crest"])
+tree.plot.cells.zoom <- 
+  tree.plot.cells.zoom[tree.plot.cells.zoom$Cell.type %in%
+                         cell.types.zoom, ]
+zoom.parents <- unique(tree.plot.cells.zoom$Parent[tree.plot.cells.zoom$Cell.type != "NA"])
+
+# cell.types.keep <- larvae.colors$Cell.type[larvae.colors$layer == "Neural crest"]
+# col2rgb("lightgrey")
+# gplots::col2hex("lightgrey")
 # Visualize extracted tree ####
 
 # save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
