@@ -28,11 +28,18 @@ doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.125 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.125 # Default 0.125, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
 max.larvae <- 1
+
+parameters <-
+  data.frame(Doublet.rate = doublet.rate,
+             Min.detection.rate = min.detection.rate,
+             Branch.size.ratio = branch.size.ratio,
+             Max.scar.p = max.scar.p,
+             Max.larvae = max.larvae)
 
 # For testing purposes: how many scars to include in tree building (takes the
 # most frequent scars, set to NA to include all)
@@ -41,11 +48,11 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA
-# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
-                            # c("Cell", "Cluster", "Cell.type")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
+                            c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
@@ -53,21 +60,26 @@ print("Loading data")
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 3000 #125 #
-# N <- nrow(tsne.coord)
+# N <- 3000 #125 #
+N <- nrow(tsne.coord)
+
+# Cell type colors
+larvae.colors <- read.csv("./Data/color_table_larvae.csv",
+                          stringsAsFactors = F)
+colnames(larvae.colors)[2] <- "Cell.type"
 
 # Scars
 scar.input <- 
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
-  read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
 # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-# scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
-#                     tsne.coord)
+scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
+                    tsne.coord)
 
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
@@ -506,11 +518,8 @@ tree.statistics <-
 # the name to "[scar 1], [scar 2]". 
 # After collapsing, make a dictionary that says which scar belongs to which
 # node.
-tree.summary.collapse <- tree.summary #[tree.summary$Main, ]
-# tree.summary.collapse$Nnp <- 1:nrow(tree.summary.collapse)
-# tree.summary.old <- tree.summary
-# nodename.dictionary <- data.frame(Nnp = integer(),
-#                                  Old.node = character())
+tree.summary.collapse <- tree.summary
+
 # Loop over dataframe to find all singles.
 index <- 1
 while(index <= nrow(tree.summary.collapse)){
@@ -540,7 +549,6 @@ while(index <= nrow(tree.summary.collapse)){
   if(nrow(tree.summary.collapse) == 1){break}
 }
 rm(single.name, downstream.name, collapsed.name)
-# tree.summary <- tree.summary.collapse
 
 # New node names
 tree.summary.collapse.nodes <- 
@@ -684,18 +692,24 @@ determine.main <- function(aggregates, current.branches, main.parent,
   if(main.parent){
     # main.parent T -> Test if there are any branches off-main
     if(nrow(output) > 1){
-      output <- output[order(-output$Freq), ]
-      output$Previous.freq <-
-        c(output$Freq[1], output$Freq[-nrow(output)])
-      output$Freq.ratio <- 
-        output$Freq/output$Previous.freq
-      for(tree.row in 1:nrow(output)){
-        if(output$Freq.ratio[tree.row] < branch.size.ratio){
-          break
-        }else{
-          output$Main[tree.row] <- T
-        }
-      }
+      # NEW
+      output$Max.freq <- max(output$Freq)
+      output$Freq.ratio <- output$Freq/output$Max.freq
+      output$Main <- output$Freq.ratio >= branch.size.ratio
+      
+      # OLD
+      # output <- output[order(-output$Freq), ]
+      # output$Previous.freq <-
+      #   c(output$Freq[1], output$Freq[-nrow(output)])
+      # output$Freq.ratio <- 
+      #   output$Freq/output$Previous.freq
+      # for(tree.row in 1:nrow(output)){
+      #   if(output$Freq.ratio[tree.row] < branch.size.ratio){
+      #     break
+      #   }else{
+      #     output$Main[tree.row] <- T
+      #   }
+      # }
       output <- output[, c("Node", "Node.depth", "Freq", "Main")]
     }else{
       output$Main <- T
@@ -721,9 +735,13 @@ determine.main <- function(aggregates, current.branches, main.parent,
   return(output)
 }
 
+start.branches <- 
+  node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
+                              min(node.count.cumulative.agg$Node.depth), ]
+
 main.branches <- 
   determine.main(aggregates = node.count.cumulative.agg, 
-                 current.branches = node.count.cumulative.agg[1, ], # All roots
+                 current.branches = start.branches,
                  main.parent = T, branch.size.ratio = branch.size.ratio)
 node.count.cumulative.agg <- main.branches
 node.count.cumulative <-
@@ -737,8 +755,12 @@ tree.summary.collapse.main <-
   merge(tree.summary.collapse, 
         node.count.cumulative.agg.main)[, c("Node", "Node.1", "Node.2")]
 
-rm(main.branches)
-
+start.branches.2 <- 
+  node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
+                              min(node.count.cumulative.agg$Node.depth), ]
+tree.statistics$Main <- sum(start.branches.2$Freq[start.branches.2$Main])
+tree.statistics$Off.main <- sum(start.branches.2$Freq[!start.branches.2$Main])
+rm(main.branches, start.branches, start.branches.2)
 
 # Make edgelists without and with cells ####
 # Without
@@ -769,12 +791,16 @@ tree.plot$size <- 1
 rm(root.scars, root.add)
 
 # With
-cells.add <- correct.cell.placement[, c("Node", "Cell")]
+if("Cell.type" %in% names(correct.cell.placement)){
+cells.add <- correct.cell.placement[, c("Node", "Cell", "Cell.type")]
+}else{
+  cells.add <- correct.cell.placement[, c("Node", "Cell")]
+  cell.add$Cell.type <- "Cell"
+}
 cells.add$Scar.acquisition <- ""
 colnames(cells.add)[1:2] <- c("Parent", "Child")
 cells.add$fill <- "lightgrey"
 cells.add$size <- 0.5
-cells.add$Cell.type <- "Cell"
 cells.add$Child <- 
   sapply(cells.add$Child,
          function(x){
@@ -791,21 +817,46 @@ tree.plot.cells <- rbind(tree.plot, cells.add)
 rm(cells.add)
 
 # Visualize trees ####
-# Without cells, no pie charts
+## No pie charts
+# Without cells
 # LINNAEUS.wo <- generate_tree(tree.plot)
-# collapsibleTree(LINNAEUS.wo, root = LINNAEUS.wo$scar, pieNode = F,
-#                 pieSummary = F, fill = "fill", nodeSize = "size",
-#                 width = 800, height = 600,
-#                 collapsed = F, ctypes=unique(LINNAEUS.wo$Get("Cell.types")))
+# LINNAEUS.wo.wg <- 
+#   collapsibleTree(LINNAEUS.wo, root = LINNAEUS.wo$scar, pieNode = F,
+#                   pieSummary = F, fill = "fill", nodeSize = "size",
+#                   width = 400, height = 400,
+#                   collapsed = F, ctypes=unique(LINNAEUS.wo$Get("Cell.types")))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.wo.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
 
-# With cells, no pie charts
+# With cells
 # LINNAEUS.with <- generate_tree(tree.plot.cells)
 # collapsibleTree(LINNAEUS.with, root = LINNAEUS.wo$scar, pieNode = F,
 #                 pieSummary = F, fill = "fill", nodeSize = "size",
 #                 width = 800, height = 600,
 #                 collapsed = F, ctypes=unique(LINNAEUS.with$Get("Cell.types")))
 
-# Without cells, with pie charts
+## With pie charts
+LINNAEUS.pie <- generate_tree(tree.plot.cells)
+# Without cells
+collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+                pieSummary = T,collapsed = F,
+                width = 800, height = 600,
+                ctypes = larvae.colors$Cell.type,
+                ct_colors = larvae.colors$color)
+# With cells
+# collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+#                 pieSummary = F,collapsed = F,
+#                 width = 800, height = 600,
+#                 ctypes = larvae.colors$Cell.type,
+#                 ct_colors = larvae.colors$color)
+
+
+# LINNAEUS.tree_wg <-
+#   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F,
+#                   pieSummary = F, fill = "fill", nodeSize = "size",
+#                   width = 800, height = 600,
+#                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
 
 # With cells, with pie charts
 
