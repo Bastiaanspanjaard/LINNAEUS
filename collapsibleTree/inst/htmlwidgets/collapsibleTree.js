@@ -118,7 +118,7 @@ HTMLWidgets.widget({
          return final_arc;
          })
          .style("fill", function(d, i) { 
-         var ii = color.length
+         var ii = color.length -i -1
          return color[ii]; });
 
       }
