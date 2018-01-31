@@ -12,6 +12,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 				ct_colors = NULL, ctypes = NULL, sort_by_ctype = TRUE, 
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
+				angle = 0,
 				# PO test
 				use_scar_as_name = TRUE,
 				hide_scars = FALSE,
@@ -66,6 +67,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     colors = ct_colors, #PO
     nodeLabel_sc = ifelse(is.null(nodeLabel_sc), TRUE, nodeLabel_sc ),
     zoomable = zoomable,
+    angle  = angle ,
     margin = list(
       top = 20,
       bottom = 20,
