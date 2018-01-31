@@ -1106,15 +1106,15 @@ LINNAEUS.mini.wg <-
 # larvae.colors.zoom <- larvae.colors
 # larvae.colors.zoom$color[larvae.colors.zoom$layer != "Neural crest"] <-
 #   gplots::col2hex("lightgrey")
-# LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
+LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
 # Without cells
-# LINNAEUS.pie.zoom.wg <-
-#   collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
-#                   pieSummary = T,collapsed = F,
-#                   width = 600, height = 600,
-#                   ctypes = larvae.colors.zoom$Cell.type,
-#                   ct_colors = larvae.colors.zoom$color,
-#                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
+LINNAEUS.pie.zoom.wg <-
+  collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 600, height = 600,
+                  ctypes = larvae.colors.zoom$Cell.type,
+                  ct_colors = larvae.colors.zoom$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.zoom.wg,
 #   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb_nc.html")
