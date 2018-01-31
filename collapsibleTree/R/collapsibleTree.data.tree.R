@@ -13,7 +13,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
 				# PO test
-				use_scar_as_name = FALSE,
+				use_scar_as_name = TRUE,
 				hide_scars = FALSE,
 				pieSummary = TRUE,
 				pieNode = FALSE,  
