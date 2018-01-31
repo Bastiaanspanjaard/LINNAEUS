@@ -49,9 +49,9 @@ HTMLWidgets.widget({
       // PO If colors provided, use them
       var color;
       if(options.useColors){
-	color = d3.scaleOrdinal().range(options.colors)
+	color = options.colors
 	}else{
-	color = d3.scaleOrdinal().range(fixed_colors)
+	color = fixed_colors
 	}
       // Assigns the x and y position for the nodes
       var treeData = treemap(root);
@@ -97,8 +97,10 @@ HTMLWidgets.widget({
         .data(function(d) {
 	//var proportions = (d.data.isScar?  d.data.pieNode : [1]) 
 	var proportions = d.data.pieNode
-	proportions.reverse()
-	var pieProp = pie(proportions).map(function(m){
+	//proportions.reverse()
+	var pieProp = pie(proportions).map(function(m, j){
+		m.id = j
+		m.color = color[j]
 		m.isScar = JSON.parse(d.data.isScar);
 		m.r = d.data.SizeOfNode;
 		m.ct = (m.isScar? d.data.name : d.data.ct);
@@ -117,7 +119,8 @@ HTMLWidgets.widget({
 	var final_arc = arc(d);
          return final_arc;
          })
-         .style("fill", function(d, i) { return color(i); });
+         .style("fill", function(d, i) { 
+         return d.color });
 
       }
 
@@ -179,15 +182,15 @@ HTMLWidgets.widget({
       // Update the node attributes and style
       // PO choose depending on pie option
       // pie mode
-      if(options.pieNode){
-        nodeUpdate.select('arc.node')
+      var cito = 1;
+      if(options.pieNode ){
+        nodeUpdate.select('g.node')
         .attr('outerRadius', function(d){
-	    return pieNodeOut * d.data.SizeOfNode/150
+	    return p.size
 	})
 	// PO TODO verify action
-        .style("fill", function(d) {
-            return d._children ? "lightsteelblue" : "#fff";
-        })
+	.style("fill", function(d) { 
+         return d.color })
         .attr('cursor', 'pointer');
       }
 
@@ -216,9 +219,10 @@ HTMLWidgets.widget({
       .remove();
 
       // On exit reduce the node circles size to 0
+      if(!options.pieNode){
       nodeExit.select('circle')
       .attr('r', 1e-6);
-
+      }
       // On exit reduce the opacity of text labels
       nodeExit.select('text')
       .style('fill-opacity', 1e-6);
@@ -405,3 +409,4 @@ HTMLWidgets.widget({
     };
   }
 });
+
