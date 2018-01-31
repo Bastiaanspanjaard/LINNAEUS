@@ -23,18 +23,23 @@
 source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
-# Fraction of doublets expected; number of connections has to be higher than
-# the expected number of doublets + 2sigma under the assumption that the
-# number of doublets is binomially distributed.
-doublet.rate <- 0 # Default is 0.1, set to 0 to turn off.
+# Fraction of doublets expected.
+doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
-min.detection.rate <- 0.01 # Default value is 0.05
+min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
-branch.size.ratio <- 0.25 # Default 0.25, set to 0 to turn off
+branch.size.ratio <- 0.125 # Default 0.125, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
 max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
 max.larvae <- 1
+
+parameters <-
+  data.frame(Doublet.rate = doublet.rate,
+             Min.detection.rate = min.detection.rate,
+             Branch.size.ratio = branch.size.ratio,
+             Max.scar.p = max.scar.p,
+             Max.larvae = max.larvae)
 
 # For testing purposes: how many scars to include in tree building (takes the
 # most frequent scars, set to NA to include all)
@@ -43,57 +48,58 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA
-# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # Count total number of cells present even without scars
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"), c("Cell", "Cluster", "Cell.type")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
+                            c("Cell", "Cluster", "Cell.type")]
 # For Z4
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Barcode", "Cluster")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Barcode", "Cluster")]
 # For A5
 # N <- sum(grepl("B5|H5|P5", tsne.coord$Cell))
 # For (simulated) tree B
-N <- 125 #3000 #
-# N <- nrow(tsne.coord)
+# N <- 3000 #125 #
+N <- nrow(tsne.coord)
+
+# Cell type colors
+larvae.colors <- read.csv("./Data/color_table_larvae.csv",
+                          stringsAsFactors = F)
+colnames(larvae.colors)[2] <- "Cell.type"
 
 # Scars
 scar.input <- 
-  read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
-  # read.csv("./Data/Simulations/Tree_B2_2000cellsout.csv")
-  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005.csv")
-  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
+  # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_used_scars_2.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-# scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
-#                     tsne.coord)
-# colnames(scar.input)[which(colnames(scar.input) == "Cluster")] <-
-#   "Cell.type"
-# colnames(scar.input)[which(colnames(scar.input) == "Barcode")] <-
-#   "Cell"
+# scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
+# read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
+                    tsne.coord)
 
 if(!("Cell.type" %in% names(scar.input))){
   scar.input$Cell.type <- "Type.O.Negative"
 }
 if("p" %in% names(scar.input)){
-  cells.in.tree <- scar.input[scar.input$p <= max.scar.p, 
+  cells.in.tree.pre.f <- scar.input[scar.input$p <= max.scar.p, 
                               c("Cell", "Scar", "Cell.type")]
   if("Presence" %in% names(scar.input)){
-    cells.in.tree <- 
+    cells.in.tree.pre.f <- 
       scar.input[scar.input$p <= max.scar.p & scar.input$Presence <= max.larvae, 
                  c("Cell", "Scar", "Cell.type")]
   }
 }else{
-  cells.in.tree <- scar.input
+  cells.in.tree.pre.f <- scar.input
 }
-cells.in.tree <- cells.in.tree[!duplicated(cells.in.tree), ]
+cells.in.tree.pre.f <- cells.in.tree.pre.f[!duplicated(cells.in.tree.pre.f), ]
 
 # cells.in.tree <- cells.in.tree[!grepl(";", cells.in.tree$Cell), ]
 
-scar.freqs <- data.frame(table(cells.in.tree$Scar))
+scar.freqs <- data.frame(table(cells.in.tree.pre.f$Scar))
 colnames(scar.freqs)[1] <- "Scar"
 scar.freqs <- scar.freqs[order(-scar.freqs$Freq), ]
 set.seed(1)
@@ -102,285 +108,321 @@ if(is.na(number.scars)){
 }else{
   include.scars <- scar.freqs$Scar[1:number.scars]
 }
-cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% include.scars, ]
-
-# Filter out low-frequency scar connections ####
-print("Filtering doublets")
-# Count how often every scar-scar connection is seen
-scar.connections <- connections.for.graph(cells.in.tree)
-only.once.connections <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
-colnames(only.once.connections) <- c("Scar.A", "Scar.B")
-only.once.connections <- 
-  merge(only.once.connections, 
-        scar.connections)
-
-# NEW
-only.once.connections <- only.once.connections[only.once.connections$x_AB > 0, ]
-
-# Investigate difference between dataset with doublets and without
-# cells.in.tree.no.d <- cells.in.tree[cells.in.tree$Cell.type != "Doublet", ]
-# scar.connections.no.d <- connections.for.graph(cells.in.tree.no.d)
-# only.once.connections.no.d <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
-# colnames(only.once.connections.no.d) <- c("Scar.A", "Scar.B")
-# only.once.connections.no.d <- 
-#   merge(only.once.connections.no.d, 
-#         scar.connections.no.d)
-# colnames(only.once.connections.no.d)[3:5] <- c("xnd_A", "xnd_B", "xnd_AB")
+cells.in.tree.pre.f <- cells.in.tree.pre.f[cells.in.tree.pre.f$Scar %in% include.scars, ]
 
 
-# Calculate how many doublets we'd expect given a general doublet rate, and 
-# calculate the doublet rate for every scar connection.
-only.once.connections$AB.doublets <- 
-  2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
-only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
-
-# Calculate the probability that the connections we see can all be explained by
-# doublets.
-only.once.connections$Doublet.p <-
-  apply(only.once.connections[, c("x_AB", "AB.doublet.rate")], 1,
-        function(x){
-          x_d <- as.integer(x[1])
-          p_d <- as.numeric(x[2])
-          binom.test(x_d, N, p_d, alternative = "greater")$p.value
-        }
-  )
-only.once.connections$Doublet.padj <-
-  p.adjust(only.once.connections$Doublet.p, "fdr")
-
-ooc.cutoff <- 
-  only.once.connections[only.once.connections$Doublet.padj > 0.01, ]
-
-# Identify incorrect connections
-incorrect.connections <- 
-  only.once.connections[only.once.connections$Doublet.padj >= 0.01, ]
-
-# Identify and remove cells with incorrect connections
-# ic <- 1
-inc.cells <- character()
-for(ic in 1:nrow(incorrect.connections)){
-  inc.scar.A <- incorrect.connections$Scar.A[ic]
-  inc.scar.B <- incorrect.connections$Scar.B[ic]
-  cells.scar.A <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.A]
-  cells.scar.B <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.B]
+# Start tree building ####
+# Try to build a tree and detect any weak scars until a tree has been built
+# without finding weak scars.
+weak.scars <- character()
+repeat{
+  print(paste("Tree building without scars", paste(weak.scars, collapse = ", ")))
+  weak.scar.found <- F
+  # Remove weak scars
+  cells.in.tree <- 
+    cells.in.tree.pre.f[!(cells.in.tree.pre.f$Scar %in% weak.scars), ]
   
-  inc.cells <- unique(c(inc.cells, intersect(cells.scar.A, cells.scar.B)))
-}
-cells.in.tree.f <- cells.in.tree[!(cells.in.tree$Cell %in% inc.cells), ]
-
-# Iteration start conditions ####
-scar.amount <- length(unique(cells.in.tree.f$Scar))
-it.tree.building <- vector("list", scar.amount)
-tree.summary <- 
-  initialize.branches(cells.in.tree.f, scar.remove = "Root",
-                      size.ratio = branch.size.ratio)
-
-# Iterative tree building ####
-scar.index <- 1
-while(scar.index <= scar.amount){
-  print(paste("Iterative tree building, identifying scar",
-              scar.index, "of", scar.amount))
   
-  # Select the topmost incomplete line in the tree summary to define the scar 
-  # graph branch for which to determine the first scar created. Deduce the other 
-  # scars removed for this branch and which component corresponds to the branch.
-  top.incomplete.edge.index <- min(which(is.na(tree.summary$Node.2)))
-  top.incomplete.edge <- tree.summary[top.incomplete.edge.index, ]
+  # Filter out low-frequency scar connections ####
+  print("Filtering doublets")
+  # dfilter.start <- Sys.time()
   
-  # Determine which scars to remove
-  starting.scar <- as.character(top.incomplete.edge$Node.1)
-  scars.to.remove <- find.scars.to.remove(starting.scar, tree.summary)
+  # dataset.graph <- graph.and.decompose(cells.in.tree)
+  # dataset.degrees <-
+  #   data.frame(lapply(dataset.graph, function(x) degree(x, mode = "all", loops = F)))
+  # colnames(dataset.degrees) <- "Degree"
+  # dataset.degrees$Scar <- as.character(rownames(dataset.degrees))
+  # dataset.counts <- data.frame(table(cells.in.tree$Scar))
+  # colnames(dataset.counts) <- c("Scar", "Count")
+  # dataset.dc <- merge(dataset.counts, dataset.degrees)
+  # dataset.dc$scardeg.ratio <- dataset.dc$Count/dataset.dc$Degree
+  # ggplot(dataset.dc) +
+  #   geom_histogram(aes(x = scardeg.ratio))
+  # dataset.dc$degscar.ratio <- dataset.dc$Degree/dataset.dc$Count
+  # ggplot(dataset.dc) +
+  #   geom_histogram(aes(x = log(degscar.ratio)))
+  # dataset.dc$log.dsr <- log(dataset.dc$degscar.ratio)
+  # 
+  # 
+  # cd.lm <- lm(Degree ~ Count + 0, dataset.dc)
+  # dataset.dc$cd.lm.ratio <- cd.lm$residuals/dataset.dc$Degree
+  # dataset.dc$cd.lm <- cd.lm$residuals
+  # 
+  # dataset.dc$Exp.d.max <- dataset.dc$Count/20
+  # dataset.dc$exp.d.max.diff <- dataset.dc$Exp.d.max - dataset.dc$Degree
   
-  # Finding the correct component is not fully straightforward: it may be the
-  # second connected component of the third connected component of the seventh
-  # connected component, for example, when scars are removed starting from the 
-  # top. In tree.summary we only record the component number of the last 
-  # branching event, and we record that mostly to ensure we are covering all
-  # components. While this means the 'component history' of any connected
-  # component at any level can be reconstructed (simply follow the scars back up
-  # and read out the component numbers), this is not necessary.
-  # To select the correct component, we remove scars in two steps: we first 
-  # remove all scars but the bottommost one (the [starting.scar]) and create the
-  # graph with those scars removed. As a second step, we select the component
-  # that includes the [starting.scar], remove that scar, and find the correct
-  # component in the resulting disconnected graph.
-  preceding.scars <- setdiff(scars.to.remove, starting.scar)
-  current.cs <- cells.in.tree.f[!(cells.in.tree.f$Scar %in% preceding.scars), ]
-  first.decomposition <- graph.and.decompose(current.cs)
-  for(comp in 1:length(first.decomposition)){
-    if(starting.scar %in% V(first.decomposition[[comp]])$name){
-      break
+  # 
+  # scars.high.ratio <- dataset.dc$Scar[dataset.dc$scardeg.ratio > 3]
+  # 
+  # cells.in.tree <- cells.in.tree[cells.in.tree$Scar %in% scars.high.ratio, ]
+  
+  # dc.lm <- lm(Count ~ Degree + 0, dataset.dc)
+  # dataset.dc$LM.res <- dc.lm$residuals/dataset.dc$Count
+  # dataset.dc$Scaled.res <- dataset.dc$LM.res/dataset.dc$Count
+  
+  # Count how often every scar-scar connection is seen
+  scar.connections <- connections.for.graph(cells.in.tree)
+  only.once.connections <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
+  colnames(only.once.connections) <- c("Scar.A", "Scar.B")
+  only.once.connections <- 
+    merge(only.once.connections, 
+          scar.connections)
+  
+  # NEW
+  only.once.connections <- only.once.connections[only.once.connections$x_AB > 0, ]
+  
+  # Investigate difference between dataset with doublets and without
+  # cells.in.tree.no.d <- cells.in.tree[cells.in.tree$Cell.type != "Doublet", ]
+  # scar.connections.no.d <- connections.for.graph(cells.in.tree.no.d)
+  # only.once.connections.no.d <- data.frame(t(combn(unique(cells.in.tree$Scar), 2)))
+  # colnames(only.once.connections.no.d) <- c("Scar.A", "Scar.B")
+  # only.once.connections.no.d <- 
+  #   merge(only.once.connections.no.d, 
+  #         scar.connections.no.d)
+  # colnames(only.once.connections.no.d)[3:5] <- c("xnd_A", "xnd_B", "xnd_AB")
+  
+  
+  # Calculate how many doublets we'd expect given a general doublet rate, and 
+  # calculate the doublet rate for every scar connection.
+  only.once.connections$AB.doublets <- 
+    2 * doublet.rate * only.once.connections$x_A * only.once.connections$x_B/N
+  only.once.connections$AB.doublet.rate <- only.once.connections$AB.doublets/N
+  
+  # Calculate the probability that the connections we see can all be explained by
+  # doublets.
+  only.once.connections$Doublet.p <-
+    apply(only.once.connections[, c("x_AB", "AB.doublet.rate")], 1,
+          function(x){
+            x_d <- as.integer(x[1])
+            p_d <- as.numeric(x[2])
+            binom.test(x_d, N, p_d, alternative = "greater")$p.value
+          }
+    )
+  only.once.connections$Doublet.padj <-
+    p.adjust(only.once.connections$Doublet.p, "fdr")
+  
+  ooc.cutoff <- 
+    only.once.connections[only.once.connections$Doublet.padj > 0.01, ]
+  
+  # Identify incorrect connections
+  incorrect.connections <- 
+    only.once.connections[only.once.connections$Doublet.padj >= 0.01, ]
+  
+  # Identify and remove cells with incorrect connections
+  # ic <- 1
+  inc.cells <- character()
+  if(nrow(incorrect.connections) > 0){
+    for(ic in 1:nrow(incorrect.connections)){
+      inc.scar.A <- incorrect.connections$Scar.A[ic]
+      inc.scar.B <- incorrect.connections$Scar.B[ic]
+      cells.scar.A <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.A]
+      cells.scar.B <- cells.in.tree$Cell[cells.in.tree$Scar == inc.scar.B]
+      
+      inc.cells <- unique(c(inc.cells, intersect(cells.scar.A, cells.scar.B)))
     }
   }
-  if(starting.scar == "Root"){
-    second.decomposition <- 
-      first.decomposition
-  }else{
-    second.decomposition <- 
-      decompose(delete_vertices(first.decomposition[[comp]], starting.scar))
-  }
-  current.component <- top.incomplete.edge$Component
-  current.graph <- second.decomposition[[current.component]]
-  current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
+  cells.in.tree.f <- cells.in.tree[!(cells.in.tree$Cell %in% inc.cells), ]
+  # dfilter.end <- Sys.time()
+  # dfilter.time <- dfilter.end - dfilter.start
+  # print(dfilter.time)
   
-  cs <- current.cs.component
-  graph <- current.graph
+  # Iteration start conditions ####
+  # iterative.sc.start <- Sys.time()
+  scar.amount <- length(unique(cells.in.tree.f$Scar))
+  it.tree.building <- vector("list", scar.amount)
+  tree.summary <- 
+    initialize.branches(cells.in.tree.f, scar.remove = "Root",
+                        size.ratio = branch.size.ratio)
+  # iterative.sc.end <- Sys.time()
+  # iterative.sc.time <- iterative.sc.end - iterative.sc.start
+  # print(iterative.sc.time)
   
-  if(length(V(current.graph)) == 1){
-    # Condition for last scar in branch - this will have a graph without any
-    # connections, and with one vertex.
-    scar.remove <- V(current.graph)$name
-    it.tree.element <- list(Scar = scar.remove)
-  }else{
-    # Test congruence of degree and detection efficiency of all scars, assuming
-    # they are the topmost scar of the current data.
-    scar.lls <- create.degree.lls(current.cs.component, 
-                                  current.graph)
+  # Iterative tree building ####
+  scar.index <- 1
+  while(scar.index <= scar.amount & !weak.scar.found){ 
+    print(paste("Iterative tree building, identifying scar",
+                scar.index, "of", scar.amount)) 
     
-    # Calculate the weighted average detection rate of all scars.
-    average.det.rates <- 
-      ddply(scar.lls, .(Scar),
-            function(x) data.frame(Mean.p_A = weighted.mean(x$p_A, x$Total.other)))
+    # Select the topmost incomplete line in the tree summary to define the scar 
+    # graph branch for which to determine the first scar created. Deduce the other 
+    # scars removed for this branch and which component corresponds to the branch.
+    top.incomplete.edge.index <- min(which(is.na(tree.summary$Node.2)))
+    top.incomplete.edge <- tree.summary[top.incomplete.edge.index, ]
     
-    # Select only scars whose average detection rate is higher than cutoff
-    scar.lls <- merge(scar.lls, average.det.rates)
-    scar.lls <- scar.lls[order(-scar.lls$Degree.p,
-                               -scar.lls$Degree,
-                               -scar.lls$Mean.p_A), ]
-    scar.lls.select <- scar.lls[scar.lls$Mean.p_A > min.detection.rate, ]
-    scar.lls.unique <- 
-      unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
-                          "Degree.p", "Mean.p_A")])
-    scar.lls.select.unique <- 
-      scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
+    # Determine which scars to remove
+    starting.scar <- as.character(top.incomplete.edge$Node.1)
+    scars.to.remove <- find.scars.to.remove(starting.scar, tree.summary)
     
-    if(nrow(scar.lls.select) > 0){
-      scar.remove <- scar.lls.select.unique$Scar[1]
+    # Finding the correct component is not fully straightforward: it may be the
+    # second connected component of the third connected component of the seventh
+    # connected component, for example, when scars are removed starting from the 
+    # top. In tree.summary we only record the component number of the last 
+    # branching event, and we record that mostly to ensure we are covering all
+    # components. While this means the 'component history' of any connected
+    # component at any level can be reconstructed (simply follow the scars back up
+    # and read out the component numbers), this is not necessary.
+    # To select the correct component, we remove scars in two steps: we first 
+    # remove all scars but the bottommost one (the [starting.scar]) and create the
+    # graph with those scars removed. As a second step, we select the component
+    # that includes the [starting.scar], remove that scar, and find the correct
+    # component in the resulting disconnected graph.
+    preceding.scars <- setdiff(scars.to.remove, starting.scar)
+    current.cs <- cells.in.tree.f[!(cells.in.tree.f$Scar %in% preceding.scars), ]
+    first.decomposition <- graph.and.decompose(current.cs)
+    for(comp in 1:length(first.decomposition)){
+      if(starting.scar %in% V(first.decomposition[[comp]])$name){
+        break
+      }
+    }
+    if(starting.scar == "Root"){
+      second.decomposition <- 
+        first.decomposition
     }else{
-      print("No scar above minimum detection rate. Taking best scar under minimum detection rate")
-      scar.remove <- scar.lls.unique$Scar[1]
+      second.decomposition <- 
+        decompose(delete_vertices(first.decomposition[[comp]], starting.scar))
+    }
+    current.component <- top.incomplete.edge$Component
+    current.graph <- second.decomposition[[current.component]]
+    current.cs.component <- current.cs[current.cs$Scar %in% V(current.graph)$name, ]
+    
+    # cs <- current.cs.component
+    # graph <- current.graph
+    
+    if(length(V(current.graph)) == 1){
+      # Condition for last scar in branch - this will have a graph without any
+      # connections, and with one vertex.
+      scar.remove <- V(current.graph)$name
+      it.tree.element <- list(Scar = scar.remove)
+    }else{
+      # Test congruence of degree and detection efficiency of all scars, assuming
+      # they are the topmost scar of the current data.
+      scar.lls <- create.degree.lls(current.cs.component, 
+                                    current.graph)
+      
+      # Calculate the weighted average detection rate of all scars.
+      average.det.rates <- 
+        ddply(scar.lls, .(Scar),
+              function(x) data.frame(Mean.p_A = weighted.mean(x$p_A, x$Total.other)))
+      
+      # Select only scars whose average detection rate is higher than cutoff
+      scar.lls <- merge(scar.lls, average.det.rates)
+      scar.lls <- scar.lls[order(-scar.lls$Degree.p,
+                                 -scar.lls$Degree,
+                                 -scar.lls$Mean.p_A), ]
+      scar.lls.select <- scar.lls[scar.lls$Mean.p_A > min.detection.rate, ]
+      # scar.lls.unique <- 
+      #   unique(scar.lls[, c("Scar", "Degree", "Scar.count", "Expected.degree", 
+      #                       "Degree.p", "Mean.p_A")])
+      # scar.lls.select.unique <- 
+      #   scar.lls.unique[scar.lls.unique$Mean.p_A > min.detection.rate, ]
+      
+      if(nrow(scar.lls.select) > 0){
+        scar.remove <- scar.lls.select$Scar[1]
+        difficult.scars <-
+          scar.lls$Scar[scar.lls$Degree.p >
+                          scar.lls$Degree.p[scar.lls$Scar == scar.remove]]
+        # if(length(difficult.scars) > 0){
+        #   print(paste("Weak scar", difficult.scars[1], "found"))
+        #   weak.scar.found <- T
+        #   weak.scar <- difficult.scars[1]
+        #   # print(cat("Scars", difficult.scars, "will be difficult to place"))
+        # }
+      }else{
+        # How to relate this to weak scars?
+        print("No scar above minimum detection rate. Taking best scar under minimum detection rate")
+        scar.remove <- scar.lls$Scar[1]
+      }
+      
+      it.tree.element <- list(Scar = scar.remove,
+                              LLS = scar.lls,
+                              LLS.select = scar.lls.select)
+      # ,
+      #                         LLS.unique = scar.lls.unique,
+      #                         LLS.select.unique = scar.lls.select.unique)
+    }
+    it.tree.building[[scar.index]] <- it.tree.element
+    
+    # Add scar to tree.summary as Node.2
+    tree.summary$Node.2[top.incomplete.edge.index] <- scar.remove
+    
+    ## Test if difficult scars would change the scar graph topology. Test for one
+    # scar at a time, remove if it would indeed change the topology.
+    remaining.cs <- current.cs.component[current.cs.component$Scar != scar.remove, ]
+
+    if(nrow(remaining.cs) > 0){
+      if(length(difficult.scars) > 0){
+        print("Testing difficult scars")
+      }
+      graph.with <- graph.and.decompose(remaining.cs)
+      for(difficult.scar in difficult.scars){
+        # print(paste("Testing difficult scar", difficult.scar))
+        
+        # remove difficult scar from (sub)graph, see if it is still connected
+        difficult.subgraph <-
+          graph.with[[which(unlist(lapply(graph.with,
+                                          function(x) difficult.scar %in% names(V(x)))))]]
+        this.scar.weak <-
+          !is.connected(delete.vertices(difficult.subgraph,
+                        which(names(V(difficult.subgraph)) == difficult.scar)))
+        if(this.scar.weak){
+          # print("This scar weak!")
+          weak.scars <- c(weak.scars, difficult.scar)
+          weak.scar.found <- T
+        }
+      }
+    }
+
+    # Add newfound scar and components to tree.summary.
+    remaining.cs <- current.cs.component[!(current.cs.component$Scar %in% scar.remove), ]
+    if(nrow(remaining.cs) > 0){
+      tree.summary.add <- 
+        initialize.branches(remaining.cs, scar.remove = scar.remove, 
+                            size.ratio = branch.size.ratio)
+      tree.summary.add$Depth <- tree.summary$Depth[top.incomplete.edge.index] + 1
+      # If current branch was not a main branch, set non-main flags for all
+      # consecutive scars as well.
+      if(!tree.summary$Main[top.incomplete.edge.index]){
+        tree.summary.add$Main <- F
+      }
+      tree.summary <- rbind(tree.summary, tree.summary.add)
     }
     
-    it.tree.element <- list(Scar = scar.remove,
-                            LLS = scar.lls,
-                            LLS.select = scar.lls.select,
-                            LLS.unique = scar.lls.unique,
-                            LLS.select.unique = scar.lls.select.unique)
+    scar.index <- scar.index + 1
   }
-  it.tree.building[[scar.index]] <- it.tree.element
-  
-  # Add scar to tree.summary as Node.2
-  tree.summary$Node.2[top.incomplete.edge.index] <- scar.remove
-  
-  # Add newfound scar and components to tree.summary.
-  remaining.cs <- current.cs.component[current.cs.component$Scar != scar.remove, ]
-  if(nrow(remaining.cs) > 0){
-    tree.summary.add <- 
-      initialize.branches(remaining.cs, scar.remove = scar.remove, 
-                          size.ratio = branch.size.ratio)
-    tree.summary.add$Depth <- tree.summary$Depth[top.incomplete.edge.index] + 1
-    # If current branch was not a main branch, set non-main flags for all
-    # consecutive scars as well.
-    if(!tree.summary$Main[top.incomplete.edge.index]){
-      tree.summary.add$Main <- F
-    }
-    tree.summary <- rbind(tree.summary, tree.summary.add)
-  }
-  
-  scar.index <- scar.index + 1
+  if(!weak.scar.found){break}
+  print("One or more weak scars found - removing and restarting tree building")
 }
+rm(tree.summary.add, average.det.rates, current.cs, current.cs.component,
+   current.graph, difficult.subgraph, first.decomposition, graph.with,
+   it.tree.element, remaining.cs, scar.connections, scar.lls, scar.lls.select,
+   second.decomposition, top.incomplete.edge)
 
-# Collapse tree ####
-# Remove 'singles' (i.e. scars in tree.summary$Node.1 that only occur once)
-# from the tree.summary by collapsing them with their successors while changing
-# the name to "[scar 1], [scar 2]".
-tree.summary.collapse <- tree.summary[tree.summary$Main, ]
-tree.summary.old <- tree.summary
-# Loop over dataframe to find all singles.
-index <- 1
-while(index <= nrow(tree.summary.collapse)){
-  non.singles <-
-    unique(tree.summary.collapse$Node.1[duplicated(tree.summary.collapse$Node.1)])
-  if(!(tree.summary.collapse$Node.1[index] %in% non.singles)){
-    single.name <- tree.summary.collapse$Node.1[index]
-    downstream.name <- tree.summary.collapse$Node.2[index]
-    collapsed.name <- paste(single.name, downstream.name, sep = ",")
-    tree.summary.collapse$Node.1[tree.summary.collapse$Node.1 %in% 
-                                   c(single.name, downstream.name)] <- 
-      collapsed.name
-    tree.summary.collapse$Node.2[tree.summary.collapse$Node.2 %in% 
-                                   c(single.name, downstream.name)] <- 
-      collapsed.name
-    tree.summary.collapse <- tree.summary.collapse[-index, ]
-  }else{index <- index + 1}
-  if(nrow(tree.summary.collapse) == 1){break}
+# TEST: only consider "main" and "off-main" later
+tree.summary <- tree.summary[, -6]
+
+# Place cells in uncollapsed tree ####
+print("Placing cells in uncollapsed tree")
+# Name nodes - we need node names to easily determine whether doublet-flagged
+# cells can be placed or not (all scars need to be in one branch)
+# NEW
+tree.summary.nodes <- tree.summary[tree.summary$Node.1 == "Root", ]
+tree.summary.nodes$Node.uc <-
+  paste("0", tree.summary.nodes$Component, sep = "_")
+for(d in 1:max(tree.summary$Depth)){
+  tree.summary.node.add <- tree.summary[tree.summary$Depth == d, ]
+  tree.summary.node.add <-
+    merge(tree.summary.node.add, tree.summary.nodes[, c("Node.2", "Node.uc")],
+          by.x = "Node.1", by.y = "Node.2")
+  tree.summary.node.add$Node.uc <-
+    paste(tree.summary.node.add$Node.uc, tree.summary.node.add$Component, sep = "_")
+  tree.summary.nodes <- rbind(tree.summary.nodes, tree.summary.node.add)
 }
-tree.summary <- tree.summary.collapse
-
-# Create phylogenetic tree ####
-# Create a list that includes edges, tips, nodes and possibly labels,
-# then turn that into an object of class "phylo", then plot.
-tips <- data.frame(Name = setdiff(tree.summary$Node.2, tree.summary$Node.1),
-                   stringsAsFactors = F)
-tips$Index <- 1:nrow(tips)
-nodes <- data.frame(
-  Name = setdiff(c(tree.summary$Node.1, tree.summary$Node.2), tips$Name),
-  stringsAsFactors = F)
-nodes$Index <- NA
-nodes$Index[grep("Root", nodes$Name)] <- nrow(tips) + 1
-nodes <- nodes[order(nodes$Index), ]
-nodes$Index[-1] <- (nrow(tips) + 2):(nrow(tips) + nrow(nodes))
-nodes$Index <- as.integer(nodes$Index)
-nodestips <- rbind(nodes, tips)
-phylo.edges <- merge(tree.summary[, c("Node.1", "Node.2")], nodestips,
-                     by.x = "Node.1", by.y = "Name")
-colnames(phylo.edges)[3] <- "V1"
-phylo.edges <- merge(phylo.edges, nodestips,
-                     by.x = "Node.2", by.y = "Name")
-colnames(phylo.edges)[4] <- "V2"
-
-nodes.2 <- nodes
-nodes.2$Name[grep("Root", nodes.2$Name)] <-
-  sub("Root,", "", nodes.2$Name[grep("Root", nodes.2$Name)])
-
-scar.phylo <-
-  list(
-    edge = as.matrix(phylo.edges[, c("V1", "V2")]),
-    tip.label = tips$Name,
-    edge.length = rep(1, nrow(phylo.edges)),
-    Nnode = nrow(nodes.2),
-    node.label = nodes.2$Name,
-    root.edge = 1)
-class(scar.phylo) <- "phylo"
-
-# Plot tree ####
-# pdf("Images/Simulations/tree_B_wdoublets_doubletrate009_detratio01_branchratio025.pdf",
-# width = 20, height = 10)
-plot(scar.phylo, show.node.label = F, show.tip.label = F, root.edge = T,
-     edge.width = 3, no.margin = T, direction = "leftward")
-edgelabels(phylo.edges$Node.2, frame = "none", adj = c(0.5, 0), cex = 2,
-           col = "red")
-# dev.off()
-
-# View(it.tree.building[[1]]$LLS.unique)
-
-# Place cells in tree ####
-print("Placing cells")
-# Name nodes
-tree.summary.old.pc <- tree.summary.old[tree.summary.old$Node.1 == "Root", ]
-tree.summary.old.pc$Node <-
-  paste("0", tree.summary.old.pc$Component, sep = "_")
-for(d in 1:max(tree.summary.old$Depth)){
-  tree.summary.pc.add <- tree.summary.old[tree.summary.old$Depth == d, ]
-  tree.summary.pc.add <- merge(tree.summary.pc.add, tree.summary.old.pc[, c("Node.2", "Node")],
-                               by.x = "Node.1", by.y = "Node.2")
-  tree.summary.pc.add$Node <- 
-    paste(tree.summary.pc.add$Node, tree.summary.pc.add$Component, sep = "_")
-  tree.summary.old.pc <- rbind(tree.summary.old.pc, tree.summary.pc.add)
-}
+tree.summary <- tree.summary.nodes
+rm(tree.summary.node.add, tree.summary.nodes)
 
 # Place correct cells in the lowest possible place
 correct.cell.placement.positions <- 
-  merge(cells.in.tree.f, tree.summary.old[, c("Node.2", "Depth", "Main")],
+  merge(cells.in.tree.f, tree.summary[, c("Node.2", "Depth")],
         by.x = "Scar", by.y = "Node.2")
 correct.cell.depths <-
   aggregate(correct.cell.placement.positions$Depth,
@@ -388,9 +430,10 @@ correct.cell.depths <-
             max)
 colnames(correct.cell.depths)[2] <- "Depth"                      
 correct.cell.placement <- merge(correct.cell.placement.positions, correct.cell.depths)
-correct.cell.placement <- 
-  merge(correct.cell.placement, tree.summary.old.pc[, c("Node.2", "Node")],
+correct.cell.placement <-
+  merge(correct.cell.placement, tree.summary[, c("Node.2", "Node.uc")],
         by.x = "Scar", by.y = "Node.2")
+rm(correct.cell.depths, correct.cell.placement.positions)
 
 # Determine which doublet-flagged cells can be placed: 
 # unplaceable cells will not have any scars in the actual tree; of the remainder,
@@ -399,27 +442,30 @@ correct.cell.placement <-
 if(length(inc.cells) > 0){
   cells.in.tree.flagged <- cells.in.tree[cells.in.tree$Cell %in% inc.cells, ]
   cells.in.tree.flagged <- 
-    merge(cells.in.tree.flagged, tree.summary.old[, c("Node.2", "Depth", "Main")],
+    merge(cells.in.tree.flagged, tree.summary[, c("Node.2", "Depth")],
           by.x = "Scar", by.y = "Node.2", all.x = T)
   unplaceable.cells <- 
     unique(cells.in.tree.flagged$Cell[is.na(cells.in.tree.flagged$Depth)])
   placeable.cells <- cells.in.tree.flagged[!is.na(cells.in.tree.flagged$Depth), ]
   unplaceable.cells <- setdiff(unplaceable.cells, placeable.cells$Cell)
-  placeable.cells <- merge(placeable.cells, tree.summary.old.pc[, c("Node.2", "Node")],
+  placeable.cells <- merge(placeable.cells, tree.summary[, c("Node.2", "Node.uc")],
                            by.x = "Scar", by.y = "Node.2")
   correct.conflicting <- unique(placeable.cells[, c("Cell", "Cell.type")])
-  correct.conflicting$Node <- NA                               
-  correct.conflicting$Node <-
+  correct.conflicting$Node.uc <- NA                               
+  correct.conflicting$Node.uc <-
     sapply(correct.conflicting$Cell,
            function(x){
              this.cell <- placeable.cells[placeable.cells$Cell == x, ]
              if(max(table(this.cell$Depth)) > 1){
+               # If a cell has more than one scar at the same depth, it belongs
+               # to two separate branches and cannot be placed in the tree.
                return("-1")
              }else{
+               # Test if a cell has scars that belong to separate branches.
                this.cell <- this.cell[order(this.cell$Depth), ]
                conflict <- F
                for(i in 2:nrow(this.cell)){
-                 if(!grepl(this.cell$Node[i-1], this.cell$Node[i])){
+                 if(!grepl(this.cell$Node.uc[i-1], this.cell$Node.uc[i])){
                    conflict <- T
                    break
                  }
@@ -427,15 +473,15 @@ if(length(inc.cells) > 0){
                if(conflict){
                  return("-1")
                }else{
-                 return(this.cell$Node[nrow(this.cell)])
+                 return(this.cell$Node.uc[nrow(this.cell)])
                }
              }
            }
     )
-  really.conflicting <- correct.conflicting[correct.conflicting$Node == "-1", ]
-  actually.not.conflicting <- correct.conflicting[correct.conflicting$Node != "-1", ]
+  really.conflicting <- correct.conflicting[correct.conflicting$Node.uc == "-1", ]
+  actually.not.conflicting <- correct.conflicting[correct.conflicting$Node.uc != "-1", ]
   actually.not.conflicting <-
-    merge(actually.not.conflicting, tree.summary.old.pc[, c("Node.2", "Depth", "Node", "Main")])
+    merge(actually.not.conflicting, tree.summary[, c("Node.2", "Depth", "Node.uc")])
   colnames(actually.not.conflicting)[which(colnames(actually.not.conflicting) == "Node.2")] <-
     "Scar"
   
@@ -446,343 +492,983 @@ if(length(inc.cells) > 0){
   unplaceable.cells <- character()
   actually.not.conflicting <- cells.in.tree.f[0, ]
 }
+# Note that all cells in correct.cell.placement can now be placed by the
+# scar column, which is the lowest scar in the tree that that cell has.
 
 # Calculate tree statistics
-tree.statistics <- data.frame(Cells = length(unique(cells.in.tree$Cell)),
-                              Doublets = nrow(really.conflicting),
-                              Unplaceable = length(unplaceable.cells),
-                              Placeable.main = sum(correct.cell.placement$Main),
-                              Placeable.off.main = sum(!correct.cell.placement$Main),
-                              Recovered.suspected.doublets = nrow(actually.not.conflicting))
+tree.statistics <- 
+  data.frame(Cells = length(unique(cells.in.tree$Cell)),
+             Placeable = nrow(correct.cell.placement),
+             Suspected.doublets = nrow(really.conflicting),
+             Recovered.suspected.doublets = nrow(actually.not.conflicting),
+             Unplaceable = length(unplaceable.cells))
+# Placeable.main = sum(correct.cell.placement$Main),
+# Placeable.off.main = sum(!correct.cell.placement$Main),
+# )
+# rm(actually.not.conflicting, cells.in.tree.flagged, correct.conflicting,
+#    placeable.cells)
 
-tree.summary.out.2 <- tree.summary.old.pc[, c("Node.2", "Depth", "Main", "Node", "Size")]
-colnames(tree.summary.out.2)[1] <- "Scar"
+# tree.summary.out.2 <- tree.summary.old.pc[, c("Node.2", "Depth", "Main", "Node", "Size")]
+# colnames(tree.summary.out.2)[1] <- "Scar"
 
-# write.csv(correct.cell.placement,
-#           "./Data/2017_10X_2/Z2_tree_sc_positions_dr09_det01_bs025_scarp001_larvae1.csv",
-#           row.names = F, quote = F)
 
-# Create tree summary and make node piecharts ####
-print("Making tree summary and node piecharts")
-# Aggregate cells (stratified by cell type) to nodes to make a cumulative node
-# count.
-cumulative.node.count <- 
-  expand.grid(Node = unique(tree.summary.old.pc$Node),
-              Cell.type = unique(correct.cell.placement$Cell.type),
-              stringsAsFactors = F)
+# Collapse tree ####
+print("Collapsing tree")
+# Remove 'singles' (i.e. scars in tree.summary$Node.1 that only occur once)
+# from the tree.summary by collapsing them with their successors while changing
+# the name to "[scar 1], [scar 2]". 
+# After collapsing, make a dictionary that says which scar belongs to which
+# node.
+tree.summary.collapse <- tree.summary
 
+# Loop over dataframe to find all singles.
+index <- 1
+while(index <= nrow(tree.summary.collapse)){
+  non.singles <-
+    unique(tree.summary.collapse$Node.1[duplicated(tree.summary.collapse$Node.1)])
+  if(!(tree.summary.collapse$Node.1[index] %in% non.singles)){
+    single.name <- tree.summary.collapse$Node.1[index]
+    downstream.name <- tree.summary.collapse$Node.2[index]
+    collapsed.name <- paste(single.name, downstream.name, sep = ",")
+    # collapsed.nodename <- tree.summary.collapse$Node[index]
+    # collapsed.nnp.target <- 
+    tree.summary.collapse$Node.1[tree.summary.collapse$Node.1 %in% 
+                                   c(single.name, downstream.name)] <- 
+      collapsed.name
+    tree.summary.collapse$Node.2[tree.summary.collapse$Node.2 %in% 
+                                   c(single.name, downstream.name)] <- 
+      collapsed.name
+    tree.summary.collapse <- tree.summary.collapse[-index, ]
+  }else{
+    # if(sum(is.na(tree.summary.collapse$Nnp)) == nrow(tree.summary.collapse)){
+    #   tree.summary.collapse$Nnp[index] <- 1
+    # }else{
+    #   tree.summary.collapse$Nnp[index] <- max(tree.summary.collapse$Nnp, na.rm = T) + 1
+    # }
+    index <- index + 1
+  }
+  if(nrow(tree.summary.collapse) == 1){break}
+}
+rm(single.name, downstream.name, collapsed.name)
+
+# New node names
+tree.summary.collapse.nodes <- 
+  tree.summary.collapse[tree.summary.collapse$Depth == min(tree.summary.collapse$Depth), ]
+tree.summary.collapse.nodes$Node <-
+  paste("0", tree.summary.collapse.nodes$Component, sep = "_")
+for(d in (1 + min(tree.summary.collapse$Depth)):max(tree.summary.collapse$Depth)){
+  tree.summary.collapse.node.add <- 
+    tree.summary.collapse[tree.summary.collapse$Depth == d, ]
+  if(nrow(tree.summary.collapse.node.add) > 0){
+    tree.summary.collapse.node.add <- 
+      merge(tree.summary.collapse.node.add, 
+            tree.summary.collapse.nodes[, c("Node.2", "Node")],
+            by.x = "Node.1", by.y = "Node.2")
+    tree.summary.collapse.node.add$Node <-
+      paste(tree.summary.collapse.node.add$Node, 
+            tree.summary.collapse.node.add$Component, sep = "_")
+    tree.summary.collapse.nodes <- 
+      rbind(tree.summary.collapse.nodes, tree.summary.collapse.node.add)
+  }
+}
+tree.summary.collapse <- tree.summary.collapse.nodes
+rm(tree.summary.collapse.nodes, tree.summary.collapse.node.add, d)
+
+# Dictionary of scars to new node names
+scar.node.dictionary.1 <- data.frame(Scar = tree.summary.collapse$Node.2,
+                                     Node = tree.summary.collapse$Node)
+scar.node.dictionary.2 <- scar.node.dictionary.1[0, ]
+scar.node.dictionary <- scar.node.dictionary.1[0, ]
+for(i in 1:nrow(scar.node.dictionary.1)){
+  if(grepl(",", scar.node.dictionary.1$Scar[i])){
+    # If the node is collapsed, create a dictionary entry for every scar
+    collapsed.scars <- unlist(strsplit(as.character(scar.node.dictionary.1$Scar[i]), ","))
+    scar.node.dictionary.2 <- 
+      rbind(scar.node.dictionary.2,
+            data.frame(Scar = collapsed.scars,
+                       Node = scar.node.dictionary.1$Node[i]))
+  }else{
+    scar.node.dictionary <- 
+      rbind(scar.node.dictionary, scar.node.dictionary.1[i, ])
+  }
+}
+scar.node.dictionary <- rbind(scar.node.dictionary, scar.node.dictionary.2)
+rm(scar.node.dictionary.1, scar.node.dictionary.2, i, collapsed.scars)
+
+# If any scars are collapsed onto the root node, add entries to the dictionary
+# for those as well - the dictionary is used to attach cells to the correct
+# nodes in the tree and if the root tree node also has one or more scars,
+# cells must be added to that node as well.
+root.name <-
+  unique(tree.summary.collapse$Node.1[grepl("Root", 
+                                            tree.summary.collapse$Node.1)])
+if(root.name != "Root"){
+  collapsed.scars <- unlist(strsplit(as.character(root.name), ","))[-1]
+  root.dictionary <- data.frame(Scar = collapsed.scars,
+                                Node = 0)
+  scar.node.dictionary <- rbind(root.dictionary, scar.node.dictionary)
+  rm(root.dictionary, collapsed.scars)
+}
+rm(root.name)
+
+# Place cells in collapsed tree using dictionary ####
+print("Placing cells in collapsed tree")
+correct.cell.placement <- merge(correct.cell.placement, scar.node.dictionary)
+
+
+# DID NOT WORK. Calculate cumulative node counts and separate main and off-main ####
+# Output: node.count.cumulative.agg (ncca), node.count.cumulative (ncc), 
+# node.count.cumulative.agg.main (nccam), node.count.cumulative.main (nncm), 
+# stats about how many cells were placed main and off-main.
+# placing.cells <- correct.cell.placement[, c("Scar", "Cell", "Cell.type", "Node")]
+# placing.cells$Node <- as.character(placing.cells$Node)
+# placing.cells$Node.depth <- 
+#   sapply(placing.cells$Node, 
+#          function(x){
+#            y <- unlist(strsplit(x, "_"))
+#            return(length(y) - 1)
+#          }
+#   )
+# # Start by aggregating lowest depth - STILL ADD
+# placing.cells.lowest <- 
+#   placing.cells[placing.cells$Node.depth == max(placing.cells$Node.depth), ]
+# ncc <-
+#   data.frame(table(placing.cells.lowest$Cell.type, placing.cells.lowest$Node),
+#              stringsAsFactors = F)
+# colnames(ncc)[1:2] <- c("Cell.type", "Node")
+# 
+# ncca <-
+#   aggregate(ncc$Freq,
+#             by = list(Node = ncc$Node),
+#             sum)
+# colnames(ncca)[2] <- "Freq"
+# ncca$Node <- as.character(ncca$Node)
+# ncca$Node.depth <- max(placing.cells$Node.depth)
+# ncca$Parent <-
+#   sapply(ncca$Node,
+#          function(x) {
+#            y <- unlist(strsplit(x, "_"))
+#            return(paste(y[-length(y)], collapse = "_"))
+#          }
+#   )
+# ncca$Main <- F
+# for(node.parent in unique(ncca$Parent)){
+#   s.i <- which(ncca$Parent == node.parent)
+#   ncca$Main[s.i] <- (ncca$Freq[s.i]/max(ncca$Freq[s.i]) > branch.size.ratio)
+# }
+# ncc <- merge(ncc, ncca[, c("Node", "Node.depth", "Main")])
+# 
+# depth.order <-
+#   sort(unique(placing.cells$Node.depth), 
+#        decreasing = T)[-1]
+# for(d in depth.order){
+#   # Loop over depths apart from the lowest, going up.
+#   
+#   # Determine sets of sister branches and loop over them.
+#     # Which sisters are on and which ones are off-main?
+#     # Cumulate cells to parents for on-main and both.
+# }
+# 
+# rm(placing.cells, depth.order, d)
+
+# Calculate cumulative node counts with and without cell type stratification ####
+# Note: while it's not strictly necessary at this stage to calculate the
+# cumulative node counts with cell type stratification, this will be useful
+# later on for enrichment calculations.
+print("Calculating cumulative node sizes")
 node.count <- 
   data.frame(table(correct.cell.placement$Node, correct.cell.placement$Cell.type))
 colnames(node.count)[1:2] <- c("Node", "Cell.type")
-node.count <- merge(node.count, tree.summary.old.pc[, c("Node", "Main")])
+node.count$Node <- as.character(node.count$Node)
+node.count$Node.depth <- 
+  sapply(node.count$Node, 
+         function(x){
+           y <- unlist(strsplit(x, "_"))
+           return(length(y) - 1)
+         }
+  )
 
-cumulative.node.count$Cumulative.count.main <- NA
-cumulative.node.count$Cumulative.count.all <- NA
-for(i in 1:nrow(cumulative.node.count)){
-  c.node <- cumulative.node.count$Node[i]
-  c.node.pattern <- paste(c.node, "(_|$)", sep = "")
-  c.type <- cumulative.node.count$Cell.type[i]
-  
-  nodes.under.and.including <-
-    node.count[node.count$Cell.type == c.type &
-                 grepl(c.node.pattern, node.count$Node), ]
-  
-  cumulative.node.count$Cumulative.count.main[i] <-
-    sum(nodes.under.and.including$Freq[nodes.under.and.including$Main])
-  cumulative.node.count$Cumulative.count.all[i] <-
-    sum(nodes.under.and.including$Freq)
+node.count.working <- node.count[, c("Node", "Cell.type", "Freq", "Node.depth")]
+node.count.cumulative <- node.count[0, c("Node", "Cell.type", "Freq", "Node.depth")]
+
+# Do for decreasing depth (start with maximal):
+depth.order <- 
+  sort(unique(node.count$Node.depth), 
+        decreasing = T)[-length(unique(node.count$Node.depth))]
+for(c.depth in depth.order){
+  # Add nodes of current depth to separate (final output) dataframe.
+  node.count.cumulative <- 
+    rbind(node.count.working[node.count.working$Node.depth==c.depth, 
+                             c("Node", "Cell.type", "Freq", "Node.depth")],
+          node.count.cumulative)
+  # Change nodes of current depth in working dataframe: depth-- and remove the
+  # last node. Then aggregate frequencies.
+  # x <- as.character(node.count.working$Node[1])
+  node.count.working$Node[node.count.working$Node.depth == c.depth] <- 
+    sapply(node.count.working$Node[node.count.working$Node.depth == c.depth],
+           function(x) {
+             y <- unlist(strsplit(as.character(x),"_"))
+             z <- y[-length(y)]
+             return(paste(z, collapse = "_"))
+           }
+    )
+  node.count.working$Node.depth[node.count.working$Node.depth == c.depth] <-
+    c.depth - 1
+  node.count.working <- 
+    aggregate(node.count.working$Freq,
+              by = list(Node = node.count.working$Node,
+                        Cell.type = node.count.working$Cell.type,
+                        Node.depth = node.count.working$Node.depth),
+              sum)
+  colnames(node.count.working)[4] <- "Freq"
+}
+node.count.cumulative <- 
+  rbind(node.count.working[node.count.working$Node.depth == min(node.count$Node.depth), 
+                           c("Node", "Cell.type", "Freq", "Node.depth")],
+        node.count.cumulative)
+rm(node.count, depth.order, node.count.working, c.depth)
+
+node.count.cumulative.agg <-
+  aggregate(node.count.cumulative$Freq,
+            by = list(Node = node.count.cumulative$Node,
+                      Node.depth = node.count.cumulative$Node.depth),
+            sum)
+colnames(node.count.cumulative.agg)[3] <- "Freq"
+
+# Separate main and off-main nodes ####
+print("Separating main and off-main")
+# Do recursive: calculate what's main and off-main for a given dataframe of
+# branches (these should be sister clades), determine main and off-main for
+# children, return dataframe with main and off-main marked.
+determine.main <- function(aggregates, current.branches, main.parent, 
+                           branch.size.ratio){
+  # Recursive function: calculate what's main and off-main for a given dataframe of
+  # branches (these should be sister clades), determine main and off-main for
+  # children, return dataframe with main and off-main marked.
+  # Create output dataframe
+  output <- current.branches
+  output$Main <- F
+  # main.parent F -> Set all branches off main (happens by default)
+  if(main.parent){
+    # main.parent T -> Test if there are any branches off-main
+    if(nrow(output) > 1){
+      # NEW
+      output$Max.freq <- max(output$Freq)
+      output$Freq.ratio <- output$Freq/output$Max.freq
+      output$Main <- output$Freq.ratio >= branch.size.ratio
+      
+      # OLD
+      # output <- output[order(-output$Freq), ]
+      # output$Previous.freq <-
+      #   c(output$Freq[1], output$Freq[-nrow(output)])
+      # output$Freq.ratio <- 
+      #   output$Freq/output$Previous.freq
+      # for(tree.row in 1:nrow(output)){
+      #   if(output$Freq.ratio[tree.row] < branch.size.ratio){
+      #     break
+      #   }else{
+      #     output$Main[tree.row] <- T
+      #   }
+      # }
+      output <- output[, c("Node", "Node.depth", "Freq", "Main")]
+    }else{
+      output$Main <- T
+    }
+  }
+  # For each branch: 
+  for(i in 1:nrow(output)){
+    #   determine children
+    parent <- output$Node[i]
+    children <- 
+      aggregates[grepl(paste(parent, "_", sep = ""), aggregates$Node) &
+                   aggregates$Node.depth == (output$Node.depth[i] + 1), ]
+    if(nrow(children) > 0){
+      #   if children -> call function for children, add children to output
+      children.main <-
+        determine.main(aggregates, current.branches = children, 
+                       main.parent = output$Main[i], 
+                       branch.size.ratio = branch.size.ratio)
+      output <- rbind(output, children.main)
+    }
+  }
+  # return output
+  return(output)
 }
 
-# Calculate total node sizes, make tree summary and calculate cell type ratios 
-# per node
-tree.summary.out.1 <- aggregate(cumulative.node.count$Cumulative.count.main,
-                          by = list(Node = cumulative.node.count$Node),
-                          sum)
-colnames(tree.summary.out.1)[2] <- "Total.main"
-tree.summary.out.2 <- aggregate(cumulative.node.count$Cumulative.count.all,
-                                by = list(Node = cumulative.node.count$Node),
-                                sum)
-colnames(tree.summary.out.2)[2] <- "Total.all"
-tree.summary.out <- merge(tree.summary.out.1, tree.summary.out.2)
+start.branches <- 
+  node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
+                              min(node.count.cumulative.agg$Node.depth), ]
 
-tree.summary.out <- merge(tree.summary.out, 
-                          tree.summary.old.pc[, c("Node", "Node.2", "Depth", "Main")])
-colnames(tree.summary.out)[which(colnames(tree.summary.out) == "Node.2")] <- "Scar"
-tree.summary.out <- tree.summary.out[, c("Scar", "Node", "Depth", "Total.main", "Total.all", "Main")]
+main.branches <- 
+  determine.main(aggregates = node.count.cumulative.agg, 
+                 current.branches = start.branches,
+                 main.parent = T, branch.size.ratio = branch.size.ratio)
+node.count.cumulative.agg <- main.branches
+node.count.cumulative <-
+  merge(node.count.cumulative, node.count.cumulative.agg[, c("Node", "Main")])
 
-cumulative.node.count <- merge(cumulative.node.count, tree.summary.out)
-cumulative.node.count$Ratio.main <-
-  cumulative.node.count$Cumulative.count.main/cumulative.node.count$Total.main
-cumulative.node.count$Ratio.all <-
-  cumulative.node.count$Cumulative.count.all/cumulative.node.count$Total.all
+node.count.cumulative.agg.main <- 
+  node.count.cumulative.agg[node.count.cumulative.agg$Main, ]
+node.count.cumulative.main <- 
+  node.count.cumulative[node.count.cumulative$Main, ]
+tree.summary.collapse.main <- 
+  merge(tree.summary.collapse, 
+        node.count.cumulative.agg.main)[, c("Node", "Node.1", "Node.2")]
 
-# Output tree summary
-# write.csv(tree.summary.out,
-#           "./Data/Simulations/Tree_A_1kcellsout_det03_reconstructed_tree.csv",
-#           row.names = F, quote = F)
+start.branches.2 <- 
+  node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
+                              min(node.count.cumulative.agg$Node.depth), ]
+tree.statistics$Main <- sum(start.branches.2$Freq[start.branches.2$Main])
+tree.statistics$Off.main <- sum(start.branches.2$Freq[!start.branches.2$Main])
+rm(main.branches, start.branches, start.branches.2)
 
-# Plot pie charts main only
-# ggplot(cumulative.node.count[cumulative.node.count$Main, ]) +
-#   geom_bar(aes(x = "", y = Ratio.main, fill = as.factor(Cell.type)), stat = "identity") +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-#   coord_polar("y", start = 0) +
-#   facet_wrap(~ Node) +
-#   labs(x = "", y = "") +
-#   theme(axis.ticks.y = element_blank(),
-#         axis.text.x = element_blank(),
-#         panel.grid.major.x = element_blank(),
-#         panel.grid.major.y = element_blank())
 
-# Plot pie charts all
-# ggplot(cumulative.node.count) +
-#   geom_bar(aes(x = "", y = Ratio.all, fill = as.factor(Cell.type)), stat = "identity") +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-#   coord_polar("y", start = 0) +
-#   facet_wrap(~ Node) +
-#   labs(x = "", y = "") +
-#   theme(axis.ticks.y = element_blank(),
-#         axis.text.x = element_blank(),
-#         panel.grid.major.x = element_blank(),
-#         panel.grid.major.y = element_blank())
+# Move cells on off-main branches to the above on-main branches ####
+# Note: this is a cell placement issue, the node counts do not change.
 
-# Create edgelist of scars and cells ####
-# Create edgelist of scars
-tree.summary.edge <- tree.summary.out[, c("Node", "Scar")]
-colnames(tree.summary.edge) <- c("Child", "Scar.acquisition")
-tree.summary.edge$Parent <-
-  sapply(tree.summary.edge$Child,
+# Determine the lowest 'main' parent of non-main nodes. It is possible they
+# do not exist - these non-main nodes are removed.
+off.main.nodes <- 
+  data.frame(Orig.node = 
+               node.count.cumulative.agg[!node.count.cumulative.agg$Main, "Node"],
+             stringsAsFactors = F)
+off.main.nodes$Parent <-
+  sapply(off.main.nodes$Orig.node,
+         function(x) {
+           y <- unlist(strsplit(x, "_"))
+           return(paste(y[-length(y)], collapse = "_"))
+         }
+  )
+repeat{
+  off.main.nodes <- merge(off.main.nodes, 
+                          node.count.cumulative.agg[, c("Node", "Main")],
+                          by.x = "Parent", by.y = "Node")
+  if(sum(off.main.nodes$Main) == nrow(off.main.nodes)){break}
+  off.main.nodes$Parent[!off.main.nodes$Main] <-
+    sapply(off.main.nodes$Parent[!off.main.nodes$Main],
+           function(x) {
+             y <- unlist(strsplit(x, "_"))
+             return(paste(y[-length(y)], collapse = "_"))
+           }
+    )
+  off.main.nodes <- off.main.nodes[, c("Parent", "Orig.node")]
+}
+
+# For cells currently placed in non-main nodes, determine to which main node
+# they should be attached.
+correct.cell.placement.main <- 
+  merge(correct.cell.placement, node.count.cumulative.agg[, c("Node", "Main")])
+correct.cell.placement.off <- 
+  correct.cell.placement.main[!correct.cell.placement.main$Main, ]
+correct.cell.placement.main <- 
+  correct.cell.placement.main[correct.cell.placement.main$Main, ]
+correct.cell.placement.off <-
+  merge(off.main.nodes, correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Main")], 
+        by.x = "Orig.node", by.y = "Node")
+correct.cell.placement.off <-
+  correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Orig.node")]
+colnames(correct.cell.placement.off)[1] <- "Node"
+correct.cell.placement.main <- rbind(correct.cell.placement.main, correct.cell.placement.off)
+
+rm(correct.cell.placement.off, off.main.nodes)
+
+# Make edgelists without and with cells ####
+print("Making edgelists")
+# Without
+tree.plot <- tree.summary.collapse.main[, c("Node", "Node.2")]
+colnames(tree.plot) <- c("Child", "Scar.acquisition")
+tree.plot$Parent <-
+  sapply(tree.plot$Child,
          function(x){
            y <- unlist(strsplit(x, "_"))
            z <- paste(y[-length(y)], collapse = "_")
          }
   )
-cell.edge <- correct.cell.placement[, c("Node", "Cell")]
-colnames(cell.edge) <- c("Parent", "Child")
-cell.edge$Scar.acquisition <- ""
+root.scars <- 
+  unique(tree.summary.collapse.main$Node.1[grepl("Root", tree.summary.collapse.main$Node.1)])
+if(root.scars != "Root"){
+  root.add <- data.frame(Parent = "Root",
+                         Child = 0,
+                         Scar.acquisition = root.scars,
+                         stringsAsFactors = F)
+  root.add$Scar.acquisition <- 
+    sapply(root.add$Scar.acquisition,
+           function(x) paste(unlist(strsplit(x, ","))[-1], collapse = ","))
+  tree.plot <- rbind(root.add, tree.plot)
+}
+tree.plot$Cell.type <- "NA"
+tree.plot$fill <- "black"
+tree.plot$size <- 1
+rm(root.scars, root.add)
 
-tree.edgelist <- rbind(tree.summary.edge, cell.edge)[, c("Parent", "Child", "Scar.acquisition")]
-# write.csv(tree.edgelist, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
-#           row.names = F, quote = F)
-
-# Do same for collapsed tree
-tree.summary.c <- tree.summary[, c("Node.1", "Node.2")]
-# Create root node
-root.scars <- unique(tree.summary$Node.1[grepl("Root", tree.summary$Node.1)])
-root.scars <- paste(unlist(strsplit(root.scars, ","))[-1], collapse = ",")
-tree.summary.c$Node.1[grepl("Root", tree.summary$Node.1)] <- root.scars
-tree.summary.c <- 
-  rbind(data.frame(Node.1 = 0, Node.2 = root.scars, stringsAsFactors = F),
-        tree.summary.c)
-# Rename nodes and create scar.acquisition column
-known.nodes <- 
-  data.frame(Old.node = unique(c(tree.summary.c$Node.1, tree.summary.c$Node.2)))
-known.nodes$New.node <- 0:(nrow(known.nodes) - 1)
-tree.summary.c <- merge(tree.summary.c, known.nodes,
-                        by.x = "Node.1", by.y = "Old.node")
-colnames(tree.summary.c)[3] <- "Parent"
-tree.summary.c <- merge(tree.summary.c, known.nodes,
-                        by.x = "Node.2", by.y = "Old.node")
-colnames(tree.summary.c)[4] <- "Child"
-tree.summary.c <- tree.summary.c[, c("Parent", "Child", "Node.2")]
-colnames(tree.summary.c)[3] <- "Scar.acquisition"
-# Place cells in tree
-cells.to.place <- correct.cell.placement[correct.cell.placement$Main, c("Cell", "Scar")]
-# x <- 70
-cells.to.place$Parent <-
-  sapply(cells.to.place$Scar,
+# With
+if("Cell.type" %in% names(correct.cell.placement.main)){
+  cells.add <- 
+    correct.cell.placement.main[,
+                           c("Node", "Cell", "Cell.type")]
+  # cells.not.add <- 
+  #   correct.cell.placement.main[!(correct.cell.placement.main$Node %in% 
+  #                            unique(c(tree.plot$Child, tree.plot$Parent))),
+  #                          c("Node", "Cell", "Cell.type")]
+}else{
+  cells.add <- 
+    correct.cell.placement.main[, 
+                           c("Node", "Cell")]
+  cell.add$Cell.type <- "Cell"
+}
+cells.add$Scar.acquisition <- ""
+colnames(cells.add)[1:2] <- c("Parent", "Child")
+cells.add$fill <- "lightgrey"
+cells.add$size <- 0.5
+cells.add$Child <- 
+  sapply(cells.add$Child,
          function(x){
-           scar.pattern <- 
-             paste("^", x, ",|^", x, "$|,", x, ",|,", x, "$", sep = "")
-           parent <- tree.summary.c$Child[grepl(scar.pattern, tree.summary.c$Scar.acquisition)]
-           return(parent)
+           x <- as.character(x)
+           if(grepl(";", x)){
+             return(paste(unlist(strsplit(x, ";")), collapse = "d"))
+           }else{
+             return(x)
+           }
          }
   )
-colnames(cells.to.place)[1] <- "Child"
-cells.to.place <- cells.to.place[, c("Parent", "Child")]
-cells.to.place$Scar.acquisition <- ""
 
-collapsed.tree <- rbind(tree.summary.c, cells.to.place)
+tree.plot.cells <- rbind(tree.plot, cells.add)
+rm(cells.add)
 
-if(exists("tsne.coord")){
-collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
-                        by.x = "Child", by.y = "Cell", all.x = T)
-}else{
-  collapsed.tree$Cell.type <- 
-    sapply(collapsed.tree$Child,
-           function(x) {
-             if(grepl("_", x)){
-               type.output <- "Cell"
-             }else{
-               type.output <- NA
-             }
-             return(type.output)
-           }
-    )
-}
-
-# write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
-#           row.names = F, quote = F, sep = " ")
-
-# Visualize tree ####
+# Visualize trees ####
+print("Visualization of full trees")
+## No pie charts
 # Without cells
-tree.summary.c.plot <- tree.summary.c
-tree.summary.c.plot$fill <- "black"
-tree.summary.c.plot$size <- 1
-tree.summary.c.plot$Cell.type <- NA
-# Order in scar_tree order
-# scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
-#                         header = T, fill = T, stringsAsFactors = F)
-# tentative.reorder <- data.frame(Scar.acquisition = tree.summary.c.plot$Scar.acquisition)
-# tentative.reorder$Order <-
-#   sapply(tentative.reorder$Scar.acquisition,
-#          function(x) {
-#            if(x %in% scar_tree$Scar.acquisition){
-#              which(scar_tree$Scar.acquisition == x)
-#            }else{0}
-#          }
-#   )
-# tentative.reorder$Order[tentative.reorder$Order == 0] <-
-#   c(11, 22, 13)
-# tree.summary.c.plot <- merge(tree.summary.c.plot, tentative.reorder)
-# tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Order),
-#                                    c("Parent", "Child", "Scar.acquisition",
-#                                      "fill", "size", "Cell.type")]
-tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
-# save(tree.summary.c.plot, file = "./Data/Simulations/B2_wweak_dlet0_edges.Robj")
-LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
-# save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
-LINNAEUS.tree_wg <-
-  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F, 
-                  collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
-LINNAEUS.tree_wg
-
-LINNAEUS.tree_wg <- 
-  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
-                  fontSize = 8, width = 300, height = 400, fill = "fill",
-                  nodeSize = "size", pieSummary = F)
-# save(LINNAEUS.tree_wg, file = "./Data/Simulations/B2_wweak_dlet0_widget.Robj")
-LINNAEUS.tree_wg
-# htmlwidgets::saveWidget(LINNAEUS.tree_wg,
-#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
+# LINNAEUS.wo <- generate_tree(tree.plot)
+# LINNAEUS.wo.wg <- 
+#   collapsibleTree(LINNAEUS.wo, root = LINNAEUS.wo$scar, pieNode = F,
+#                   pieSummary = F, fill = "fill", nodeSize = "size",
+#                   width = 400, height = 400,
+#                   collapsed = F, ctypes=unique(LINNAEUS.wo$Get("Cell.types")))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.wo.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
 
 # With cells
-tree.cells.c.plot <- collapsed.tree
-tree.cells.c.plot$fill <-  
-  sapply(tree.cells.c.plot$Child,
-         function(x){
-           if(grepl("_", x)){
-             return("lightgrey")
-           }else{
-             return("black")
-           }
-         })
-tree.cells.c.plot$size <- 
-  sapply(tree.cells.c.plot$Child,
-         function(x){
-           if(grepl("_", x)){
-             return(0.5)
-           }else{
-             return(1)
-           }
-         })
-tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
-LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
-# save(LINNAEUS.cell.tree, 
-#      file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
-load(file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
-collapsibleTree(LINNAEUS.cell.tree, collapsed = F, pieSummary=F, pieNode=F, 
-                nodeSize='size', ctypes=unique(LINNAEUS.cell.tree$Get("Cell.type")), 
-                fill='fill')
-load("./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj");
-collapsibleTree(phylip.tree, collapsed = F, pieSummary=F, pieNode=F, 
-                nodeSize='size', ctypes=unique(phylip.tree$Get("Cell.type")), 
-                fill='fill')
+# LINNAEUS.with <- generate_tree(tree.plot.cells)
+# collapsibleTree(LINNAEUS.with, root = LINNAEUS.wo$scar, pieNode = F,
+#                 pieSummary = F, fill = "fill", nodeSize = "size",
+#                 width = 800, height = 600,
+#                 collapsed = F, ctypes=unique(LINNAEUS.with$Get("Cell.types")))
+
+## With pie charts
+tree.plot.cells.scar.blind <- tree.plot.cells
+tree.plot.cells.scar.blind$Scar.acquisition <- ""
+LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
+# Without cells
+LINNAEUS.pie.wg <-
+  collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 600, height = 600,
+                  ctypes = larvae.colors$Cell.type,
+                  ct_colors = larvae.colors$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb.html")
+# With cells
+LINNAEUS.pie.all <- generate_tree(tree.plot.cells)
+LINNAEUS.pie.all.wg <-
+  collapsibleTree(LINNAEUS.pie.all, root = LINNAEUS.pie.all$scar, pieNode = T,
+                  pieSummary = F,collapsed = F,
+                  width = 800, height = 1200,
+                  ctypes = larvae.colors$Cell.type,
+                  ct_colors = larvae.colors$color, nodeSize_sc = 1,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.all.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_all.html")
 
 
+node.sizes <-
+  merge(node.count.cumulative.agg.main[, c("Node", "Freq")], 
+        tree.summary.collapse.main[, c("Node", "Node.2")])
 
-LINNAEUS.cell.tree_wg <- 
-  collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar, collapsed = F,
-                  fontSize = 8, width = 300, height = 600)
-# , fill = "fill",
-#                   nodeSize = "size")
-LINNAEUS.cell.tree_wg
-LINNAEUS.cell.tree.pie <-
-  collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar,
-                  collapsed = F, pieNode = T)
-LINNAEUS.cell.tree.pie
-# htmlwidgets::saveWidget(LINNAEUS.cell.tree_wg,
-#                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
-# save(tree.cells.c.plot, file = "./Data/2017_10X_2/Z2_tree_2.Robj")
-# save(LINNAEUS.cell.tree, file = "./Data/2017_10X_2/Z2_Ltree_2.Robj")
-# save(LINNAEUS.cell.tree.pie, file = "./Data/2017_10X_2/Z2_Ltree_pie.Robj")
+# With cells
+# collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+#                 pieSummary = F,collapsed = F,
+#                 width = 800, height = 600,
+#                 ctypes = larvae.colors$Cell.type,
+#                 ct_colors = larvae.colors$color)
 
-# Extract subtree ####
-get.node.comp <- function(node, tree.edges){
-  # Return the cell type composition of a node, including its subnodes (recursive function)
-  node.children <- extracted.tree$Child[is.na(extracted.tree$Cell.type) & 
-                                          extracted.tree$Parent == node]
-  cell.children <- extracted.tree$Child[!is.na(extracted.tree$Cell.type) & 
-                                          extracted.tree$Parent == node]
-  comp.this.node <-
-    data.frame(table(extracted.tree$Cell.type[extracted.tree$Child %in% 
-                                                cell.children]))
-  colnames(comp.this.node) <- c("Cell.type", "Count")
-  if(length(node.children) > 0){
-    for(n in 1:length(node.children)){
-      comp.below <- get.node.comp(node.children[n], tree.edges)
-      colnames(comp.below)[2] <- "Count.1"
-      comp.this.node <- merge(comp.this.node, comp.below)
-      comp.this.node$Count <- comp.this.node$Count + comp.this.node$Count.1
-      comp.this.node <- comp.this.node[, c("Cell.type", "Count")]
-    }
-  }
-  
-  return(comp.this.node)
+
+# LINNAEUS.tree_wg <-
+#   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F,
+#                   pieSummary = F, fill = "fill", nodeSize = "size",
+#                   width = 800, height = 600,
+#                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
+
+# Extract tree ####
+print("Visualization of zoomed trees")
+# Easy mode 1: set all colors to lightgrey except the ones we want
+larvae.colors.zoom <- larvae.colors
+larvae.colors.zoom$color[larvae.colors.zoom$layer != "Neural crest"] <-
+  gplots::col2hex("lightgrey")
+# LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
+# Without cells
+LINNAEUS.pie.zoom.wg <-
+  collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 600, height = 600,
+                  ctypes = larvae.colors.zoom$Cell.type,
+                  ct_colors = larvae.colors.zoom$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.zoom.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb_nc.html")
+
+# Easy mode 2: remove all cells except the cell types we want
+parent.child.scarnodes <- tree.plot.cells.scar.blind[tree.plot.cells.scar.blind$Cell.type == "NA", ]
+
+tree.plot.cells.mini <- tree.plot.cells.scar.blind
+cell.types.mini <- 
+    larvae.colors$Cell.type[larvae.colors$layer == "Neural crest"]
+tree.plot.cells.mini <- 
+  tree.plot.cells.mini[tree.plot.cells.mini$Cell.type %in%
+                         cell.types.mini, ]
+
+mini.parents <- unique(tree.plot.cells.mini$Parent[tree.plot.cells.mini$Cell.type != "NA"])
+# Determine which parent nodes to keep
+mini.scar.edges <- 
+  parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.parents, ]
+repeat{
+  mini.scar.edges.add <- 
+    parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.scar.edges$Parent, ]
+  if(sum(mini.scar.edges.add$Child %in% mini.scar.edges$Child) == 
+     nrow(mini.scar.edges.add)){
+    break}
+  mini.scar.edges <- unique(rbind(mini.scar.edges, mini.scar.edges.add))
 }
+rm(mini.scar.edges.add)
 
-celltypes.to.extract <- c("Chondrocytes A", "Retinal cells A", "Erythrocytes B",
-                          "Epidermal cells B", "Fibroblasts B (Fin)", "Hepatocytes A")
-extracted.tree <- tree.cells.c.plot
-extracted.tree <- extracted.tree[is.na(extracted.tree$Cell.type) | 
-                                   extracted.tree$Cell.type %in% celltypes.to.extract, ]
-extracted.tree$Keep <-
-  sapply(extracted.tree$Child,
-         function(x){
-           if(grepl("_", x)){
-             return(T)
-           }else{
-             node.comp <- get.node.comp(x, extracted.tree)
-             node.comp <- node.comp[node.comp$Cell.type %in% celltypes.to.extract, ]
-             
-             return(sum(node.comp$Count) > 0)
-           }
-         }
-  )
+mini.plot <- rbind(mini.scar.edges, tree.plot.cells.mini)
+LINNAEUS.mini <- generate_tree(mini.plot)
+LINNAEUS.mini.wg <-
+  collapsibleTree(LINNAEUS.mini, root = LINNAEUS.mini$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 300, height = 300,
+                  ctypes = larvae.colors.zoom$Cell.type,
+                  ct_colors = larvae.colors.zoom$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.mini.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_mini_nc.html")
 
-extracted.tree <- extracted.tree[extracted.tree$Keep, ]
 
-# Tree vis tests ####
-tree.summary.c.plot <- tree.summary.c
-tree.summary.c.plot$fill <- "black"
-tree.summary.c.plot$size <- 1
-tree.summary.c.plot$Cell.type <- NA
-tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
 
-LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
-# save(LINNAEUS.tree, file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/B2_correct_tree.Robj")
-collapsibleTree(LINNAEUS.tree, pieNode=T, pieSummary=F, collapsed=F, 
-                width=500, height=300, ctypes=c('internal'))
-collapsibleTree(LINNAEUS.tree, pieNode=T, pieSummary=F, collapsed=F, 
-                width=1.5e3, height=1e3, nodeLabel_sc=40, ctypes=c('internal'))
-collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,  
-                pieNode=T, ctypes=unique(LINNAEUS.tree$Get("Cell.type")))
+# Visualize extracted tree ####
 
-LINNAEUS.tree_wg <-
-  collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F, 
-                  collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
-LINNAEUS.tree_wg
-
-# load(file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/B2_correct_tree.Robj")
-# collapsibleTree(LINNAEUS.tree, collapsed = F, pieSummary=F, pieNode=F, 
-#                 nodeSize='size', ctypes=unique(LINNAEUS.tree$Get("Cell.type")), 
+# save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
+# LINNAEUS.tree_wg <-
+#   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F,
+#                   pieSummary = F, fill = "fill", nodeSize = "size",
+#                   width = 800, height = 600,
+#                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
+# LINNAEUS.tree_wg
+# 
+# 
+# 
+# # Create tree summary and make node piecharts ####
+# print("Making tree summary and node piecharts")
+# # Aggregate cells (stratified by cell type) to nodes to make a cumulative node
+# # count.
+# cumulative.node.count <- 
+#   expand.grid(Node = unique(tree.summary.old.pc$Node),
+#               Cell.type = unique(correct.cell.placement$Cell.type),
+#               stringsAsFactors = F)
+# 
+# node.count <- 
+#   data.frame(table(correct.cell.placement$Node, correct.cell.placement$Cell.type))
+# colnames(node.count)[1:2] <- c("Node", "Cell.type")
+# node.count <- merge(node.count, tree.summary.old.pc[, c("Node", "Main")])
+# 
+# require(stringr)
+# node.count$Depth <- sapply(node.count$Node, function(x) str_count(x, pattern = "_"))
+# node.count$Node <- as.character(node.count$Node)
+# # order(unique(node.count$Depth), decreasing = T)
+# 
+# node.count.working <- node.count[, c("Node", "Cell.type", "Freq", "Depth")]
+# 
+# node.count.output <- node.count[0, c("Node", "Cell.type", "Freq")]
+# 
+# # c.depth <- 3
+# # Do for decreasing depth (start with maximal):
+# for(c.depth in order(unique(node.count$Depth), decreasing = T)[-length(unique(node.count$Depth))]){
+#   # Add nodes of current depth to separate (final output) dataframe.
+#   node.count.output <- 
+#     rbind(node.count.working[node.count.working$Depth==c.depth, 
+#                              c("Node", "Cell.type", "Freq")],
+#           node.count.output)
+#   # Change nodes of current depth in working dataframe: depth-- and remove the
+#   # last node. Then aggregate frequencies.
+#   # x <- as.character(node.count.working$Node[1])
+#   node.count.working$Node[node.count.working$Depth == c.depth] <- 
+#     sapply(node.count.working$Node[node.count.working$Depth == c.depth],
+#            function(x) {
+#              y <- unlist(strsplit(as.character(x),"_"))
+#              z <- y[-length(y)]
+#              return(paste(z, collapse = "_"))
+#            }
+#     )
+#   node.count.working$Depth[node.count.working$Depth == c.depth] <-c.depth - 1
+#   node.count.working <- aggregate(node.count.working$Freq,
+#                                   by = list(Node = node.count.working$Node,
+#                                             Cell.type = node.count.working$Cell.type,
+#                                             Depth = node.count.working$Depth),
+#                                   sum)
+#   colnames(node.count.working)[4] <- "Freq"
+# }
+# node.count.output <- rbind(node.count.working[node.count.working$Depth==1, 
+#                                               c("Node", "Cell.type", "Freq")],
+#                            node.count.output)
+# 
+# cumulative.node.count$Cumulative.count.main <- NA
+# cumulative.node.count$Cumulative.count.all <- NA
+# for(i in 1:nrow(cumulative.node.count)){
+#   c.node <- cumulative.node.count$Node[i]
+#   print(paste("Noding", c.node))
+#   c.node.pattern <- paste(c.node, "(_|$)", sep = "")
+#   c.type <- cumulative.node.count$Cell.type[i]
+#   
+#   nodes.under.and.including <-
+#     node.count[node.count$Cell.type == c.type &
+#                  grepl(c.node.pattern, node.count$Node), ]
+#   
+#   cumulative.node.count$Cumulative.count.main[i] <-
+#     sum(nodes.under.and.including$Freq[nodes.under.and.including$Main])
+#   cumulative.node.count$Cumulative.count.all[i] <-
+#     sum(nodes.under.and.including$Freq)
+# }
+# 
+# # Calculate total node sizes, make tree summary and calculate cell type ratios 
+# # per node
+# tree.summary.out.1 <- aggregate(cumulative.node.count$Cumulative.count.main,
+#                           by = list(Node = cumulative.node.count$Node),
+#                           sum)
+# colnames(tree.summary.out.1)[2] <- "Total.main"
+# tree.summary.out.2 <- aggregate(cumulative.node.count$Cumulative.count.all,
+#                                 by = list(Node = cumulative.node.count$Node),
+#                                 sum)
+# colnames(tree.summary.out.2)[2] <- "Total.all"
+# tree.summary.out <- merge(tree.summary.out.1, tree.summary.out.2)
+# 
+# tree.summary.out <- merge(tree.summary.out, 
+#                           tree.summary.old.pc[, c("Node", "Node.2", "Depth", "Main")])
+# colnames(tree.summary.out)[which(colnames(tree.summary.out) == "Node.2")] <- "Scar"
+# tree.summary.out <- tree.summary.out[, c("Scar", "Node", "Depth", "Total.main", "Total.all", "Main")]
+# 
+# cumulative.node.count <- merge(cumulative.node.count, tree.summary.out)
+# cumulative.node.count$Ratio.main <-
+#   cumulative.node.count$Cumulative.count.main/cumulative.node.count$Total.main
+# cumulative.node.count$Ratio.all <-
+#   cumulative.node.count$Cumulative.count.all/cumulative.node.count$Total.all
+# 
+# # Output tree summary
+# # write.csv(tree.summary.out,
+# #           "./Data/Simulations/Tree_A_1kcellsout_det03_reconstructed_tree.csv",
+# #           row.names = F, quote = F)
+# 
+# # Plot pie charts main only
+# # ggplot(cumulative.node.count[cumulative.node.count$Main, ]) +
+# #   geom_bar(aes(x = "", y = Ratio.main, fill = as.factor(Cell.type)), stat = "identity") +
+# #   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+# #   coord_polar("y", start = 0) +
+# #   facet_wrap(~ Node) +
+# #   labs(x = "", y = "") +
+# #   theme(axis.ticks.y = element_blank(),
+# #         axis.text.x = element_blank(),
+# #         panel.grid.major.x = element_blank(),
+# #         panel.grid.major.y = element_blank())
+# 
+# # Plot pie charts all
+# # ggplot(cumulative.node.count) +
+# #   geom_bar(aes(x = "", y = Ratio.all, fill = as.factor(Cell.type)), stat = "identity") +
+# #   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+# #   coord_polar("y", start = 0) +
+# #   facet_wrap(~ Node) +
+# #   labs(x = "", y = "") +
+# #   theme(axis.ticks.y = element_blank(),
+# #         axis.text.x = element_blank(),
+# #         panel.grid.major.x = element_blank(),
+# #         panel.grid.major.y = element_blank())
+# 
+# # Create edgelist of scars and cells ####
+# # Create edgelist of scars
+# tree.summary.edge <- tree.summary.out[, c("Node", "Scar")]
+# colnames(tree.summary.edge) <- c("Child", "Scar.acquisition")
+# tree.summary.edge$Parent <-
+#   sapply(tree.summary.edge$Child,
+#          function(x){
+#            y <- unlist(strsplit(x, "_"))
+#            z <- paste(y[-length(y)], collapse = "_")
+#          }
+#   )
+# cell.edge <- correct.cell.placement[, c("Node", "Cell")]
+# colnames(cell.edge) <- c("Parent", "Child")
+# cell.edge$Scar.acquisition <- ""
+# 
+# tree.edgelist <- rbind(tree.summary.edge, cell.edge)[, c("Parent", "Child", "Scar.acquisition")]
+# # write.csv(tree.edgelist, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
+# #           row.names = F, quote = F)
+# 
+# # Do same for collapsed tree
+# tree.summary.c <- tree.summary[, c("Node.1", "Node.2")]
+# # Create root node
+# root.scars <- unique(tree.summary$Node.1[grepl("Root", tree.summary$Node.1)])
+# root.scars <- paste(unlist(strsplit(root.scars, ","))[-1], collapse = ",")
+# tree.summary.c$Node.1[grepl("Root", tree.summary$Node.1)] <- root.scars
+# tree.summary.c <- 
+#   rbind(data.frame(Node.1 = 0, Node.2 = root.scars, stringsAsFactors = F),
+#         tree.summary.c)
+# # Rename nodes and create scar.acquisition column
+# known.nodes <- 
+#   data.frame(Old.node = unique(c(tree.summary.c$Node.1, tree.summary.c$Node.2)))
+# known.nodes$New.node <- 0:(nrow(known.nodes) - 1)
+# tree.summary.c <- merge(tree.summary.c, known.nodes,
+#                         by.x = "Node.1", by.y = "Old.node")
+# colnames(tree.summary.c)[3] <- "Parent"
+# tree.summary.c <- merge(tree.summary.c, known.nodes,
+#                         by.x = "Node.2", by.y = "Old.node")
+# colnames(tree.summary.c)[4] <- "Child"
+# tree.summary.c <- tree.summary.c[, c("Parent", "Child", "Node.2")]
+# colnames(tree.summary.c)[3] <- "Scar.acquisition"
+# # Place cells in tree
+# cells.to.place <- correct.cell.placement[correct.cell.placement$Main, c("Cell", "Scar")]
+# # x <- 70
+# cells.to.place$Parent <-
+#   sapply(cells.to.place$Scar,
+#          function(x){
+#            scar.pattern <- 
+#              paste("^", x, ",|^", x, "$|,", x, ",|,", x, "$", sep = "")
+#            parent <- tree.summary.c$Child[grepl(scar.pattern, tree.summary.c$Scar.acquisition)]
+#            return(parent)
+#          }
+#   )
+# colnames(cells.to.place)[1] <- "Child"
+# cells.to.place <- cells.to.place[, c("Parent", "Child")]
+# cells.to.place$Scar.acquisition <- ""
+# 
+# collapsed.tree <- rbind(tree.summary.c, cells.to.place)
+# 
+# if(exists("tsne.coord")){
+# collapsed.tree <- merge(collapsed.tree, tsne.coord[, c("Cell", "Cell.type")],
+#                         by.x = "Child", by.y = "Cell", all.x = T)
+# }else{
+#   collapsed.tree$Cell.type <- 
+#     sapply(collapsed.tree$Child,
+#            function(x) {
+#              if(grepl("_", x)){
+#                type.output <- "Cell"
+#              }else{
+#                type.output <- NA
+#              }
+#              return(type.output)
+#            }
+#     )
+# }
+# 
+# # write.table(collapsed.tree, "./Data/Simulations/Tree_B2_2000cell_LINNAEUS_tree.csv",
+# #           row.names = F, quote = F, sep = " ")
+# 
+# # Visualize tree ####
+# # Without cells
+# tree.summary.c.plot <- tree.summary.c
+# tree.summary.c.plot$fill <- "black"
+# tree.summary.c.plot$size <- 1
+# tree.summary.c.plot$Cell.type <- NA
+# # Order in scar_tree order
+# # scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
+# #                         header = T, fill = T, stringsAsFactors = F)
+# # scar_tree.2 <- scar_tree
+# # scar_tree.2$Scar.acquisition[1] <- "177"
+# # scar_tree.2$Parent[scar_tree.2$Parent == 34] <- 33
+# # scar_tree.2 <- scar_tree.2[-which(scar_tree.2$Child == 34), ]
+# # scar_tree.2$Parent[scar_tree.2$Parent == 59] <- 45
+# # scar_tree.2 <- scar_tree.2[-which(scar_tree.2$Child == 59), ]
+# # 
+# # tentative.reorder <- data.frame(Scar.acquisition = tree.summary.c.plot$Scar.acquisition)
+# # tentative.reorder$Order <-
+# #   sapply(tentative.reorder$Scar.acquisition,
+# #          function(x) {
+# #            if(x %in% scar_tree$Scar.acquisition){
+# #              which(scar_tree.2$Scar.acquisition == x)
+# #            }else{0}
+# #          }
+# #   )
+# # tentative.reorder$Order[tentative.reorder$Order == 0] <-
+# #   c(1, 11, 13, 22, 23)
+# # tree.summary.c.plot <- merge(tree.summary.c.plot, tentative.reorder)
+# # tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Order),
+# #                                    c("Parent", "Child", "Scar.acquisition",
+# #                                      "fill", "size", "Cell.type")]
+# tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
+# # rownames(tree.summary.c.plot) <- 1:nrow(tree.summary.c.plot)
+# # tree.summary.c.plot$Order <- # REDO ONCE PLACEMENT OF SCARS IN SCAR TREE IS CORRECT
+# #   c(1,10,12,7,11,
+# #     8,6,3,2,4,
+# #     5,9,13,28,26,
+# #     27,20,21,22,23,
+# #     15,16,14,18,19,
+# #     17,24,25,30,29)
+# # tree.summary.c.plot.2 <- tree.summary.c.plot[order(tree.summary.c.plot$Order), -7]
+# # save(tree.summary.c.plot, file = "./Data/Simulations/B2_wweak_dlet0_edges.Robj")
+# tree.summary.c.plot.2 <- tree.summary.c.plot
+# LINNAEUS.tree <- generate_tree(tree.summary.c.plot.2)
+# # save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
+# LINNAEUS.tree_wg <-
+#   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F,
+#                   pieSummary = F, fill = "fill", nodeSize = "size",
+#                   width = 800, height = 600,
+#                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
+# LINNAEUS.tree_wg
+# # htmlwidgets::saveWidget(LINNAEUS.tree_wg,
+# #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_Z2_LINNAEUS_scar_tree.html")
+# 
+# # LINNAEUS.tree_wg <- 
+# #   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,
+# #                   fontSize = 8, width = 300, height = 400, fill = "fill",
+# #                   nodeSize = "size", pieSummary = F)
+# # save(LINNAEUS.tree_wg, file = "./Data/Simulations/B2_wweak_dlet0_widget.Robj")
+# # LINNAEUS.tree_wg
+# # htmlwidgets::saveWidget(LINNAEUS.tree_wg,
+# #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_LINNAEUS_tree.html")
+# 
+# # With cells
+# tree.cells.c.plot <- collapsed.tree
+# tree.cells.c.plot$fill <-  
+#   sapply(tree.cells.c.plot$Child,
+#          function(x){
+#            if(grepl("_", x)){
+#              return("lightgrey")
+#            }else{
+#              return("black")
+#            }
+#          })
+# tree.cells.c.plot$size <- 
+#   sapply(tree.cells.c.plot$Child,
+#          function(x){
+#            if(grepl("_", x)){
+#              return(0.5)
+#            }else{
+#              return(1)
+#            }
+#          })
+# tree.cells.c.plot <- tree.cells.c.plot[order(tree.cells.c.plot$Parent), ]
+# LINNAEUS.cell.tree <- generate_tree(tree.cells.c.plot)
+# # save(LINNAEUS.cell.tree, 
+# #      file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
+# # load(file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj")
+# LINNAEUS.cell.tree.wg <- 
+#   collapsibleTree(LINNAEUS.cell.tree, collapsed = F, pieSummary=T, pieNode=T, 
+#                   nodeSize='size', ctypes=unique(LINNAEUS.cell.tree$Get("Cell.type")), 
+#                   fill='fill')
+# # htmlwidgets::saveWidget(LINNAEUS.cell.tree.wg,
+# #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_Z2_LINNAEUS_scar_pie_tree.html")
+# 
+# 
+# # load("./Scripts/linnaeus-scripts/collapsibleTree/sand/C2_phylip_0_wcells.Robj");
+# collapsibleTree(phylip.tree, collapsed = F, pieSummary=F, pieNode=F, 
+#                 nodeSize='size', ctypes=unique(phylip.tree$Get("Cell.type")), 
 #                 fill='fill')
+# 
+# 
+# 
+# LINNAEUS.cell.tree_wg <- 
+#   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar, collapsed = F,
+#                   fontSize = 8, width = 300, height = 600)
+# # , fill = "fill",
+# #                   nodeSize = "size")
+# LINNAEUS.cell.tree_wg
+# LINNAEUS.cell.tree.pie <-
+#   collapsibleTree(LINNAEUS.cell.tree, root = LINNAEUS.cell.tree$scar,
+#                   collapsed = F, pieNode = T)
+# LINNAEUS.cell.tree.pie
+# # htmlwidgets::saveWidget(LINNAEUS.cell.tree_wg,
+# #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_C2_03det_iterative.html")
+# # save(tree.cells.c.plot, file = "./Data/2017_10X_2/Z2_tree_2.Robj")
+# # save(LINNAEUS.cell.tree, file = "./Data/2017_10X_2/Z2_Ltree_2.Robj")
+# # save(LINNAEUS.cell.tree.pie, file = "./Data/2017_10X_2/Z2_Ltree_pie.Robj")
+# 
+# # Extract subtree ####
+# get.node.comp <- function(node, tree.edges){
+#   # Return the cell type composition of a node, including its subnodes (recursive function)
+#   node.children <- extracted.tree$Child[is.na(extracted.tree$Cell.type) & 
+#                                           extracted.tree$Parent == node]
+#   cell.children <- extracted.tree$Child[!is.na(extracted.tree$Cell.type) & 
+#                                           extracted.tree$Parent == node]
+#   comp.this.node <-
+#     data.frame(table(extracted.tree$Cell.type[extracted.tree$Child %in% 
+#                                                 cell.children]))
+#   colnames(comp.this.node) <- c("Cell.type", "Count")
+#   if(length(node.children) > 0){
+#     for(n in 1:length(node.children)){
+#       comp.below <- get.node.comp(node.children[n], tree.edges)
+#       colnames(comp.below)[2] <- "Count.1"
+#       comp.this.node <- merge(comp.this.node, comp.below)
+#       comp.this.node$Count <- comp.this.node$Count + comp.this.node$Count.1
+#       comp.this.node <- comp.this.node[, c("Cell.type", "Count")]
+#     }
+#   }
+#   
+#   return(comp.this.node)
+# }
+# 
+# celltypes.to.extract <- c("Chondrocytes A", "Retinal cells A", "Erythrocytes B",
+#                           "Epidermal cells B", "Fibroblasts B (Fin)", "Hepatocytes A")
+# extracted.tree <- tree.cells.c.plot
+# extracted.tree <- extracted.tree[is.na(extracted.tree$Cell.type) | 
+#                                    extracted.tree$Cell.type %in% celltypes.to.extract, ]
+# extracted.tree$Keep <-
+#   sapply(extracted.tree$Child,
+#          function(x){
+#            if(grepl("_", x)){
+#              return(T)
+#            }else{
+#              node.comp <- get.node.comp(x, extracted.tree)
+#              node.comp <- node.comp[node.comp$Cell.type %in% celltypes.to.extract, ]
+#              
+#              return(sum(node.comp$Count) > 0)
+#            }
+#          }
+#   )
+# 
+# extracted.tree <- extracted.tree[extracted.tree$Keep, ]
+# 
+# # Tree vis tests ####
+# tree.summary.c.plot <- tree.summary.c
+# tree.summary.c.plot$fill <- "black"
+# tree.summary.c.plot$size <- 1
+# tree.summary.c.plot$Cell.type <- NA
+# tree.summary.c.plot <- tree.summary.c.plot[order(tree.summary.c.plot$Parent), ]
+# 
+# LINNAEUS.tree <- generate_tree(tree.summary.c.plot)
+# # save(LINNAEUS.tree, file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/B2_correct_tree.Robj")
+# collapsibleTree(LINNAEUS.tree, pieNode=T, pieSummary=F, collapsed=F, 
+#                 width=500, height=300, ctypes=c('internal'))
+# collapsibleTree(LINNAEUS.tree, pieNode=T, pieSummary=F, collapsed=F, 
+#                 width=1.5e3, height=1e3, nodeLabel_sc=40, ctypes=c('internal'))
+# collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, collapsed = F,  
+#                 pieNode=T, ctypes=unique(LINNAEUS.tree$Get("Cell.type")))
+# 
+# LINNAEUS.tree_wg <-
+#   collapsibleTree(LINNAEUS.tree, root = LINNAEUS.tree$scar, pieNode = F, 
+#                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
+# LINNAEUS.tree_wg
+# 
+# # load(file = "./Scripts/linnaeus-scripts/collapsibleTree/sand/B2_correct_tree.Robj")
+# # collapsibleTree(LINNAEUS.tree, collapsed = F, pieSummary=F, pieNode=F, 
+# #                 nodeSize='size', ctypes=unique(LINNAEUS.tree$Get("Cell.type")), 
+# #                 fill='fill')
+# 
+# # Data structure tests ####
+# basic.structure <- it.tree.building[[1]]$LLS
+# ggplot(basic.structure) +
+#   geom_point(aes(x = Scar.count, y = Degree))
+# basic.structure$Scars.per.deg <- basic.structure$Scar.count/basic.structure$Degree
+# ggplot(basic.structure) +
+#   geom_histogram(aes(x = Scars.per.deg))

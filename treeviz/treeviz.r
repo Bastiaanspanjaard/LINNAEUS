@@ -367,10 +367,22 @@ scar_tree <- read.table("./Data/Simulations/tree_B2_scar_tree.csv",
 
 scar_tree$fill <- "black"
 scar_tree$size <- 1
-scar_tree_B <- generate_tree(scar_tree)
-scar_tree_wg <- collapsibleTree(scar_tree_B, root = scar_tree_B$scar, collapsed = F,
+scar_tree$Cell.type <- "NA"
+scar_tree$Order <-
+  c(1,2,8,11,5,
+    6,7,24,9,3,
+    4,17,18,19,21,
+    22,23,10,25,26,
+    27,12,13,14,15,
+    16,28,29,19,20,
+    31,32)
+scar_tree.2 <- scar_tree[order(scar_tree$Order), -7]
+scar_tree_B <- generate_tree(scar_tree.2)
+scar_tree_wg <- collapsibleTree(scar_tree_B, root = scar_tree_B$scar,
                                fontSize = 8, width = 300, height = 400,
-                               fill = "fill", nodeSize = "size")
+                               pieNode = F,
+                               pieSummary = F, fill = "fill", nodeSize = "size",
+                               collapsed = F, ctypes=unique(scar_tree_B$Get("Cell.types")))
 scar_tree_wg
 # htmlwidgets::saveWidget(scar_tree_wg,
 # file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_scar_tree.html")
@@ -531,7 +543,7 @@ phylip.tree_wg
 
 
 # Create doublet CS 0 tree B ####
-phylip.edges <- read.table("./Data/Simulations/Tree_B2_2000cellsout_d005_phylip_tree1",
+phylip.edges <- read.table("./Data/Simulations/Tree_B2_2000cellsout_d005_phylip_0_tree1",
                            stringsAsFactors = F)
 phylip.scars <- read.csv("./Data/Simulations/Tree_B2_scar_conversion.csv",
                          stringsAsFactors = F)
@@ -630,6 +642,15 @@ phylip.edges.collapse$size <-
              return(1)
            }
          })
+phylip.edges.collapse$Cell.type <- 
+  sapply(phylip.edges.collapse$Child,
+         function(x){
+           if(grepl("_", x)){
+             return("Cell")
+           }else{
+             return("NA")
+           }
+         })
 # Add entries for nodesize and fill; get fields into tree (fill has to be named
 # "fill", nodesize can be anything but its name has to be supplied in the 
 # collapsibleTree functioncall.
@@ -638,7 +659,8 @@ phylip.tree <-
 phylip.tree_wg <- 
   collapsibleTree(phylip.tree, root = phylip.tree$scar, collapsed = F,
                   fontSize = 8, width = 300, height = 800, fill = "fill",
-                  nodeSize = "size")
+                  nodeSize = "size", ctypes=unique(phylip.tree$Get("Cell.types")),
+                  pieSummary = F, pieNode = F)
 phylip.tree_wg
 # htmlwidgets::saveWidget(phylip.tree_wg,
 #                         file = "~/Documents/Projects/TOMO_scar/Images/Simulations/tree_B2_d005_CamSok0.html")
