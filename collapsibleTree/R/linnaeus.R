@@ -1,3 +1,48 @@
+# Linnaeus helper functios
+
+#' Helper function for pieNode modality of a Linnaeus data.tree object
+#' @param df data.tree object to compute cell type counts. Requires Cell.type field
+#' @param ctypes cell types
+#' @param nodeSize_breaks
+#' @param nodeSize_sc
+#' @param jsonFields 
+#' @rdname collapsibleTree
+#' @export
+get_pieNode = function(df, ctypes, 
+				nodeSize_class = c(   10, 15, 20, 35), 
+				nodeSize_breaks = c( 0, 5, 20, 100, 1e6), 
+				nodeSize_sc = 2, jsonFields  = NULL
+			){
+    t <- data.tree::Traverse(df, 'level')
+    data.tree::Do(t, function(x) {
+	x$isScar = !x$isLeaf & !x$isRoot & x$Cell.type == "NA" # This is a source of problems
+	if(x$isRoot) {
+		x$isScar = TRUE
+		x$Cell.type = "_"
+	}
+	xpieNode = x$Get("Cell.type")
+	x$ct = x$Cell.type
+	x$pieNode = table(factor(array(xpieNode), levels=ctypes))
+	x$SizeOfNode = nodeSize_class[cut(sum(x$pieNode), breaks=nodeSize_breaks, include.lowest=T, labels=F )]
+	if(!x$isScar) {
+		x$SizeOfNode = nodeSize_sc
+	}else{
+		sapply(x$children, function(child){child$parSize = length(x$children)}) 
+	}
+    })
+
+    if(!is.null(jsonFields)){
+      jsonFields <- c(jsonFields, "pieNode")
+      jsonFields <- c(jsonFields, "parSize") # keeps a record of the size of parent; used to decide wheter to show cell type of single cell
+      jsonFields <- c(jsonFields, "ct")
+      jsonFields <- c(jsonFields, "SizeOfNode")
+      jsonFields <- c(jsonFields, "isScar")
+      return(jsonFields)
+    }
+}
+
+#' @rdname collapsibleTree
+#' @export 
 do_toy_example = function(type1="type1", type2="type2", scar_color="#aaaaaa", type1_color = "#ff0000", type2_color="#0000ff", scarSize=6, scSize = 2.5, width=500, height=500){
 master <- Node$new('master', size=scarSize, fill=scar_color, Cell.type="NA")
  scarA <- master$AddChild('scarA', size=scarSize, fill=scar_color, Cell.type='NA')
@@ -40,5 +85,55 @@ widget_summary = collapsibleTree(master, collapsed = F, pieSummary=T, pieNode=T,
 return(list(widget_sc, widget_summary))
 }
 
+#' @rdname collapsibleTree
+#' @export
+pieProportions <- function(node) {
+  return(c(node$Cell.type, sapply(node$children, pieProportions)))
+}
+
+#' @rdname collapsibleTree
+#' @export
+# color legend
+.do_color_map <- function(name, ct_colors, ctypes){
+	pdf(paste0(name,'_color_map.pdf'), width=2.5, height=10)
+	par(mar=c(1.1, 10, 1.1, 1.1))
+	image(y=1:length(ct_colors), x=1, t(as.matrix(1:length(ct_colors))), col = ct_colors, axes=F, ylab='', xlab='') 
+		axis(2, at=1:length(ct_colors), las=2, labels = ctypes, cex.axis=0.5)
+	dev.off()
+}
+#' Helper function to sort children by attribute, casting the given value to numeric
+#' @rdname collapsibleTree
+#' @export
+SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TRUE)
+{
+    if (node$isLeaf)
+        return()
+    ChildL <- sapply(node$children, function(x) GetAttribute(x,
+        attribute, ...))
+    names(ChildL) <- names(node$children)
+    node$children <- node$children[order(as.numeric(ChildL), decreasing = decreasing,
+        na.last = TRUE)]
+    if (recursive)
+        for (child in node$children) SortNumeric(child, attribute, ...,
+            decreasing = decreasing, recursive = recursive)
+    invisible(node)
+}
 
 
+#' @rdname collapsibleTree
+#' @export
+rename.node <- function(node){
+  if("scar" %in% names(node)){
+    node$name <- node$scar
+  }else{
+    node$name <- ""
+  }
+
+  if("children" %in% names(node)){
+    for(i in 1:length(node$children)){
+      node$children[[i]] <- rename.node(node$children[[i]])
+    }
+  }
+
+  return(node)
+}

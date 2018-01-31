@@ -1,22 +1,6 @@
 #' @rdname collapsibleTree
 #' @method collapsibleTree Node
 #' @export
-rename.node <- function(node){
-  if("scar" %in% names(node)){
-    node$name <- node$scar
-  }else{
-    node$name <- ""
-  }
-
-  if("children" %in% names(node)){
-    for(i in 1:length(node$children)){
-      node$children[[i]] <- rename.node(node$children[[i]])
-    }
-  }
-
-  return(node)
-}
-
 collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                                  root = df$name, inputId = NULL, attribute = "leafCount",
                                  aggFun = sum, fill = "lightsteelblue",
@@ -29,6 +13,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 				nodeSize_class = c(   10, 15, 20, 35),
 				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
 				# PO test
+				use_scar_as_name = FALSE,
 				hide_scars = FALSE,
 				pieSummary = TRUE,
 				pieNode = FALSE,  
@@ -57,7 +42,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   # ctypes = sort(unique(df$Get("Cell.type")))
   # PO create colors
   if(is.null(ct_colors)){
-	ct_colors = c('#7400C2', '#8E14E0', '#A929FF', '#BB56FF', '#CD82FF', '#DFAEFF', '#F1DBFF', '#844420', '#904A23', '#9D5126', '#A85A2D', '#AE673D', '#B5734D', '#BB805D', '#C28C6D', '#C9997E', '#944D72', '#DF74AC', '#F89ACB', '#FABFDE', '#FDE5F2', '#173416', '#214B1F', '#2B6229', '#357933', '#3F913D', '#4AA847', '#57B354', '#66BA64', '#75C173', '#84C782', '#93CE91', '#A2D5A0', '#B1DCAF', '#C0E2BE', '#CFE9CD', '#DEF0DC', '#EDF7EC', '#B75B01', '#ED7600', '#FF9833', '#FFBE7F', '#FFE5CC', '#99991E', '#E6E62D', '#FFFF57', '#FFFF8C', '#FFFFC1', '#9F1213', '#B91516', '#D31819', '#E52729', '#EA4E4F', '#EE7475', '#F39B9B', '#F7C1C1', '#FCE8E8', '#214B6E', '#265780', '#2C6493', '#3171A6', '#377EB8', '#4E8DC0', '#649BC7', '#7BA9CF', '#91B8D7', '#A7C6DF', '#BED5E7', '#D4E3EF', '#EBF2F7')
+	ct_colors = c('#7400C2', '#8E14E0', '#A929FF', '#BB56FF', '#CD82FF', '#DFAEFF', '#F1DBFF', '#844420', '#904A23', '#9D5126', '#A85A2D', '#AE673D', '#B5734D', '#BB805D', '#C28C6D', '#C9997E', '#944D72', '#DF74AC', '#F89ACB', '#FABFDE', '#FDE5F2', '#173416', '#214B1F', '#2B6229', '#357933', '#3F913D', '#4AA847', '#57B354', '#66BA64', '#75C173', '#84C782', '#93CE91', '#A2D5A0', '#B1DCAF', '#C0E2BE', '#CFE9CD', '#DEF0DC', '#EDF7EC', '#B75B01', '#ED7600', '#FF9833', '#FFBE7F', '#FFE5CC', '#000000', '#E6E62D', '#FFFF57', '#FFFF8C', '#FFFFC1', '#9F1213', '#B91516', '#D31819', '#E52729', '#EA4E4F', '#EE7475', '#F39B9B', '#F7C1C1', '#FCE8E8', '#214B6E', '#265780', '#2C6493', '#3171A6', '#377EB8', '#4E8DC0', '#649BC7', '#7BA9CF', '#91B8D7', '#A7C6DF', '#BED5E7', '#D4E3EF', '#EBF2F7')
   }
 
   if(is.null(ctypes)){
@@ -107,25 +92,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 	}
 
   if(pieNode){
-    t <- data.tree::Traverse(df, 'level')
-    data.tree::Do(t, function(x) {
-	x$isScar = !x$isLeaf & !x$isRoot & x$Cell.type == "NA" # This is a source of problems
-	if(x$isRoot) {x$isScar = TRUE; x$Cell.type = "_"}
-	xpieNode = x$Get("Cell.type")
-	x$ct = x$Cell.type
-	x$pieNode = table(factor(array(xpieNode), levels=ctypes))
-	x$SizeOfNode = nodeSize_class[cut(sum(x$pieNode), breaks=nodeSize_breaks, include.lowest=T, labels=F )]
-	if(!x$isScar) {
-		x$SizeOfNode = nodeSize_sc
-	}else{
-		sapply(x$children, function(child){child$parSize = length(x$children)}) 
-	}
-    })
-    jsonFields <- c(jsonFields, "pieNode")
-    jsonFields <- c(jsonFields, "parSize") # keeps a record of the size of parent; used to decide wheter to show cell type of single cell
-    jsonFields <- c(jsonFields, "ct")
-    jsonFields <- c(jsonFields, "SizeOfNode")
-    jsonFields <- c(jsonFields, "isScar")
+    jsonFields = get_pieNode(df, ctypes = ctypes, nodeSize_breaks = nodeSize_breaks, nodeSize_sc = nodeSize_sc, jsonFields = jsonFields)
   }
   
 if(pieSummary & pieNode){
@@ -142,8 +109,8 @@ if(pieSummary & pieNode){
 		df = Clone(df)
 		tra  = data.tree::Traverse(df, 'level')
 		sapply(tra, function(x){
-		#	x$tp <- sprintf('<h2 style="color: #2e6c80;">%s</h2>', ifelse(x$isScar, x$scar, x$Cell.type))
-			x$tp <- sprintf('<h3 style="color: #2e6c80;">%s</h3>', ifelse(x$isScar, x$scar, x$Cell.type))
+		#	x$tp <- sprintf('<h3 style="color: #2e6c80;">%s</h3>', ifelse(x$isScar, x$scar, x$Cell.type))
+			x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4>', ifelse(x$isScar, x$scar, x$Cell.type))
 			x$scar = x$name}
 		)
 		options$tooltip=T
@@ -199,8 +166,9 @@ if(pieSummary & pieNode){
   # keep only the JSON fields that are necessary
   if(is.null(jsonFields)) jsonFields <- NA
   data <- data.tree::ToListExplicit(df, unname = TRUE, keepOnly = jsonFields)
-  data <- rename.node(data)
-
+  if(use_scar_as_name){
+   data <- rename.node(data)
+  }
   # pass the data and options using 'x'
   x <- list(
     data = data,
@@ -214,30 +182,4 @@ if(pieSummary & pieNode){
   )
 }
 
-# PO helper function left for the record
-pieProportions <- function(node) {
-  return(c(node$Cell.type, sapply(node$children, pieProportions)))
-}
 
-# color legend
-#plot_color_map <- function(ct_colors, ctypes){
-#	pdf('color_map.pdf', width=2.5, height=10)
-#	par(mar=c(1.1, 10, 1.1, 1.1))
-#		image(y=1:length(ct_colors), x=1, t(as.matrix(1:length(ct_colors))), col= ct_colors, axes=F, ylab='', xlab=''); axis(2, at=1:length(ct_colors), las=2, labels = ctypes, cex.axis=0.5)
-#	dev.off()
-#}
-# helper function to sort children by attribute, casting the given value to numeric
-SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TRUE)
-{
-    if (node$isLeaf)
-        return()
-    ChildL <- sapply(node$children, function(x) GetAttribute(x,
-        attribute, ...))
-    names(ChildL) <- names(node$children)
-    node$children <- node$children[order(as.numeric(ChildL), decreasing = decreasing,
-        na.last = TRUE)]
-    if (recursive)
-        for (child in node$children) SortNumeric(child, attribute, ...,
-            decreasing = decreasing, recursive = recursive)
-    invisible(node)
-}
