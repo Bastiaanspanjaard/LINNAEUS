@@ -974,10 +974,10 @@ LINNAEUS.zoom <- generate_tree(zoom.edges)
 LINNAEUS.pie.zoom.wg <-
   collapsibleTree(LINNAEUS.zoom, root = LINNAEUS.pie$scar, pieNode = T,
                   pieSummary = T,collapsed = F,
-                  width = 400, height = 300, linkLength = 30,
-                  ctypes = larvae.colors.zoom$Cell.type,
+                  width = 400, height = 400, linkLength = 40,
+                  ctypes = larvae.colors.zoom$Cell.type, angle = pi/2,
                   ct_colors = larvae.colors.zoom$color,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
-# htmlwidgets::saveWidget(
-#   LINNAEUS.pie.zoom.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb_nc.html")
+htmlwidgets::saveWidget(
+  LINNAEUS.pie.zoom.wg,
+  file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb_lpm.html")
