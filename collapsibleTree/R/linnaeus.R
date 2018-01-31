@@ -94,7 +94,7 @@ pieProportions <- function(node) {
 #' @rdname collapsibleTree
 #' @export
 # color legend
-.do_color_map <- function(name, ct_colors, ctypes){
+do_color_map <- function(name, ct_colors, ctypes){
 	pdf(paste0(name,'_color_map.pdf'), width=2.5, height=10)
 	par(mar=c(1.1, 10, 1.1, 1.1))
 	image(y=1:length(ct_colors), x=1, t(as.matrix(1:length(ct_colors))), col = ct_colors, axes=F, ylab='', xlab='') 
@@ -106,6 +106,7 @@ pieProportions <- function(node) {
 #' @export
 SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TRUE)
 {
+mesage("SORT"); message(print(environment()))  #####
     if (node$isLeaf)
         return()
     ChildL <- sapply(node$children, function(x) GetAttribute(x,
