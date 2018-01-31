@@ -1005,56 +1005,104 @@ node.sizes <-
 
 # Extract tree ####
 print("Visualization of zoomed trees")
-# Easy mode 1: set all colors to lightgrey except the ones we want
-larvae.colors.zoom <- larvae.colors
-larvae.colors.zoom$color[larvae.colors.zoom$layer != "Neural crest"] <-
-  gplots::col2hex("lightgrey")
+# Easy mode 1 (DEPRECATED): set all colors to lightgrey except the ones we want
+# larvae.colors.zoom <- larvae.colors
+# larvae.colors.zoom$color[larvae.colors.zoom$layer != "Neural crest"] <-
+#   gplots::col2hex("lightgrey")
 # LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
 # Without cells
-LINNAEUS.pie.zoom.wg <-
-  collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
-                  pieSummary = T,collapsed = F,
-                  width = 600, height = 600,
-                  ctypes = larvae.colors.zoom$Cell.type,
-                  ct_colors = larvae.colors.zoom$color,
-                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# LINNAEUS.pie.zoom.wg <-
+#   collapsibleTree(LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
+#                   pieSummary = T,collapsed = F,
+#                   width = 600, height = 600,
+#                   ctypes = larvae.colors.zoom$Cell.type,
+#                   ct_colors = larvae.colors.zoom$color,
+#                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.zoom.wg,
 #   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb_nc.html")
 
 # Easy mode 2: remove all cells except the cell types we want
-parent.child.scarnodes <- tree.plot.cells.scar.blind[tree.plot.cells.scar.blind$Cell.type == "NA", ]
+larvae.colors.zoom <- larvae.colors[larvae.colors$layer == "Neural crest", 
+                                    c("Cell.type", "color")]
+parent.child.scarnodes <-
+  tree.plot.cells.scar.blind[tree.plot.cells.scar.blind$Cell.type == "NA", ]
 
 tree.plot.cells.mini <- tree.plot.cells.scar.blind
-cell.types.mini <- 
-    larvae.colors$Cell.type[larvae.colors$layer == "Neural crest"]
+cell.types.mini <- larvae.colors.zoom$Cell.type
 tree.plot.cells.mini <- 
   tree.plot.cells.mini[tree.plot.cells.mini$Cell.type %in%
                          cell.types.mini, ]
 
 mini.parents <- unique(tree.plot.cells.mini$Parent[tree.plot.cells.mini$Cell.type != "NA"])
 # Determine which parent nodes to keep
+# OLD - keep only parents that have a direct line to included cells
+# mini.scar.edges <- 
+#   parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.parents, ]
+# repeat{
+#   mini.scar.edges.add <- 
+#     parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.scar.edges$Parent, ]
+#   if(sum(mini.scar.edges.add$Child %in% mini.scar.edges$Child) == 
+#      nrow(mini.scar.edges.add)){
+#     break}
+#   mini.scar.edges <- unique(rbind(mini.scar.edges, mini.scar.edges.add))
+# }
+# rm(mini.scar.edges.add)
+# END OLD
+
+# NEW - keep parents that have a direct line to included cells, and their siblings
+# Note: give siblings one cell, "Sibling", and assign a lightgrey color to these.
 mini.scar.edges <- 
   parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.parents, ]
+all.siblings <- parent.child.scarnodes$Child[parent.child.scarnodes$Parent %in%
+                                         mini.scar.edges$Parent]
+empty.sibling <- setdiff(all.siblings, mini.scar.edges$Child)
+empty.sibling.edges <- 
+  parent.child.scarnodes[parent.child.scarnodes$Child %in% empty.sibling, ]
+empty.sibling.children <-
+  empty.sibling.edges
+empty.sibling.children$Parent <- empty.sibling.children$Child
+empty.sibling.children$Child <- paste(empty.sibling.children$Parent, "SC", sep = "")
+empty.sibling.children$Cell.type <- "Sibling"
+mini.scar.edges <- rbind(mini.scar.edges, empty.sibling.edges, empty.sibling.children)
+
 repeat{
   mini.scar.edges.add <- 
     parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.scar.edges$Parent, ]
+  # mini.scar.edges.add <- parent.child.scarnodes[parent.child.scarnodes$Parent %in%
+  #                                             mini.scar.edges.add$Parent, ]
+  all.siblings <- parent.child.scarnodes$Child[parent.child.scarnodes$Parent %in%
+                                                 mini.scar.edges.add$Parent]
+  empty.sibling <- setdiff(all.siblings, mini.scar.edges.add$Child)
+  empty.sibling.edges <- 
+    parent.child.scarnodes[parent.child.scarnodes$Child %in% empty.sibling, ]
+  empty.sibling.children <- empty.sibling.edges
+  empty.sibling.children$Parent <- empty.sibling.children$Child
+  empty.sibling.children$Child <- paste(empty.sibling.children$Parent, "SC", sep = "")
+  empty.sibling.children$Cell.type <- "Sibling"
+  mini.scar.edges.add <- rbind(mini.scar.edges.add, empty.sibling.edges, empty.sibling.children)
+  
   if(sum(mini.scar.edges.add$Child %in% mini.scar.edges$Child) == 
      nrow(mini.scar.edges.add)){
     break}
   mini.scar.edges <- unique(rbind(mini.scar.edges, mini.scar.edges.add))
 }
-rm(mini.scar.edges.add)
+rm(mini.scar.edges.add, all.siblings, empty.sibling, empty.sibling.edges,
+   empty.sibling.children)
+larvae.colors.zoom <- rbind(larvae.colors.zoom,
+                            data.frame(Cell.type = "Sibling",
+                                       color = gplots::col2hex("lightgrey")))
+# END NEW
 
 mini.plot <- rbind(mini.scar.edges, tree.plot.cells.mini)
 LINNAEUS.mini <- generate_tree(mini.plot)
 LINNAEUS.mini.wg <-
-  collapsibleTree(LINNAEUS.mini, root = LINNAEUS.mini$scar, pieNode = T,
-                  pieSummary = T,collapsed = F,
+  collapsibleTree(LINNAEUS.mini, root = LINNAEUS.mini$scar, pieNode = F,
+                  pieSummary = F,collapsed = F,
                   width = 300, height = 300,
                   ctypes = larvae.colors.zoom$Cell.type,
                   ct_colors = larvae.colors.zoom$color,
-                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.mini.wg,
 #   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_mini_nc.html")
