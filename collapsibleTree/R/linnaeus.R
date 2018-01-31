@@ -106,7 +106,6 @@ do_color_map <- function(name, ct_colors, ctypes){
 #' @export
 SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TRUE)
 {
-message("SORT"); print(environment())  #####
     if (node$isLeaf)
         return()
     ChildL <- sapply(node$children, function(x) GetAttribute(x,
