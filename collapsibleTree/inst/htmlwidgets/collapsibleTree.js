@@ -22,7 +22,6 @@ HTMLWidgets.widget({
   // TODO
      var arc = d3.arc().innerRadius(pieNodeInner),
          pie = d3.pie().sort(null);
-  
     // Optionally enable zooming, and limit to 1/5x or 5x of the original viewport
     var zoom = d3.zoom()
     .scaleExtent([1/10, 10])
@@ -97,13 +96,20 @@ HTMLWidgets.widget({
         .data(function(d) {
 	//var proportions = (d.data.isScar?  d.data.pieNode : [1]) 
 	var proportions = d.data.pieNode
-	//proportions.reverse()
+	var prop_sum = proportions.reduce(function(a, b) { return a + b; }, 0);	
+	if(prop_sum == 0){
+		proportions = [1]
+	}
+	
+	var angle = -JSON.parse(options.angle); //-Math.PI/2;  
 	var pieProp = pie(proportions).map(function(m, j){
 		m.id = j
-		m.color = color[j]
+		m.color = (prop_sum == 0 ? "#bbbbbb": color[j])
 		m.isScar = JSON.parse(d.data.isScar);
 		m.r = d.data.SizeOfNode;
 		m.ct = (m.isScar? d.data.name : d.data.ct);
+		m.startAngle = m.startAngle + angle;
+		m.endAngle = m.endAngle + angle;
 		return m;
 		})
           return pieProp;
