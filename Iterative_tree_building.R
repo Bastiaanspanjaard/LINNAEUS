@@ -401,7 +401,7 @@ rm(tree.summary.add, average.det.rates, current.cs, current.cs.component,
 tree.summary <- tree.summary[, -6]
 
 # Place cells in uncollapsed tree ####
-print("Placing cells")
+print("Placing cells in uncollapsed tree")
 # Name nodes - we need node names to easily determine whether doublet-flagged
 # cells can be placed or not (all scars need to be in one branch)
 # NEW
@@ -513,6 +513,7 @@ tree.statistics <-
 
 
 # Collapse tree ####
+print("Collapsing tree")
 # Remove 'singles' (i.e. scars in tree.summary$Node.1 that only occur once)
 # from the tree.summary by collapsing them with their successors while changing
 # the name to "[scar 1], [scar 2]". 
@@ -611,12 +612,70 @@ if(root.name != "Root"){
 rm(root.name)
 
 # Place cells in collapsed tree using dictionary ####
+print("Placing cells in collapsed tree")
 correct.cell.placement <- merge(correct.cell.placement, scar.node.dictionary)
+
+
+# DID NOT WORK. Calculate cumulative node counts and separate main and off-main ####
+# Output: node.count.cumulative.agg (ncca), node.count.cumulative (ncc), 
+# node.count.cumulative.agg.main (nccam), node.count.cumulative.main (nncm), 
+# stats about how many cells were placed main and off-main.
+# placing.cells <- correct.cell.placement[, c("Scar", "Cell", "Cell.type", "Node")]
+# placing.cells$Node <- as.character(placing.cells$Node)
+# placing.cells$Node.depth <- 
+#   sapply(placing.cells$Node, 
+#          function(x){
+#            y <- unlist(strsplit(x, "_"))
+#            return(length(y) - 1)
+#          }
+#   )
+# # Start by aggregating lowest depth - STILL ADD
+# placing.cells.lowest <- 
+#   placing.cells[placing.cells$Node.depth == max(placing.cells$Node.depth), ]
+# ncc <-
+#   data.frame(table(placing.cells.lowest$Cell.type, placing.cells.lowest$Node),
+#              stringsAsFactors = F)
+# colnames(ncc)[1:2] <- c("Cell.type", "Node")
+# 
+# ncca <-
+#   aggregate(ncc$Freq,
+#             by = list(Node = ncc$Node),
+#             sum)
+# colnames(ncca)[2] <- "Freq"
+# ncca$Node <- as.character(ncca$Node)
+# ncca$Node.depth <- max(placing.cells$Node.depth)
+# ncca$Parent <-
+#   sapply(ncca$Node,
+#          function(x) {
+#            y <- unlist(strsplit(x, "_"))
+#            return(paste(y[-length(y)], collapse = "_"))
+#          }
+#   )
+# ncca$Main <- F
+# for(node.parent in unique(ncca$Parent)){
+#   s.i <- which(ncca$Parent == node.parent)
+#   ncca$Main[s.i] <- (ncca$Freq[s.i]/max(ncca$Freq[s.i]) > branch.size.ratio)
+# }
+# ncc <- merge(ncc, ncca[, c("Node", "Node.depth", "Main")])
+# 
+# depth.order <-
+#   sort(unique(placing.cells$Node.depth), 
+#        decreasing = T)[-1]
+# for(d in depth.order){
+#   # Loop over depths apart from the lowest, going up.
+#   
+#   # Determine sets of sister branches and loop over them.
+#     # Which sisters are on and which ones are off-main?
+#     # Cumulate cells to parents for on-main and both.
+# }
+# 
+# rm(placing.cells, depth.order, d)
 
 # Calculate cumulative node counts with and without cell type stratification ####
 # Note: while it's not strictly necessary at this stage to calculate the
 # cumulative node counts with cell type stratification, this will be useful
 # later on for enrichment calculations.
+print("Calculating cumulative node sizes")
 node.count <- 
   data.frame(table(correct.cell.placement$Node, correct.cell.placement$Cell.type))
 colnames(node.count)[1:2] <- c("Node", "Cell.type")
@@ -676,7 +735,8 @@ node.count.cumulative.agg <-
             sum)
 colnames(node.count.cumulative.agg)[3] <- "Freq"
 
-# Separate main and off-main ####
+# Separate main and off-main nodes ####
+print("Separating main and off-main")
 # Do recursive: calculate what's main and off-main for a given dataframe of
 # branches (these should be sister clades), determine main and off-main for
 # children, return dataframe with main and off-main marked.
@@ -762,7 +822,58 @@ tree.statistics$Main <- sum(start.branches.2$Freq[start.branches.2$Main])
 tree.statistics$Off.main <- sum(start.branches.2$Freq[!start.branches.2$Main])
 rm(main.branches, start.branches, start.branches.2)
 
+
+# Move cells on off-main branches to the above on-main branches ####
+# Note: this is a cell placement issue, the node counts do not change.
+
+# Determine the lowest 'main' parent of non-main nodes. It is possible they
+# do not exist - these non-main nodes are removed.
+off.main.nodes <- 
+  data.frame(Orig.node = 
+               node.count.cumulative.agg[!node.count.cumulative.agg$Main, "Node"],
+             stringsAsFactors = F)
+off.main.nodes$Parent <-
+  sapply(off.main.nodes$Orig.node,
+         function(x) {
+           y <- unlist(strsplit(x, "_"))
+           return(paste(y[-length(y)], collapse = "_"))
+         }
+  )
+repeat{
+  off.main.nodes <- merge(off.main.nodes, 
+                          node.count.cumulative.agg[, c("Node", "Main")],
+                          by.x = "Parent", by.y = "Node")
+  if(sum(off.main.nodes$Main) == nrow(off.main.nodes)){break}
+  off.main.nodes$Parent[!off.main.nodes$Main] <-
+    sapply(off.main.nodes$Parent[!off.main.nodes$Main],
+           function(x) {
+             y <- unlist(strsplit(x, "_"))
+             return(paste(y[-length(y)], collapse = "_"))
+           }
+    )
+  off.main.nodes <- off.main.nodes[, c("Parent", "Orig.node")]
+}
+
+# For cells currently placed in non-main nodes, determine to which main node
+# they should be attached.
+correct.cell.placement.main <- 
+  merge(correct.cell.placement, node.count.cumulative.agg[, c("Node", "Main")])
+correct.cell.placement.off <- 
+  correct.cell.placement.main[!correct.cell.placement.main$Main, ]
+correct.cell.placement.main <- 
+  correct.cell.placement.main[correct.cell.placement.main$Main, ]
+correct.cell.placement.off <-
+  merge(off.main.nodes, correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Main")], 
+        by.x = "Orig.node", by.y = "Node")
+correct.cell.placement.off <-
+  correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Orig.node")]
+colnames(correct.cell.placement.off)[1] <- "Node"
+correct.cell.placement.main <- rbind(correct.cell.placement.main, correct.cell.placement.off)
+
+rm(correct.cell.placement.off, off.main.nodes)
+
 # Make edgelists without and with cells ####
+print("Making edgelists")
 # Without
 tree.plot <- tree.summary.collapse.main[, c("Node", "Node.2")]
 colnames(tree.plot) <- c("Child", "Scar.acquisition")
@@ -791,10 +902,18 @@ tree.plot$size <- 1
 rm(root.scars, root.add)
 
 # With
-if("Cell.type" %in% names(correct.cell.placement)){
-cells.add <- correct.cell.placement[, c("Node", "Cell", "Cell.type")]
+if("Cell.type" %in% names(correct.cell.placement.main)){
+  cells.add <- 
+    correct.cell.placement.main[,
+                           c("Node", "Cell", "Cell.type")]
+  # cells.not.add <- 
+  #   correct.cell.placement.main[!(correct.cell.placement.main$Node %in% 
+  #                            unique(c(tree.plot$Child, tree.plot$Parent))),
+  #                          c("Node", "Cell", "Cell.type")]
 }else{
-  cells.add <- correct.cell.placement[, c("Node", "Cell")]
+  cells.add <- 
+    correct.cell.placement.main[, 
+                           c("Node", "Cell")]
   cell.add$Cell.type <- "Cell"
 }
 cells.add$Scar.acquisition <- ""
@@ -817,6 +936,7 @@ tree.plot.cells <- rbind(tree.plot, cells.add)
 rm(cells.add)
 
 # Visualize trees ####
+print("Visualization of full trees")
 ## No pie charts
 # Without cells
 # LINNAEUS.wo <- generate_tree(tree.plot)
@@ -847,10 +967,23 @@ LINNAEUS.pie.wg <-
                   width = 600, height = 600,
                   ctypes = larvae.colors$Cell.type,
                   ct_colors = larvae.colors$color,
-                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_d005_LINNAEUS_pie_scb.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb.html")
+# With cells
+LINNAEUS.pie.all <- generate_tree(tree.plot.cells)
+LINNAEUS.pie.all.wg <-
+  collapsibleTree(LINNAEUS.pie.all, root = LINNAEUS.pie.all$scar, pieNode = T,
+                  pieSummary = F,collapsed = F,
+                  width = 800, height = 1200,
+                  ctypes = larvae.colors$Cell.type,
+                  ct_colors = larvae.colors$color, nodeSize_sc = 1,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.all.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_all.html")
+
 
 node.sizes <-
   merge(node.count.cumulative.agg.main[, c("Node", "Freq")], 
@@ -871,6 +1004,7 @@ node.sizes <-
 #                   collapsed = F, ctypes=unique(LINNAEUS.tree$Get("Cell.types")))
 
 # Extract tree ####
+print("Visualization of zoomed trees")
 # Easy mode 1: set all colors to lightgrey except the ones we want
 larvae.colors.zoom <- larvae.colors
 larvae.colors.zoom$color[larvae.colors.zoom$layer != "Neural crest"] <-
@@ -886,21 +1020,47 @@ LINNAEUS.pie.zoom.wg <-
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.zoom.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_d005_LINNAEUS_pie_scb_nc.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_pie_scb_nc.html")
 
 # Easy mode 2: remove all cells except the cell types we want
-tree.plot.cells.zoom <- tree.plot.cells.scar.blind
-cell.types.zoom <- 
-  c("NA", 
-    larvae.colors.zoom$Cell.type[larvae.colors.zoom$layer == "Neural crest"])
-tree.plot.cells.zoom <- 
-  tree.plot.cells.zoom[tree.plot.cells.zoom$Cell.type %in%
-                         cell.types.zoom, ]
-zoom.parents <- unique(tree.plot.cells.zoom$Parent[tree.plot.cells.zoom$Cell.type != "NA"])
+parent.child.scarnodes <- tree.plot.cells.scar.blind[tree.plot.cells.scar.blind$Cell.type == "NA", ]
 
-# cell.types.keep <- larvae.colors$Cell.type[larvae.colors$layer == "Neural crest"]
-# col2rgb("lightgrey")
-# gplots::col2hex("lightgrey")
+tree.plot.cells.mini <- tree.plot.cells.scar.blind
+cell.types.mini <- 
+    larvae.colors$Cell.type[larvae.colors$layer == "Neural crest"]
+tree.plot.cells.mini <- 
+  tree.plot.cells.mini[tree.plot.cells.mini$Cell.type %in%
+                         cell.types.mini, ]
+
+mini.parents <- unique(tree.plot.cells.mini$Parent[tree.plot.cells.mini$Cell.type != "NA"])
+# Determine which parent nodes to keep
+mini.scar.edges <- 
+  parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.parents, ]
+repeat{
+  mini.scar.edges.add <- 
+    parent.child.scarnodes[parent.child.scarnodes$Child %in% mini.scar.edges$Parent, ]
+  if(sum(mini.scar.edges.add$Child %in% mini.scar.edges$Child) == 
+     nrow(mini.scar.edges.add)){
+    break}
+  mini.scar.edges <- unique(rbind(mini.scar.edges, mini.scar.edges.add))
+}
+rm(mini.scar.edges.add)
+
+mini.plot <- rbind(mini.scar.edges, tree.plot.cells.mini)
+LINNAEUS.mini <- generate_tree(mini.plot)
+LINNAEUS.mini.wg <-
+  collapsibleTree(LINNAEUS.mini, root = LINNAEUS.mini$scar, pieNode = T,
+                  pieSummary = T,collapsed = F,
+                  width = 300, height = 300,
+                  ctypes = larvae.colors.zoom$Cell.type,
+                  ct_colors = larvae.colors.zoom$color,
+                  nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 500, 1e6))
+# htmlwidgets::saveWidget(
+#   LINNAEUS.mini.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_2/tree_Z2_LINNAEUS_mini_nc.html")
+
+
+
 # Visualize extracted tree ####
 
 # save(LINNAEUS.tree, file = "./Data/Simulations/B2_wweak_dlet0_tree.Robj")
