@@ -11,6 +11,7 @@
 \alias{do_color_map}
 \alias{SortNumeric}
 \alias{rename.node}
+\alias{linnaeus.defaults}
 \title{Create Interactive Collapsible Tree Diagrams}
 \source{
 Christopher Gandrud: \url{http://christophergandrud.github.io/networkD3/}.
@@ -37,8 +38,8 @@ collapsibleTree(df, ..., inputId = NULL, attribute = "leafCount",
   nodeSize_sc = 2, nodeLabel_sc = FALSE, ct_colors = NULL,
   ctypes = NULL, sort_by_ctype = TRUE, nodeSize_class = c(10, 15, 20, 35),
   nodeSize_breaks = c(0, 5, 20, 100, 1e+06), angle = 0,
-  use_scar_as_name = TRUE, hide_scars = FALSE, pieSummary = TRUE,
-  pieNode = FALSE, ...)
+  hide_scars = FALSE, pieSummary = TRUE, pieNode = FALSE,
+  use_scar_as_name = TRUE, ...)
 
 get_pieNode(df, ctypes, nodeSize_class = c(10, 15, 20, 35),
   nodeSize_breaks = c(0, 5, 20, 100, 1e+06), nodeSize_sc = 2,
@@ -50,11 +51,13 @@ do_toy_example(type1 = "type1", type2 = "type2", scar_color = "#aaaaaa",
 
 pieProportions(node)
 
-do_color_map(name, ct_colors, ctypes)
+do_color_map(name, ct_colors, ctypes, width = 2.5, height = 10)
 
 SortNumeric(node, attribute, ..., decreasing = FALSE, recursive = TRUE)
 
 rename.node(node)
+
+linnaeus.defaults(name)
 }
 \arguments{
 \item{df}{a \code{data.frame} from which to construct a nested list
@@ -118,9 +121,13 @@ and hierarchy of the tree network. Applicable only for \code{data.frame} input.}
 \item{hierarchy_attribute}{name of the \code{data.tree} attribute that contains
 hierarchy information of the tree network. Applicable only for \code{data.tree} input.}
 
+\item{nodeSize_sc}{node size for single cells (currently overriden by JS)}
+
 \item{ctypes}{cell types}
 
-\item{jsonFields}{}
+\item{nodeSize_breaks}{pie node size breaks}
+
+\item{jsonFields}{what to JSON}
 
 \item{df}{data.tree object to compute cell type counts. Requires Cell.type field}
 }

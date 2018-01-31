@@ -30,4 +30,7 @@ Suggests:
     colorspace,
     RColorBrewer,
     dplyr,
-    testthat
+    testthat,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
