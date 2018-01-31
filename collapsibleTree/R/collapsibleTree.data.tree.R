@@ -89,7 +89,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   }
   # PO determine size classes
   df = Clone(df)
-message("cloning"); message(print(environment()))  #####
+message("cloning"); print(environment())  #####
   if(sort_by_ctype){ #  disable to keep original tree order
   	SortNumeric(df, decreasing=T, recursive=T,  attribute = function(x){ifelse(is.na(x$Cell.type) |  x$Cell.type == "NA", "1e4", as.numeric(match(x$Cell.type, ctypes)))})
 	}
@@ -97,10 +97,10 @@ message("cloning"); message(print(environment()))  #####
   if(pieNode){
     jsonFields = get_pieNode(df, ctypes = ctypes, nodeSize_breaks = nodeSize_breaks, nodeSize_sc = nodeSize_sc, jsonFields = jsonFields)
   }
- message(print(environment())) 
+ print(environment()) 
 if(pieSummary & pieNode){
    # Only after collecting the statistics for the scar nodes we get rid of the scells
-message("pruningt"); message(print(environment()))  #####
+message("pruningt"); print(environment())  #####
    	t <- data.tree::Traverse(df, 'post-order')
    	data.tree::Do(t, function(x) {
 		if(x$isLeaf & !x$isRoot & !x$isScar){	
@@ -145,7 +145,7 @@ message("pruningt"); message(print(environment()))  #####
 
   # if tooltipHtml is specified, pass it on in the data
   if(tooltip & !is.null(tooltipHtml)) {
-message("tooltip"); message(print(environment()))  #####
+message("tooltip"); print(environment())  #####
     df$Do(function(x) x$tooltip <- x[[tooltipHtml]])
     jsonFields <- c(jsonFields, "tooltip")
   }
@@ -170,7 +170,7 @@ message("tooltip"); message(print(environment()))  #####
 
   # keep only the JSON fields that are necessary
   if(is.null(jsonFields)) jsonFields <- NA
-message("tolist"); message(print(environment()))  #####
+message("tolist"); print(environment())  #####
   data <- data.tree::ToListExplicit(df, unname = TRUE, keepOnly = jsonFields)
   if(use_scar_as_name){
    data <- rename.node(data)
@@ -182,13 +182,13 @@ message("tolist"); message(print(environment()))  #####
   )
 
 
-message("WIDGET"); message(print(environment()))  #####
+message("WIDGET"); print(environment())  #####
   # create the widget
   htmlwidgets::createWidget(
     "collapsibleTree", x, width = width, height = height,
     htmlwidgets::sizingPolicy(viewer.padding = 0)
   )
-message("tolist"); message(print(environment()))  #####
+message("tolist"); print(environment())  #####
 }
 
 
