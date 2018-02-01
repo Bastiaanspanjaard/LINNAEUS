@@ -45,12 +45,12 @@ server <- function(input, output) {
 	pieSummary <<- ifelse(first, pieSummary, input$pieSummary)
 	if(first){first <<- FALSE}
 	if(input$root != orit$name){
-		collapsibleTree(FindNode(ttt, input$root), collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = linkLength)
+		collapsibleTree(FindNode(ttt, input$root), collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = linkLength, do_collapse= FALSE)
 	} else{
      	#collapsibleTree(ttt, collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=F, linkLength = linkLength)
 	# TODO hide_scars must be set to true as current trees lack the scar field, if F then barplots break as there is no name for a node
 	print(pieSummary)
-     	collapsibleTree(ttt, collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = linkLength)}
+     	collapsibleTree(ttt, collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = linkLength, do_collapse= FALSE)}
    })
 	observe(
 		if(!is.null(input$node)){
@@ -58,11 +58,11 @@ server <- function(input, output) {
 			clicked_node = input$node[length(input$node)]
 			if(length(input$node) == 0){
    				foc_pie = ttt$pieNode
-   				output$str <- renderPrint(cat(ttt$scar))
+   				output$str <- renderPrint(cat(ttt$name))
 			}else{
 	   			foc_node = FindNode(ttt, clicked_node)
 	   			foc_pie = foc_node$pieNode
-   				output$str <- renderPrint(cat(foc_node$scar))
+   				output$str <- renderPrint(cat(foc_node$name))
 			}
 	   		output$barplot_ctypes <- renderPlot(do_barplot(foc_pie, ct_colors = ct_colors))
 			output$treeheight <- renderText({input$treeheight})

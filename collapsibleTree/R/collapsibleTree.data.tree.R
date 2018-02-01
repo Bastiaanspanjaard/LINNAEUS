@@ -18,6 +18,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 				pieNode = FALSE,  
 			# linnaeus test
 		 	use_scar_as_name = TRUE,
+			do_collapse = TRUE,
 				...) {
 
   # acceptable inherent node attributes
@@ -69,6 +70,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     useColors = !is.null(ct_colors), 
     colors = ct_colors, 
     angle  = angle,
+    do_collapse = do_collapse, # toggle collapsible capabilities
     nodeLabel_sc = ifelse(is.null(nodeLabel_sc), TRUE, nodeLabel_sc )
   )
 

@@ -295,13 +295,15 @@ HTMLWidgets.widget({
 
       // Toggle children on click.
       function click(d) {
-        if (d.children) {
-          d._children = d.children;
-          d.children = null;
-        } else {
-          d.children = d._children;
-          d._children = null;
-        }
+        if (JSON.parse(options.do_collapse)) {
+          if (d.children) {
+            d._children = d.children;
+            d.children = null;
+          } else {
+            d.children = d._children;
+            d._children = null;
+          }
+	}
         update(d);
         // Hide the tooltip after clicking
         tooltip.transition()
