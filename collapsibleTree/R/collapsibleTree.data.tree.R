@@ -20,7 +20,6 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
 				pieNode = FALSE,  
 				...) {
 
-
   # acceptable inherent node attributes
   nodeAttr <- c("leafCount", "count")
 
