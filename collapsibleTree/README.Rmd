@@ -14,7 +14,19 @@ knitr::opts_chunk$set(
 )
 ```
 
-# collapsibleTree `r packageVersion("collapsibleTree")`
+# linnaeus-collapsibleTree `r packageVersion("linnaeus-collapsibleTree")`
+
+
+## Linnaeus defaults
+
+```{r eval=FALSE}
+library(collapsibleTree)
+
+linnaeus.defaults('larva')$color
+linnaeus.defaults('larva')$Cell.type
+```
+
+
 
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/collapsibleTree)](https://cran.r-project.org/package=collapsibleTree) [![CRAN downloads](http://cranlogs.r-pkg.org/badges/collapsibleTree)](https://cran.r-project.org/package=collapsibleTree)
 

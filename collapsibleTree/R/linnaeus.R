@@ -3,9 +3,9 @@
 #' Helper function for pieNode modality of a Linnaeus data.tree object
 #' @param df data.tree object to compute cell type counts. Requires Cell.type field
 #' @param ctypes cell types
-#' @param nodeSize_breaks
-#' @param nodeSize_sc
-#' @param jsonFields 
+#' @param nodeSize_breaks pie node size breaks
+#' @param nodeSize_sc node size for single cells (currently overriden by JS)
+#' @param jsonFields what to JSON
 #' @rdname collapsibleTree
 #' @export
 get_pieNode = function(df, ctypes, 
@@ -94,8 +94,8 @@ pieProportions <- function(node) {
 #' @rdname collapsibleTree
 #' @export
 # color legend
-do_color_map <- function(name, ct_colors, ctypes){
-	pdf(paste0(name,'_color_map.pdf'), width=2.5, height=10)
+do_color_map <- function(name, ct_colors, ctypes, width = 2.5, height=10){
+	pdf(paste0(name,'_color_map.pdf'), width=width, height=height)
 	par(mar=c(1.1, 10, 1.1, 1.1))
 	image(y=1:length(ct_colors), x=1, t(as.matrix(1:length(ct_colors))), col = ct_colors, axes=F, ylab='', xlab='') 
 		axis(2, at=1:length(ct_colors), las=2, labels = ctypes, cex.axis=0.5)
@@ -122,7 +122,7 @@ SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TR
 
 #' @rdname collapsibleTree
 #' @export
-rename.node <- function(node){
+renameNode <- function(node){
   if("scar" %in% names(node)){
     node$name <- node$scar
   }else{
@@ -131,9 +131,22 @@ rename.node <- function(node){
 
   if("children" %in% names(node)){
     for(i in 1:length(node$children)){
-      node$children[[i]] <- rename.node(node$children[[i]])
+      node$children[[i]] <- renameNode(node$children[[i]])
     }
   }
 
   return(node)
+}
+
+#' @rdname collapsibleTree
+#' @export
+
+#write.table(color_larvea, file='src/linnaeus-scripts/collapsibleTree/inst/extdata/colors_larvae.txt', quote=F, sep='\t', row.names=F)
+linnaeus.defaults = function(name){
+	linnaeus.sets = list( 'larva'= "colors_larvae.txt")
+	
+	x = system.file("extdata", linnaeus.sets[[name]], package = "collapsibleTree")
+	x = read.table(x, header = T, stringsAsFactors = FALSE, sep = '\t', comment.char='')
+	return(x)
+
 }
