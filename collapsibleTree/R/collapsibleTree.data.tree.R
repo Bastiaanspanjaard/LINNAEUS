@@ -42,8 +42,8 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   if(length(hierarchy) <= 1) stop("hierarchy vector must be greater than length 1")
 
   # Dealing with ctype colour attribution
-  if(is.null(ct_colors)){ct_colors = linnaeus.defaults('larva')$color}
-  if(is.null(ctypes)){ctypes = linnaeus.defaults('larva')$Cell.type}
+  if(is.null(ct_colors)){ct_colors = linnaeus.colors_larva$color}
+  if(is.null(ctypes)){ctypes = linnaeus.colors_larva$Cell.type}
 
 # PO this can maybe go away as we are currently using factor() 
   ctypes = ctypes[!is.na(ctypes)]
@@ -169,7 +169,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
   # keep only the JSON fields that are necessary
   if(is.null(jsonFields)) jsonFields <- NA
   data <- data.tree::ToListExplicit(df, unname = TRUE, keepOnly = jsonFields)
-  if(use_scar_as_name) data <- rename.node(data)
+  if(use_scar_as_name) {data <- renameNode(data)}
   # pass the data and options using 'x'
   x <- list(
     data = data,

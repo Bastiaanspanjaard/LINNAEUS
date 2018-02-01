@@ -10,7 +10,7 @@
 \alias{pieProportions}
 \alias{do_color_map}
 \alias{SortNumeric}
-\alias{rename.node}
+\alias{renameNode}
 \alias{linnaeus.defaults}
 \title{Create Interactive Collapsible Tree Diagrams}
 \source{
@@ -55,7 +55,7 @@ do_color_map(name, ct_colors, ctypes, width = 2.5, height = 10)
 
 SortNumeric(node, attribute, ..., decreasing = FALSE, recursive = TRUE)
 
-rename.node(node)
+renameNode(node)
 
 linnaeus.defaults(name)
 }

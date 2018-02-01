@@ -122,7 +122,7 @@ SortNumeric = function (node, attribute, ..., decreasing = FALSE, recursive = TR
 
 #' @rdname collapsibleTree
 #' @export
-rename.node <- function(node){
+renameNode <- function(node){
   if("scar" %in% names(node)){
     node$name <- node$scar
   }else{
@@ -131,7 +131,7 @@ rename.node <- function(node){
 
   if("children" %in% names(node)){
     for(i in 1:length(node$children)){
-      node$children[[i]] <- rename.node(node$children[[i]])
+      node$children[[i]] <- renameNode(node$children[[i]])
     }
   }
 
@@ -143,9 +143,9 @@ rename.node <- function(node){
 
 #write.table(color_larvea, file='src/linnaeus-scripts/collapsibleTree/inst/extdata/colors_larvae.txt', quote=F, sep='\t', row.names=F)
 linnaeus.defaults = function(name){
-	linneaus.sets = list( 'larva'= "colors_larvae.txt")
+	linnaeus.sets = list( 'larva'= "colors_larvae.txt")
 	
-	x = system.file("extdata", linneaus.sets[[name]], package = "collapsibleTree")
+	x = system.file("extdata", linnaeus.sets[[name]], package = "collapsibleTree")
 	x = read.table(x, header = T, stringsAsFactors = FALSE, sep = '\t', comment.char='')
 	return(x)
 
