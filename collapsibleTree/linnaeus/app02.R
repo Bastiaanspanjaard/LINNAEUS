@@ -34,29 +34,23 @@ do_barplot = function(foc_pie, ct_colors, zeros=F){
  grid()
 }
 
-linkLength = 80
+linkLength = 180
 pieSummary = TRUE
 first = TRUE
 # Define server logic required to draw a collapsible tree diagram
 server <- function(input, output) {
-	summa = observe({pieSummary <-- ifelse(first, pieSummary, input$pieSummary)})
    output$plot <- renderCollapsibleTree({
-	# TODO - be able to select a sub tree when controlled by clicked noe. This needs testing
-#	if(FALSE & input$branch & !is.null(input$node) & length(input$node) != 0){
-#		ttt = FindNode(ttt, input$node[length(input$node)])
-# 	}
 
-browser()
-	linkLength = ifelse(first, linkLength, input$linkLength)
-	pieSummary = ifelse(first, pieSummary, input$pieSummary)
-	if(first){first <-- FALSE}
+	linkLength <<- ifelse(first, linkLength, input$linkLength)
+	pieSummary <<- ifelse(first, pieSummary, input$pieSummary)
+	if(first){first <<- FALSE}
 	if(input$root != orit$name){
-		collapsibleTree(FindNode(ttt, input$root), collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = 170)
+		collapsibleTree(FindNode(ttt, input$root), collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = linkLength)
 	} else{
      	#collapsibleTree(ttt, collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=F, linkLength = linkLength)
 	# TODO hide_scars must be set to true as current trees lack the scar field, if F then barplots break as there is no name for a node
 	print(pieSummary)
-     	collapsibleTree(ttt, collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = 170)}
+     	collapsibleTree(ttt, collapsed=F, inputId = "node", pieNode=T, pieSummary=pieSummary, hide_scars=T, linkLength = linkLength)}
    })
 	observe(
 		if(!is.null(input$node)){
@@ -100,10 +94,7 @@ ui <- fluidPage(
          verbatimTextOutput("str"),
 	
 	checkboxInput(inputId = "pieSummary",
-	      label = strong("Hide single cells"),  value = FALSE),
-
-#	checkboxInput(inputId = "branch",
-#	      label = strong("render branch"),  value = TRUE),
+	      label = strong("Hide single cells"),  value = TRUE),
 
 	sliderInput(inputId = "linkLength",
         	label = "Link Length",
@@ -118,7 +109,7 @@ ui <- fluidPage(
 
       # Show a tree diagram with the selected root node
       mainPanel(
-        collapsibleTreeOutput("plot", height = '250px'),
+        collapsibleTreeOutput("plot", height = '450px'),
   	plotOutput(outputId = "barplot_ctypes", height = "500px")
       )
    )
