@@ -250,12 +250,15 @@ HTMLWidgets.widget({
       //return "#999999";
       })
       .style('stroke-width', function(d) {
-        if(options.pieNode)
+        if(options.pieNode){
         	return (d.data.isScar ? 1.5 : 0.25)
+	}
         return 1;
       })
       .style('stroke-dasharray', function(d) {
-       	return (JSON.parse(d.data.Main) ? '1,0' : '2,3')
+	if(d.data.Main != null){
+	       	return (JSON.parse(d.data.Main) ? '1,0' : '2,3')
+	}
       })
       .attr('d', function(d){
         var o = { x: source.x0, y: source.y0 }

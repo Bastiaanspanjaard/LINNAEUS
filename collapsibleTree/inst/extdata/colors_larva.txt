@@ -18,24 +18,24 @@ cluster	Cell.type	origin	color	zoom1	color1	zoom2	color2	zoom3	color3	zoom4	colo
 28	Pigment cells (Xantophores)	Neural crest	#944D72	NA		NA		1	#99000d	NA	
 37	Pigment cells (Melanocytes)	Neural crest	#DF74AC	NA		NA		2	#cb181d	NA	
 40	Pigment cells (Iridophores)	Neural crest	#F89ACB	NA		NA		3	#ef3b2c	NA	
-42	Glial cells (Peripheral)	Neural crest	#FABFDE	NA		NA		4	#a1d99b	NA	
-50	Neurons E (Peripheral)	Neural crest	#FDE5F2	NA		NA		5	#238b45	NA	
-2	Neurons A (Brain)	Neuroectoderm	#173416	NA		6	#00441b	NA		NA	
+42	Glial cells (Peripheral)	Neural crest	#FABFDE	NA		NA		4	#ff7f00	NA	
+50	Neurons E (Peripheral)	Neural crest	#FDE5F2	NA		NA		5	#ff9832	NA	
+2	Neurons A (Brain)	Neuroectoderm	#173416	NA		6	#00441b	6	#4daf4a	NA	
 4	Neuronal precursors A	Neuroectoderm	#214B1F	NA		8	#238b45	NA		NA	
 6	Neurons B (Proliferating)	Neuroectoderm	#2B6229	NA		9	#41ab5d	NA		NA	
 9	Cone cells	Neuroectoderm	#357933	NA		1	#3f007d	NA		NA	
 13	Retinal cells A	Neuroectoderm	#3F913D	NA		2	#54278f	NA		NA	
 23	Neuronal precursors B	Neuroectoderm	#4AA847	NA		10	#74c476	NA		NA	
-24	Neurons C (Spinal cord)	Neuroectoderm	#57B354	NA		11	#ef3b2c	NA		NA	
+24	Neurons C (Spinal cord)	Neuroectoderm	#57B354	NA		11	#ef3b2c	8	#a6d7a4	NA	
 27	Retinal cells B	Neuroectoderm	#66BA64	NA		3	#6a51a3	NA		NA	
 29	Rod cells	Neuroectoderm	#75C173	NA		4	#807dba	NA		NA	
-33	Neurons D (Brain)	Neuroectoderm	#84C782	NA		7	#006d2c	NA		NA	
+33	Neurons D (Brain)	Neuroectoderm	#84C782	NA		7	#006d2c	7	#70bf6e	NA	
 44	Radial glia A	Neuroectoderm	#93CE91	NA		12	#08519c	NA		NA	
 46	Retinal pigment epithelial cells	Neuroectoderm	#A2D5A0	NA		5	#9e9ac8	NA		NA	
 48	Radial glia B	Neuroectoderm	#B1DCAF	NA		13	#2171b5	NA		NA	
 53	Olfactory receptor cells	Neuroectoderm	#C0E2BE	NA		15	#a65628	NA		NA	
 57	Epithelial cells (Otic vesicle)	Neuroectoderm	#CFE9CD	NA		16	#ff7f00	NA		NA	
-62	Oligodendrocytes	Neuroectoderm	#DEF0DC	NA		14	#ffff33	NA		NA	
+62	Oligodendrocytes	Neuroectoderm	#DEF0DC	NA		14	#ffff33	9	#377eb8	NA	
 68	Inner ear cells	Neuroectoderm	#EDF7EC	NA		17	#f781bf	NA		NA	
 12	Chondrocytes A	Paraxial mesoderm - cartilage	#B75B01	NA		NA		NA		NA	
 49	Chondrocytes B	Paraxial mesoderm - cartilage	#ED7600	NA		NA		NA		NA	
