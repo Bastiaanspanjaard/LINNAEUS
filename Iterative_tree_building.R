@@ -876,6 +876,13 @@ print("Visualization of full trees")
 ## With pie charts
 tree.plot.cells.scar.blind <- tree.plot.cells
 tree.plot.cells.scar.blind$Scar.acquisition <- ""
+if(sum(tree.plot.cells.scar.blind$Parent == "0") > 1){
+  tree.plot.cells.scar.blind <-
+    rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+                     fill = "black", size = 1),
+          tree.plot.cells.scar.blind)
+  tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
+}
 LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
 # save(LINNAEUS.pie, file = "./Data/2018_10X_1/Z4_Ltree_pie.Robj")
 # Without cells
