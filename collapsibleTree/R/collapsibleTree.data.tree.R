@@ -109,13 +109,22 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
             }
     })  
   }
+  if("main" %in% df$fieldsAll){
+
+    jsonFields <- c(jsonFields, "main")
+  
+  }
 
   # linnaeus Test feature HideScarnames -> show them on tooltip
 	if(hide_scars){		
 		df = Clone(df)
 		tra  = data.tree::Traverse(df, 'level')
 		sapply(tra, function(x){
-			x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4>', ifelse(x$isScar, x$scar, x$Cell.type))
+# TODO determine a fixed expected node field list e.g. scar, name, is, Scar, etc.
+			x$scar = gsub("_", ".", x$name)
+			tot_scells = ifelse(!is.null(x$pieNode) ,sum(x$pieNode), x$SizeOfNode)	
+			x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4><br><h4 style="color: #2e6c80;">n=%s/%s</h4>', 
+					ifelse(x$isScar, x$scar, x$Cell.type), tot_scells, x$SizeOfNode)
 			x$scar = x$name}
 		)
 		options$tooltip = TRUE
