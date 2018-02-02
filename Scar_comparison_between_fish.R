@@ -51,7 +51,7 @@ unique.scars <-
     all = T)
 unique.scars[is.na(unique.scars)] <- 0
 unique.scars$Presence <- apply(unique.scars[, -1], 1,
-                               function(x) sum(x > 1))
+                               function(x) sum(x >= min.presence))
 table(unique.scars$Presence)
 
 all.CIGARs <- unique(rbind(Z1.scars[, c("Sequence", "CIGAR")], 
@@ -110,45 +110,73 @@ ggplot(unique.scars[unique.scars$p < 0.001, ]) +
   geom_histogram(aes(x = Presence))
 sum(unique.scars$Presence > 1 & unique.scars$p < 0.01)
 
+
+# Compute fraction of unscarred RFP ####
+sample.columnames <- 
+  paste("Freq", c("Z1", "Z2", "Z3", "Z4", "Z5", "A5", "A6", "A7"), sep = ".")
+RFP.counts <- data.frame(t(unique.scars[unique.scars$Scar == "0:75M", sample.columnames]))
+colnames(RFP.counts)[1] <- "RFP.count"
+RFP.counts$Total <- colSums(unique.scars[, sample.columnames])
+RFP.counts$Percentage <- 100 * RFP.counts$RFP.count/RFP.counts$Total
+
+# Count total and unique scars per library ####
+unique.scars.nowt <- unique.scars[-1, ]
+scars.Z1 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.Z1 >= min.presence]
+scars.Z2 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.Z2 >= min.presence]
+scars.Z3 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.Z3 >= min.presence]
+scars.Z4 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.Z4 >= min.presence]
+scars.Z5 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.Z5 >= min.presence]
+scars.A5 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.A5 >= min.presence]
+scars.A6 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.A6 >= min.presence]
+scars.A7 <- unique.scars.nowt$Scar[unique.scars.nowt$Freq.A7 >= min.presence]
+
+sum(scars.A7 %in% unique.scars.nowt$Scar[unique.scars.nowt$Presence == 1])
+
 # Create Venn diagram ####
-# STILL TO DO - HOW TO DO OUTPUT? VENN DIAGRAM FOR > 5 QUITE DIFFICUlT AND NOT REALLY INTERPRETABLE
+require(VennDiagram)
+venn.fill <- RColorBrewer::brewer.pal(5, "Set1")
+venn.diagram(list(Z1 = scars.Z1, Z2 = scars.Z2, Z3 = scars.Z3, Z4 = scars.Z4,
+                  Z5 = scars.Z5),
+             filename = "./Images/Z12345_scar_venn.png",
+             fontfamily = "sans", main.fontfamily = "sans",
+             imagetype = "png", fill = venn.fill)
 
 # Write output ####
 Z1.scars.compared <- 
   merge(Z1.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
-write.csv(Z1.scars.compared, file = "./Data/2017_10X_1/Z1_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(Z1.scars.compared, file = "./Data/2017_10X_1/Z1_scars_compared.csv",
+#           quote = F, row.names = F)
 # sum(Z1.scars.compared$Presence > 0 & Z1.scars.compared$Presence < 3 & Z1.scars.compared$p < 0.001)
 Z2.scars.compared <- 
   merge(Z2.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z2.scars.compared$Presence > 0 & Z2.scars.compared$Presence < 2 & Z2.scars.compared$p < 0.001)
-write.csv(Z2.scars.compared, file = "./Data/2017_10X_2/Z2_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(Z2.scars.compared, file = "./Data/2017_10X_2/Z2_scars_compared.csv",
+#           quote = F, row.names = F)
 Z3.scars.compared <- 
   merge(Z3.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z3.scars.compared$Presence > 0 & Z3.scars.compared$Presence < 2 & Z3.scars.compared$p < 0.001)
-write.csv(Z3.scars.compared, file = "./Data/2017_10X_2/Z3_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(Z3.scars.compared, file = "./Data/2017_10X_2/Z3_scars_compared.csv",
+#           quote = F, row.names = F)
 Z4.scars.compared <- 
   merge(Z4.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z4.scars.compared$Presence > 0 & Z4.scars.compared$Presence < 2 & Z4.scars.compared$p < 0.001)
-write.csv(Z4.scars.compared, file = "./Data/2017_10X_10_CR/Z4_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(Z4.scars.compared, file = "./Data/2017_10X_10_CR/Z4_scars_compared.csv",
+#           quote = F, row.names = F)
 Z5.scars.compared <- 
   merge(Z5.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(Z5.scars.compared$Presence > 0 & Z5.scars.compared$Presence < 2 & Z5.scars.compared$p < 0.001)
-write.csv(Z5.scars.compared, file = "./Data/2017_10X_10_CR/Z5_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(Z5.scars.compared, file = "./Data/2017_10X_10_CR/Z5_scars_compared.csv",
+#           quote = F, row.names = F)
 A5.scars.compared <- 
   merge(A5.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
-write.csv(A5.scars.compared, file = "./Data/2017_10X_7/A5_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(A5.scars.compared, file = "./Data/2017_10X_7/A5_scars_compared.csv",
+#           quote = F, row.names = F)
 A6.scars.compared <- 
   merge(A6.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
-write.csv(A6.scars.compared, file = "./Data/2017_10X_6/A6_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(A6.scars.compared, file = "./Data/2017_10X_6/A6_scars_compared.csv",
+#           quote = F, row.names = F)
 A7.scars.compared <- 
   merge(A7.scars, unique.scars[, c("Sequence", "Presence", "p", "Embryos", "Scar")])
 # sum(A7.scars.compared$Presence > 0 & A7.scars.compared$Presence < 2 & A7.scars.compared$p < 0.001)
-write.csv(A7.scars.compared, file = "./Data/2018_10X_1/A7_scars_compared.csv",
-          quote = F, row.names = F)
+# write.csv(A7.scars.compared, file = "./Data/2018_10X_1/A7_scars_compared.csv",
+#           quote = F, row.names = F)

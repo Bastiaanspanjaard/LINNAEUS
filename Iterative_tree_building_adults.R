@@ -75,11 +75,11 @@ tsne.coord.in <- rbind(tsne.coord.in.1, tsne.coord.in.2, tsne.coord.in.3)
 # For Z5
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster")]
 # For A5
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B5", "H5", "P5"),
-#                             c("Cell", "Cell.type")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B5", "H5", "P5"),
+                            c("Cell", "Cell.type")]
 # For A6
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B6", "H6", "P6"),
-c("Cell", "Cell.type")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B6", "H6", "P6"),
+# c("Cell", "Cell.type")]
 # For A7
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B7", "H7", "P7endo", "P7exo"),
 #                             c("Cell", "Cell.type")]
@@ -102,8 +102,8 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
-  # read.csv("./Data/2017_10X_7/A5_scars_compared.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_6/A6_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_7/A5_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_6/A6_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2018_10X_1/A7_scars_compared.csv", stringsAsFactors = F)
 # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
@@ -773,86 +773,114 @@ determine.main <- function(aggregates, current.branches, main.parent,
   return(output)
 }
 
-start.branches <- 
-  node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
-                              min(node.count.cumulative.agg$Node.depth), ]
-
-main.branches <- 
-  determine.main(aggregates = node.count.cumulative.agg, 
-                 current.branches = start.branches,
-                 main.parent = T, branch.size.ratio = branch.size.ratio)
-node.count.cumulative.agg <- main.branches
-node.count.cumulative <-
-  merge(node.count.cumulative, node.count.cumulative.agg[, c("Node", "Main")])
-
-node.count.cumulative.agg.main <- 
-  node.count.cumulative.agg[node.count.cumulative.agg$Main, ]
-node.count.cumulative.main <- 
-  node.count.cumulative[node.count.cumulative$Main, ]
-tree.summary.collapse.main <- 
-  merge(tree.summary.collapse, 
-        node.count.cumulative.agg.main)[, c("Node", "Node.1", "Node.2")]
-
-start.branches.2 <- 
-  node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
-                              min(node.count.cumulative.agg$Node.depth), ]
-tree.statistics$Main <- sum(start.branches.2$Freq[start.branches.2$Main])
-tree.statistics$Off.main <- sum(start.branches.2$Freq[!start.branches.2$Main])
-rm(main.branches, start.branches, start.branches.2)
-
-# Move cells on off-main branches to the above on-main branches ####
-# Note: this is a cell placement issue, the node counts do not change.
-
-# Determine the lowest 'main' parent of non-main nodes. It is possible they
-# do not exist - these non-main nodes are removed.
-off.main.nodes <- 
-  data.frame(Orig.node = 
-               node.count.cumulative.agg[!node.count.cumulative.agg$Main, "Node"],
-             stringsAsFactors = F)
-off.main.nodes$Parent <-
-  sapply(off.main.nodes$Orig.node,
+# NEW
+node.count.main.det <- node.count.cumulative.agg
+node.count.main.det$Parent <-
+  sapply(node.count.main.det$Node,
          function(x) {
            y <- unlist(strsplit(x, "_"))
            return(paste(y[-length(y)], collapse = "_"))
          }
   )
-repeat{
-  off.main.nodes <- merge(off.main.nodes, 
-                          node.count.cumulative.agg[, c("Node", "Main")],
-                          by.x = "Parent", by.y = "Node")
-  if(sum(off.main.nodes$Main) == nrow(off.main.nodes)){break}
-  off.main.nodes$Parent[!off.main.nodes$Main] <-
-    sapply(off.main.nodes$Parent[!off.main.nodes$Main],
-           function(x) {
-             y <- unlist(strsplit(x, "_"))
-             return(paste(y[-length(y)], collapse = "_"))
-           }
-    )
-  off.main.nodes <- off.main.nodes[, c("Parent", "Orig.node")]
-}
+# node.count.main.det$Main <- T
+parent.max <- aggregate(node.count.main.det$Freq,
+                        by = list(Parent = node.count.main.det$Parent),
+                        max)
+node.count.main.det <- merge(node.count.main.det, parent.max)
+node.count.main.det$Main <- (node.count.main.det$Freq/node.count.main.det$x >= branch.size.ratio)
 
-# For cells currently placed in non-main nodes, determine to which main node
-# they should be attached.
-correct.cell.placement.main <- 
-  merge(correct.cell.placement, node.count.cumulative.agg[, c("Node", "Main")])
-correct.cell.placement.off <- 
-  correct.cell.placement.main[!correct.cell.placement.main$Main, ]
-correct.cell.placement.main <- 
-  correct.cell.placement.main[correct.cell.placement.main$Main, ]
-correct.cell.placement.off <-
-  merge(off.main.nodes, correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Main")], 
-        by.x = "Orig.node", by.y = "Node")
-correct.cell.placement.off <-
-  correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Orig.node")]
-colnames(correct.cell.placement.off)[1] <- "Node"
-correct.cell.placement.main <- rbind(correct.cell.placement.main, correct.cell.placement.off)
+node.count.cumulative <-
+  merge(node.count.cumulative, node.count.main.det[, c("Node", "Main")])
+node.count.cumulative.agg <-
+  merge(node.count.cumulative.agg, node.count.main.det[, c("Node", "Main")])
 
-rm(correct.cell.placement.off, off.main.nodes)
+rm(node.count.main.det)
+# END NEW
+
+# OLD
+# start.branches <- 
+#   node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
+#                               min(node.count.cumulative.agg$Node.depth), ]
+# 
+# main.branches <- 
+#   determine.main(aggregates = node.count.cumulative.agg, 
+#                  current.branches = start.branches,
+#                  main.parent = T, branch.size.ratio = branch.size.ratio)
+# node.count.cumulative.agg <- main.branches
+# node.count.cumulative <-
+#   merge(node.count.cumulative, node.count.cumulative.agg[, c("Node", "Main")])
+# 
+# node.count.cumulative.agg.main <- 
+#   node.count.cumulative.agg[node.count.cumulative.agg$Main, ]
+# node.count.cumulative.main <- 
+#   node.count.cumulative[node.count.cumulative$Main, ]
+# tree.summary.collapse.main <- 
+#   merge(tree.summary.collapse, 
+#         node.count.cumulative.agg.main)[, c("Node", "Node.1", "Node.2")]
+# 
+# start.branches.2 <- 
+#   node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
+#                               min(node.count.cumulative.agg$Node.depth), ]
+# tree.statistics$Main <- sum(start.branches.2$Freq[start.branches.2$Main])
+# tree.statistics$Off.main <- sum(start.branches.2$Freq[!start.branches.2$Main])
+# rm(main.branches, start.branches, start.branches.2)
+# END OLD
+
+# Move cells on off-main branches to the above on-main branches ####
+# Not necessary if we include main and off-main
+# Note: this is a cell placement issue, the node counts do not change.
+
+# Determine the lowest 'main' parent of non-main nodes. It is possible they
+# do not exist - these non-main nodes are removed.
+# off.main.nodes <- 
+#   data.frame(Orig.node = 
+#                node.count.cumulative.agg[!node.count.cumulative.agg$Main, "Node"],
+#              stringsAsFactors = F)
+# off.main.nodes$Parent <-
+#   sapply(off.main.nodes$Orig.node,
+#          function(x) {
+#            y <- unlist(strsplit(x, "_"))
+#            return(paste(y[-length(y)], collapse = "_"))
+#          }
+#   )
+# repeat{
+#   off.main.nodes <- merge(off.main.nodes, 
+#                           node.count.cumulative.agg[, c("Node", "Main")],
+#                           by.x = "Parent", by.y = "Node")
+#   if(sum(off.main.nodes$Main) == nrow(off.main.nodes)){break}
+#   off.main.nodes$Parent[!off.main.nodes$Main] <-
+#     sapply(off.main.nodes$Parent[!off.main.nodes$Main],
+#            function(x) {
+#              y <- unlist(strsplit(x, "_"))
+#              return(paste(y[-length(y)], collapse = "_"))
+#            }
+#     )
+#   off.main.nodes <- off.main.nodes[, c("Parent", "Orig.node")]
+# }
+# 
+# # For cells currently placed in non-main nodes, determine to which main node
+# # they should be attached.
+# correct.cell.placement.main <- 
+#   merge(correct.cell.placement, node.count.cumulative.agg[, c("Node", "Main")])
+# correct.cell.placement.off <- 
+#   correct.cell.placement.main[!correct.cell.placement.main$Main, ]
+# correct.cell.placement.main <- 
+#   correct.cell.placement.main[correct.cell.placement.main$Main, ]
+# correct.cell.placement.off <-
+#   merge(off.main.nodes, correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Main")], 
+#         by.x = "Orig.node", by.y = "Node")
+# correct.cell.placement.off <-
+#   correct.cell.placement.off[, -which(colnames(correct.cell.placement.off) == "Orig.node")]
+# colnames(correct.cell.placement.off)[1] <- "Node"
+# correct.cell.placement.main <- rbind(correct.cell.placement.main, correct.cell.placement.off)
+# 
+# rm(correct.cell.placement.off, off.main.nodes)
 
 # Make edgelists without and with cells ####
 print("Making edgelists")
 # Without
-tree.plot <- tree.summary.collapse.main[, c("Node", "Node.2")]
+tree.plot <- tree.summary.collapse[, c("Node", "Node.2")]
+# tree.plot <- tree.summary.collapse.main[, c("Node", "Node.2")]
 colnames(tree.plot) <- c("Child", "Scar.acquisition")
 tree.plot$Parent <-
   sapply(tree.plot$Child,
@@ -861,8 +889,10 @@ tree.plot$Parent <-
            z <- paste(y[-length(y)], collapse = "_")
          }
   )
-root.scars <- 
-  unique(tree.summary.collapse.main$Node.1[grepl("Root", tree.summary.collapse.main$Node.1)])
+root.scars <-
+  unique(tree.summary.collapse$Node.1[grepl("Root", tree.summary.collapse$Node.1)])
+# root.scars <- 
+#   unique(tree.summary.collapse.main$Node.1[grepl("Root", tree.summary.collapse.main$Node.1)])
 if(root.scars != "Root"){
   root.add <- data.frame(Parent = "Root",
                          Child = 0,
@@ -879,19 +909,26 @@ tree.plot$fill <- "black"
 tree.plot$size <- 1
 rm(root.scars)
 
+tree.plot <- merge(tree.plot, node.count.cumulative.agg[, c("Node", "Main")],
+                   by.x = "Child", by.y = "Node")
+
 # With
 if("Cell.type" %in% names(correct.cell.placement.main)){
-  cells.add <- 
-    correct.cell.placement.main[,
-                           c("Node", "Cell", "Cell.type")]
+  cells.add <- correct.cell.placement[, c("Node", "Cell", "Cell.type")]
+  
+  # cells.add <- 
+  #   correct.cell.placement.main[,
+  #                          c("Node", "Cell", "Cell.type")]
   # cells.not.add <- 
   #   correct.cell.placement.main[!(correct.cell.placement.main$Node %in% 
   #                            unique(c(tree.plot$Child, tree.plot$Parent))),
   #                          c("Node", "Cell", "Cell.type")]
 }else{
   cells.add <- 
-    correct.cell.placement.main[, 
-                           c("Node", "Cell")]
+    correct.cell.placement[, c("Node", "Cell")]
+  # cells.add <- 
+  #   correct.cell.placement.main[, 
+  #                          c("Node", "Cell")]
   cell.add$Cell.type <- "Cell"
 }
 cells.add$Scar.acquisition <- ""
@@ -909,6 +946,7 @@ cells.add$Child <-
            }
          }
   )
+cells.add$Main <- T
 
 tree.plot.cells <- rbind(tree.plot, cells.add)
 
@@ -938,23 +976,23 @@ tree.plot.cells.scar.blind <- tree.plot.cells
 tree.plot.cells.scar.blind$Scar.acquisition <- ""
 tree.plot.cells.scar.blind <-
   rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
-                   fill = "black", size = 1),
+                   fill = "black", size = 1, Main = T),
         tree.plot.cells.scar.blind)
 tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
 
 LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
-# save(LINNAEUS.pie, file = "./Data/2017_10X_6/A6_Ltree_pie.Robj")
+# save(LINNAEUS.pie, file = "./Data/2017_10X_7/A5_Ltree_pie.Robj")
 # Without cells
 LINNAEUS.pie.wg <-
   collapsibleTree(df = LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
                   pieSummary = T,collapsed = F,
-                  width = 500, height = 500,
+                  width = 500, height = 1000,
                   ctypes = adult.colors$Cell.type,linkLength=50,
                   ct_colors = adult.colors$color, angle = pi/2,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_6/tree_A6_LINNAEUS_pie_scb.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_7/tree_A5_LINNAEUS_pie_scb_inc_off.html")
 # Without cells but with all information
 tree.plot.cells.all <- tree.plot.cells
 tree.plot.cells.all <-
@@ -1079,3 +1117,42 @@ ggplot(colors.use) +
 parst.output <- data.frame(A6 = rbind(t(parameters), t(tree.statistics)))
 # write.csv(parst.output, "./Data/2017_10X_6/A6_LINNAUS_par_stat.csv",
 #           quote = F)
+
+# Calculate scar enrichment between cell types ####
+cell.types <- c("Pancreas endocrine cells (alpha) pancreas",
+                "Pancreas endocrine cells (beta) pancreas",
+                "Pancreas endocrine cells (delta) pancreas")
+                # "Pancreas endocrine cells (epsilon) pancreas")
+cell.scar.zoom <- cells.in.tree.pre.f[cells.in.tree.pre.f$Cell.type %in%
+                                        cell.types, ]
+scar.zoom.count <- data.frame(table(cell.scar.zoom$Scar, cell.scar.zoom$Cell.type))
+colnames(scar.zoom.count) <- c("Scar", "Cell.type", "Count")
+
+scarred.cell.types.count <- unique(cells.in.tree.pre.f[, c("Cell", "Cell.type")])
+cell.type.count <- data.frame(table(scarred.cell.types.count$Cell.type))
+colnames(cell.type.count) <- c("Cell.type", "Total")
+
+# cell.type.count <- aggregate(scar.zoom.count$Count,
+#                              by = list(Cell.type = scar.zoom.count$Cell.type),
+#                              sum)
+# colnames(cell.type.count)[2] <- "Total"
+
+
+scar.zoom.count <- merge(scar.zoom.count, cell.type.count)
+scar.zoom.count$Percentage <- 100 * scar.zoom.count$Count/scar.zoom.count$Total
+scar.max.rates <- aggregate(scar.zoom.count$Percentage,
+                            by = list(Scar = scar.zoom.count$Scar),
+                            max)
+scar.zoom.count <- 
+  scar.zoom.count[scar.zoom.count$Scar %in% 
+                    scar.max.rates$Scar[scar.max.rates$x > 10], ]
+scar.zoom.count$Cell.type <- plyr::mapvalues(scar.zoom.count$Cell.type, 
+                from = cell.types, 
+                to = c("Alpha", "Beta", "Delta"))
+# pdf("./Images/2017_10X_7/Endocrine_cells_scar_enrichment_A5.pdf")
+ggplot(scar.zoom.count) +
+  geom_bar(stat = "identity", position = "dodge",
+           aes(x = Scar, y = Percentage, fill = Cell.type)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(x = "", y = "", fill = "")
+# dev.off()

@@ -4,7 +4,6 @@
 # Written by B. Spanjaard, 2017
 
 # Dependencies ####
-
 suppressPackageStartupMessages(library(ggplot2))
 # require(proxy)
 # require(tsne)
@@ -37,55 +36,6 @@ theme_bs <-
                panel.grid.major.x = element_line(colour = "grey"),
                legend.key = element_rect(fill = "white"),
                plot.title = element_text(hjust = 0.5))
-# allowed.close.scars <-
-#   c("GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTACTACGTGGACACCAAGCTGGACATCACCTCCCA",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGACTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGACTACGTGGACACCAAGCTGGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCTACGTGGACACCAAGCTGGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGTCTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCCACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCTACTACGTGGACACCAAGCTGGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGACACCAAGCTGGACATCACCTCCCACAAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCACCAAGCTGGACATCACCTCCCACAAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCTTGGACACCAAGCTGGACATCACCTCCCAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGTGGACACCAAGCTGGACATCACCTCCCAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCTACGTGGACACCAAGCTGGACATCACCTCCCA",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGTCCTACTACGTGGACACCAAGCTGGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAAGCTGGACACCAAGCTGGACATCACCTCCCACAACGA",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAAGTTGGACACCAAGCTGGACATCACCTCCCACAACGA",
-#     "GAGTTCAAGACCATCTACATGGCCAAGTAGCCCGTGCAACTGCCCGGCTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGACATCACCTCCCACAACGAGGACTACACCATCGTGGAACAGTACG",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCATCACCTCCCACAACGAGGACTACACCATCGTGGAACAGTACG",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGGCTACTACGTGGACACCAAGCTGGACATCACCT",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGTCTACTACGTGGACACCAAGCTGGACATCACCT",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCAACTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCTACTACGTGGACACCAAGCTGGACATCACCT",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCTACTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCTACTACTACGTGGACACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCAACTACTACGTGGACACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGACGTGGACACCAAGCTGGACATCACCTCC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCGTGGACACCAAGCTGGACATCACCTCC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCACTACTACGTGGACACCAAGCTGGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCTTCTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCTTCTACTACGTGGACACCAAGCTGGAC", 
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCACTACTACGTGGACACCAAGCTGGACATCAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCAACTACTACGTGGACACCAAGCTGGACATCAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGACTTCTACTACGTGGACACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCTGCTACGTGGACACCAAGCTGGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCCACTACTACGTGGACACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCTTGGTGTCTACTACGTGGACACCAAGCTGAAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCTTGGTGTCTACTACGTGGACACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCTACGTGGACACCAAGCTAGACATCACC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGTCAGATCTGCCGGTATAACTTCGTATAAT",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGTCGGATCTGCCGGTATAACTTCGTATAAT",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCAAACTACTACGTGGACACCAAGCTGGACATC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCTGGCTGCCTGGCTTGTCCAACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCTGGCTGCCTGGCTTGCCCAACCAAGCTGGAC",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGTAACTGCCCGGCAGTTGCACGGGCTACGTGGACACCAAG",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCAGTTGCACGGGCTACGTGGACACCAAG",
-#     "GAGTTCAAGACCATCTACATGGCCAAGAAGCCCGTGCAACTGCCCGGCAGTTGCACGGGCGACGTGGACACCAAG")
-
 
 # Functions ####
 binary <- function(x) {
@@ -284,6 +234,55 @@ calculate.links.bos <- function(fscars.rcc){
                            value.name = "Links")
   
   return(property.links.l)
+}
+
+calculate.node.enrichment <- function(node.counts, node.counts.agg,
+                                      test.alternative = "two.sided", p.adj.method = "fdr"){
+  # Calculate the enrichment of cell types in nodes, using a dataframe of cell-
+  # type specific cumulative node counts and a dataframe of aggregated
+  # cumulative node counts (the latter one is strictly speaking unnecessary
+  # since it could also be calculated from the former).
+  # The test done is a binomial test: can the number of cells in a
+  # node be explained by random sampling from the parent node? The p-values are
+  # corrected for multiple testing.
+  # Testing and p-value correcting can be done using all implemented binom.test
+  # methods (two-sided, greater, less), and using 
+  e.calc <- 
+    merge(node.counts[, c("Node", "Cell.type", "Freq")],
+          node.counts.agg[, c("Node", "Freq")],
+          by = "Node")
+  colnames(e.calc)[3:4] <- c("Node.tc", "Node.total")
+  e.calc$Parent.node <-
+    sapply(e.calc$Node,
+           function(x) {
+             if(x == "0_1"){
+               return(NA)
+             }else{
+               y <- unlist(strsplit(x, "_"))
+               return(paste(y[-length(y)], collapse = "_"))
+             }
+           }
+    )
+  e.calc <- e.calc[complete.cases(e.calc), ]
+  e.calc <- merge(e.calc, node.counts[, c("Node", "Cell.type", "Freq")],
+                  by.x = c("Parent.node", "Cell.type"), by.y = c("Node", "Cell.type"))
+  colnames(e.calc)[6] <- "Parent.tc"
+  e.calc <- merge(e.calc, node.counts.agg[, c("Node", "Freq")],
+                  by.x = "Parent.node", by.y = "Node")
+  colnames(e.calc)[7] <- "Parent.total"
+  e.calc <- e.calc[, c("Cell.type", "Node", "Parent.node", "Node.tc", "Node.total",
+                       "Parent.tc", "Parent.total")]
+  e.calc$Binom.p <-
+    apply(e.calc[, c("Node.tc", "Node.total", "Parent.tc", "Parent.total")], 1,
+          function(x){
+            bt <- binom.test(x = x[1], n = x[2], p = x[3]/x[4], 
+                             alternative = test.alternative)
+            return(bt$p.value)
+          }
+    )
+  e.calc$p.adj <- p.adjust(e.calc$Binom.p, method = p.adj.method)
+  
+  return(e.calc)
 }
 
 connections.for.graph <- function(current.cs){
@@ -738,6 +737,47 @@ decimal <- function(x){
   return(output)
 }
 
+determine.main <- function(aggregates, current.branches, main.parent, 
+                           branch.size.ratio){
+  # Recursive function: calculate what's main and off-main for a given dataframe of
+  # branches (these should be sister clades), determine main and off-main for
+  # children, return dataframe with main and off-main marked.
+  # Create output dataframe
+  output <- current.branches
+  output$Main <- F
+  # main.parent F -> Set all branches off main (happens by default)
+  if(main.parent){
+    # main.parent T -> Test if there are any branches off-main
+    if(nrow(output) > 1){
+      output$Max.freq <- max(output$Freq)
+      output$Freq.ratio <- output$Freq/output$Max.freq
+      output$Main <- output$Freq.ratio >= branch.size.ratio
+      
+       output <- output[, c("Node", "Node.depth", "Freq", "Main")]
+    }else{
+      output$Main <- T
+    }
+  }
+  # For each branch: 
+  for(i in 1:nrow(output)){
+    #   determine children
+    parent <- output$Node[i]
+    children <- 
+      aggregates[grepl(paste(parent, "_", sep = ""), aggregates$Node) &
+                   aggregates$Node.depth == (output$Node.depth[i] + 1), ]
+    if(nrow(children) > 0){
+      #   if children -> call function for children, add children to output
+      children.main <-
+        determine.main(aggregates, current.branches = children, 
+                       main.parent = output$Main[i], 
+                       branch.size.ratio = branch.size.ratio)
+      output <- rbind(output, children.main)
+    }
+  }
+  # return output
+  return(output)
+}
+
 expand.tip <- function(x, y, attach.at){
   # Making a new tree z that is basically tree x with one tip replaced by a
   # second tree y.
@@ -796,6 +836,10 @@ generate_tree = function(df){
       }
       if("size" %in% colnames(df)){
         eval_txt <- paste(child, "$size <- ", df$size[i], sep = "")
+        eval(parse(text = eval_txt))
+      }
+      if("Main" %in% colnames(df)){
+        eval_txt <- paste(child, "$Main <- ", df$Main[i], sep = "")
         eval(parse(text = eval_txt))
       }
     }
@@ -1551,24 +1595,6 @@ query.simulation <- function(simulation.results, vary, constants, plot = T){
     )
   }
 }
-
-# scar.tree <- list(Nodes =   data.frame(Node = character(),
-#                                        Scar = character()),
-#                   Edges =   data.frame(From = character(),
-#                                        To = character()),
-#                   Parent.node = "0")
-
-# scar.tree.in <- scar.tree
-# scar.tree.final <- scar.tree.step(scar.graph, scar.tree)
-# scar.pref.order <- character() #c("55:75M", "12:47M3I25M", "89:51M4I20M")
-
-# scar.tree.final <- scar.tree.step(scar.graph, scar.tree, scar.order)
-# scar.tree.in <- scar.tree
-# scar.pref.order <- scar.order
-# 
-# scar.tree.step(delete.vertices(scar.sub.graph, scar.to.delete),
-#                scar.tree.out)
-# scar.graph <- delete.vertices(scar.sub.graph, scar.to.delete)
 
 scar.tree.step <- function(scar.graph, scar.tree.in, 
                            scar.pref.order = character()){

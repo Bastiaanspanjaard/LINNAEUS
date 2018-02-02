@@ -30,9 +30,9 @@ min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.125 # Default 0.125, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
-max.scar.p <- 0.001
+max.scar.p <- 0.01
 # Maximum number of embryos a scar can be present in to include in tree building
-max.larvae <- 1
+max.larvae <- 10
 
 parameters <-
   data.frame(Doublet.rate = doublet.rate,
@@ -49,9 +49,12 @@ number.scars <- NA
 print("Loading data")
 # mRNA larvae
 tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
-# For Z2
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
+# For Z1
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L1",
                             c("Cell", "Cluster", "Cell.type")]
+# For Z2
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
+#                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
@@ -95,8 +98,9 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
-  # read.csv("./Data/2017_10X_7/A5_scars_compared.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_1/Z1_scars_compared.csv", stringsAsFactors = F)
+scar.input$Cell <- paste("L1", scar.input$Barcode, sep = "_")
+  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
 # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
@@ -709,61 +713,6 @@ print("Separating main and off-main")
 # Do recursive: calculate what's main and off-main for a given dataframe of
 # branches (these should be sister clades), determine main and off-main for
 # children, return dataframe with main and off-main marked.
-determine.main <- function(aggregates, current.branches, main.parent, 
-                           branch.size.ratio){
-  # Recursive function: calculate what's main and off-main for a given dataframe of
-  # branches (these should be sister clades), determine main and off-main for
-  # children, return dataframe with main and off-main marked.
-  # Create output dataframe
-  output <- current.branches
-  output$Main <- F
-  # main.parent F -> Set all branches off main (happens by default)
-  if(main.parent){
-    # main.parent T -> Test if there are any branches off-main
-    if(nrow(output) > 1){
-      # NEW
-      output$Max.freq <- max(output$Freq)
-      output$Freq.ratio <- output$Freq/output$Max.freq
-      output$Main <- output$Freq.ratio >= branch.size.ratio
-      
-      # OLD
-      # output <- output[order(-output$Freq), ]
-      # output$Previous.freq <-
-      #   c(output$Freq[1], output$Freq[-nrow(output)])
-      # output$Freq.ratio <- 
-      #   output$Freq/output$Previous.freq
-      # for(tree.row in 1:nrow(output)){
-      #   if(output$Freq.ratio[tree.row] < branch.size.ratio){
-      #     break
-      #   }else{
-      #     output$Main[tree.row] <- T
-      #   }
-      # }
-      output <- output[, c("Node", "Node.depth", "Freq", "Main")]
-    }else{
-      output$Main <- T
-    }
-  }
-  # For each branch: 
-  for(i in 1:nrow(output)){
-    #   determine children
-    parent <- output$Node[i]
-    children <- 
-      aggregates[grepl(paste(parent, "_", sep = ""), aggregates$Node) &
-                   aggregates$Node.depth == (output$Node.depth[i] + 1), ]
-    if(nrow(children) > 0){
-      #   if children -> call function for children, add children to output
-      children.main <-
-        determine.main(aggregates, current.branches = children, 
-                       main.parent = output$Main[i], 
-                       branch.size.ratio = branch.size.ratio)
-      output <- rbind(output, children.main)
-    }
-  }
-  # return output
-  return(output)
-}
-
 start.branches <- 
   node.count.cumulative.agg[node.count.cumulative.agg$Node.depth == 
                               min(node.count.cumulative.agg$Node.depth), ]
@@ -863,11 +812,12 @@ if(root.scars != "Root"){
     sapply(root.add$Scar.acquisition,
            function(x) paste(unlist(strsplit(x, ","))[-1], collapse = ","))
   tree.plot <- rbind(root.add, tree.plot)
+  rm(root.add)
 }
 tree.plot$Cell.type <- "NA"
 tree.plot$fill <- "black"
 tree.plot$size <- 1
-rm(root.scars, root.add)
+rm(root.scars)
 
 # With
 if("Cell.type" %in% names(correct.cell.placement.main)){
@@ -1056,81 +1006,15 @@ ggplot(colors.use) +
 # dev.off()
 
 # Write parameters and statistics ####
-parst.output <- data.frame(Z4 = rbind(t(parameters), t(tree.statistics)))
+parst.output <- data.frame(Z1 = rbind(t(parameters), t(tree.statistics)))
 # write.csv(parst.output, "./Data/2018_10X_1/Z4_LINNAUS_par_stat.csv",
 #           quote = F)
 
 
 # Calculate cell type enrichment per node ####
 # Does a cell type have more than expected cells in a node (> expected is per
-# ratio of the above node)
-calculate.node.enrichment <- function(node.counts, node.counts.agg){
-  e.calc <- 
-    merge(node.counts[, c("Node", "Cell.type", "Freq")],
-          node.count.cumulative.agg.main[, c("Node", "Freq")],
-          by = "Node")
-  colnames(e.calc)[3:4] <- c("Node.tc", "Node.total")
-  e.calc$Parent.node <-
-    sapply(e.calc$Node,
-           function(x) {
-             if(x == "0_1"){
-               return(NA)
-             }else{
-               y <- unlist(strsplit(x, "_"))
-               return(paste(y[-length(y)], collapse = "_"))
-             }
-           }
-    )
-  e.calc <- e.calc[complete.cases(e.calc), ]
-  e.calc <- merge(e.calc, node.counts[, c("Node", "Cell.type", "Freq")],
-                  by.x = c("Parent.node", "Cell.type"), by.y = c("Node", "Cell.type"))
-  colnames(e.calc)[6] <- "Parent.tc"
-  e.calc <- merge(e.calc, node.count.cumulative.agg.main[, c("Node", "Freq")],
-                  by.x = "Parent.node", by.y = "Node")
-  colnames(e.calc)[7] <- "Parent.total"
-  e.calc <- e.calc[, c("Cell.type", "Node", "Parent.node", "Node.tc", "Node.total",
-                       "Parent.tc", "Parent.total")]
-  e.calc$Binom.p <-
-    apply(e.calc[, c("Node.tc", "Node.total", "Parent.tc", "Parent.total")], 1,
-          function(x){
-            bt <- binom.test(x = x[1], n = x[2], p = x[3]/x[4], alternative = "greater")
-            return(bt$p.value)
-          }
-    )
-  e.calc$p.adj <- p.adjust(e.calc$Binom.p, method = "fdr")
-  
-}
-
-e.calc <- 
-  merge(node.count.cumulative.main[, c("Node", "Cell.type", "Freq")],
-        node.count.cumulative.agg.main[, c("Node", "Freq")],
-        by = "Node")
-colnames(e.calc)[3:4] <- c("Node.tc", "Node.total")
-e.calc$Parent.node <-
-  sapply(e.calc$Node,
-         function(x) {
-           if(x == "0_1"){
-             return(NA)
-           }else{
-             y <- unlist(strsplit(x, "_"))
-             return(paste(y[-length(y)], collapse = "_"))
-           }
-         }
-  )
-e.calc <- e.calc[complete.cases(e.calc), ]
-e.calc <- merge(e.calc, node.count.cumulative.main[, c("Node", "Cell.type", "Freq")],
-                by.x = c("Parent.node", "Cell.type"), by.y = c("Node", "Cell.type"))
-colnames(e.calc)[6] <- "Parent.tc"
-e.calc <- merge(e.calc, node.count.cumulative.agg.main[, c("Node", "Freq")],
-                by.x = "Parent.node", by.y = "Node")
-colnames(e.calc)[7] <- "Parent.total"
-e.calc <- e.calc[, c("Cell.type", "Node", "Parent.node", "Node.tc", "Node.total",
-                     "Parent.tc", "Parent.total")]
-e.calc$Binom.p <-
-  apply(e.calc[, c("Node.tc", "Node.total", "Parent.tc", "Parent.total")], 1,
-        function(x){
-          bt <- binom.test(x = x[1], n = x[2], p = x[3]/x[4], alternative = "greater")
-          return(bt$p.value)
-        }
-  )
-e.calc$p.adj <- p.adjust(e.calc$Binom.p, method = "fdr")
+# ratio of the above node). Maybe improve function output to include ratio
+# observed/expected instead of all the raw numbers? Or at least change the
+# column ordering.
+e.calc <- calculate.node.enrichment(node.counts = node.count.cumulative.main,
+                                      node.counts.agg = node.count.cumulative.agg.main)
