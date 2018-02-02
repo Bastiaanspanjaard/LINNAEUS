@@ -2,31 +2,18 @@ library(shiny)
 library(collapsibleTree)
 library(data.tree)
 
-#load('/Users/polivar/src/linnaeus-scripts/collapsibleTree/sand/C2_correct_tree_wcells.Robj')
-#load('/Users/polivar/Downloads/bs/Z2_Ltree.Robj')
-#ttt = Clone(LINNAEUS.cell.tree$nd2)
-#ctypes = unique(orit$Get('Cell.type')) #linnaeus.colors_larva$Cell.type
-#ct_colors = linnaeus.colors_adult$color# linnaeus.colors_larva$color
+#source('linnaeus/app_pancreas.R')
+#source('linnaeus/app_neural_larva.R')
 
-#load('src/linnaeus-scripts/collapsibleTree/sand/Z2_Ltree_pie.Robj')
-load('~/Dropbox/PJ/linnaeus_manuscript/collapsibleTrees/Trees/Z2_Ltree_pie.Robj')
-
-
-f_zoom3 = !is.na(linnaeus.colors_larva$zoom3)
-ct_colors = linnaeus.colors_larva$colors3[f_zoom3]
-ctypes = linnaeus.colors_larva$Cell.type[f_zoom3]
-
-
-orit = Clone(LINNAEUS.pie)
-
-get_pieNode(orit, ctypes=ctypes)
-ttt = Clone(orit$nd0_27$nd0_27_1)
-
-
-
-namess = ttt$Get(function(x) if(x$isScar) x$name)
-namess = namess[!is.na(namess)]
-names(namess) = namess
+if(FALSE){master = do_toy_example()
+	ct_colors = c("#0000dd","#cd00cd")
+	ctypes = c("type1", "type2")
+	orit = Clone(master)
+	ttt = Clone(master)
+	namess = ttt$Get(function(x) if(x$isScar) x$name)
+	namess = namess[!is.na(namess)]
+	names(namess) = namess
+	}
 
 do_barplot = function(foc_pie, ct_colors, zeros = FALSE, horiz = FALSE){
  #names(ct_colors) = ctypes
@@ -129,7 +116,8 @@ server <- function(input, output) {
 			if(length(input$node) == 0){
    				foc_pie = ttt$pieNode
    				#output$str <- renderPrint(cat(ttt$name))
-   				output$str <- str(as.list(do_summary(ttt)))
+   				#output$str <- str(as.list(do_summary(ttt)))
+	   			foc_node <<- ttt
 			}else{
 	   			foc_node <<- FindNode(ttt, clicked_node)
 	   			foc_pie = foc_node$pieNode
@@ -140,8 +128,7 @@ server <- function(input, output) {
 			barplot_width = max(400, sum(foc_pie>0)* 18)
 	   		output$barplot_ctypes <- renderPlot(do_barplot(foc_pie, ct_colors = ct_colors))
 	   		output$barplot_ctypes.ui <- renderUI({plotOutput(outputId = "barplot_ctypes", height = 600, width = barplot_width)})
-browser()
-   			output$str <- str(as.list(do_summary(foc_node)))
+   			#output$str <- str(as.list(do_summary(foc_node)))
 			output$treeheight <- renderText({input$treeheight})
 		}
 	)

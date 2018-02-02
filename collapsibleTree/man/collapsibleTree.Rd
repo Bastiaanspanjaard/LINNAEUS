@@ -10,6 +10,8 @@
 \alias{do_color_map}
 \alias{SortNumeric}
 \alias{renameNode}
+\alias{do_summary}
+\alias{linnaeus.sets}
 \alias{do_toy_example}
 \title{Create Interactive Collapsible Tree Diagrams}
 \source{
@@ -52,9 +54,13 @@ SortNumeric(node, attribute, ..., decreasing = FALSE, recursive = TRUE)
 
 renameNode(node)
 
+do_summary(x)
+
+linnaeus.sets(setname = "adult")
+
 do_toy_example(type1 = "type1", type2 = "type2", scar_color = "#aaaaaa",
   type1_color = "#ff0000", type2_color = "#0000ff", scarSize = 6,
-  scSize = 2.5, width = 500, height = 500)
+  scSize = 2.5, width = 500, height = 500, return_widget = FALSE)
 }
 \arguments{
 \item{df}{a \code{data.frame} from which to construct a nested list
@@ -135,6 +141,8 @@ where every node can be expanded and collapsed by clicking on it.
 Helper function for pieNode modality of a Linnaeus data.tree object
 
 Helper function to sort children by attribute, casting the given value to numeric
+
+Node Summary
 
 Helper function for pieNode modality of a Linnaeus data.tree object
 }

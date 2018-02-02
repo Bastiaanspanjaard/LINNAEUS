@@ -21,11 +21,11 @@ cluster	Cell.type	origin	color	zoom1	color1	zoom2	color2	zoom3	color3	zoom4	colo
 42	Glial cells (Peripheral)	Neural crest	#FABFDE	NA		NA		4	#ff7f00	NA	
 50	Neurons E (Peripheral)	Neural crest	#FDE5F2	NA		NA		5	#ff9832	NA	
 2	Neurons A (Brain)	Neuroectoderm	#173416	NA		6	#00441b	6	#4daf4a	NA	
-4	Neuronal precursors A	Neuroectoderm	#214B1F	NA		8	#238b45	NA		NA	
-6	Neurons B (Proliferating)	Neuroectoderm	#2B6229	NA		9	#41ab5d	NA		NA	
+4	Neuronal precursors A	Neuroectoderm	#214B1F	NA		8	#238b45	15	#4daf4a	NA	
+6	Neurons B (Proliferating)	Neuroectoderm	#2B6229	NA		9	#41ab5d	16	#4daf4a	NA	
 9	Cone cells	Neuroectoderm	#357933	NA		1	#3f007d	NA		NA	
 13	Retinal cells A	Neuroectoderm	#3F913D	NA		2	#54278f	NA		NA	
-23	Neuronal precursors B	Neuroectoderm	#4AA847	NA		10	#74c476	NA		NA	
+23	Neuronal precursors B	Neuroectoderm	#4AA847	NA		10	#74c476	17	#4daf4a	NA	
 24	Neurons C (Spinal cord)	Neuroectoderm	#57B354	NA		11	#ef3b2c	8	#a6d7a4	NA	
 27	Retinal cells B	Neuroectoderm	#66BA64	NA		3	#6a51a3	NA		NA	
 29	Rod cells	Neuroectoderm	#75C173	NA		4	#807dba	NA		NA	
