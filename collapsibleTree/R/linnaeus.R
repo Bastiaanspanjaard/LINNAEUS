@@ -96,21 +96,35 @@ renameNode <- function(node){
   return(node)
 }
 
-##' Helper function for pieNode modality of a Linnaeus data.tree object
-##' @rdname collapsibleTree
-##' @export
-#linnaeus.sets = function(setname='adult'){
-#	x = system.file("extdata", linnaeus.sets[[name]], package = "collapsibleTree")
-#	x = read.table(x, header = T, stringsAsFactors = FALSE, sep = '\t', comment.char='')
-#	return(x)
-#
-##write.table(color_larvea, file='src/linnaeus-scripts/collapsibleTree/inst/extdata/colors_larvae.txt', quote=F, sep='\t', row.names=F)
-#}
+#' Node Summary
+#' @rdname collapsibleTree
+#' @export 
+do_summary = function(x){
+	if(!is.null(x$pieNode)){
+		# the last -1 is to not count for x itself
+		progeny = sum(x$Get(function(x){if(!x$isLeaf){length(x$children)-1}}), na.rm=T) +1
+		name = x$name
+	return(list(progeny = progeny,
+		name = name
+	))
+	}	
+}
+
+#' Helper function for pieNode modality of a Linnaeus data.tree object
+#' @rdname collapsibleTree
+#' @export
+linnaeus.sets = function(setname='adult'){
+	x = system.file("extdata", linnaeus.sets[[name]], package = "collapsibleTree")
+	x = read.table(x, header = T, stringsAsFactors = FALSE, sep = '\t', comment.char='')
+	return(x)
+
+#write.table(color_larvea, file='src/linnaeus-scripts/collapsibleTree/inst/extdata/colors_larvae.txt', quote=F, sep='\t', row.names=F)
+}
 
 
 #' @rdname collapsibleTree
 #' @export 
-do_toy_example = function(type1="type1", type2="type2", scar_color="#aaaaaa", type1_color = "#ff0000", type2_color="#0000ff", scarSize=6, scSize = 2.5, width=500, height=500){
+do_toy_example = function(type1="type1", type2="type2", scar_color="#aaaaaa", type1_color = "#ff0000", type2_color="#0000ff", scarSize=6, scSize = 2.5, width=500, height=500, return_widget = FALSE){
 master <- Node$new('master', size=scarSize, fill=scar_color, Cell.type="NA")
  scarA <- master$AddChild('scarA', size=scarSize, fill=scar_color, Cell.type='NA')
 	scarC <-  scarA$AddChild('scarC', size=scarSize, fill=scar_color, Cell.type='NA')
@@ -147,7 +161,13 @@ master <- Node$new('master', size=scarSize, fill=scar_color, Cell.type="NA")
 			scF3 = scarF$AddChild('scF3', size=scSize, fill=type2_color, Cell.type=type2)
 			scF4 = scarF$AddChild('scF4', size=scSize, fill=type2_color, Cell.type=type2)
 # TODO sort children to have symmetrical trees
-widget_sc = collapsibleTree(master, collapsed = F, pieSummary=F, pieNode=F, ctypes=unique(master$Get("Cell.type")), nodeSize='size', fill="fill", ct_colors=c(type2_color,type1_color), width=width, height=height, sort_by_ctype = FALSE)
-widget_summary = collapsibleTree(master, collapsed = F, pieSummary=T, pieNode=T, ctypes=unique(master$Get("Cell.type")), ct_colors=c(type1_color,type2_color), width=width, height=height)
-return(list(widget_sc, widget_summary))
+browser()
+	get_pieNode(master, ctypes=c(type1, type2))
+	if(return_widget){
+		widget_sc = collapsibleTree(master, collapsed = F, pieSummary=F, pieNode=F, ctypes=unique(master$Get("Cell.type")), nodeSize='size', fill="fill", ct_colors=c(type2_color,type1_color), width=width, height=height, sort_by_ctype = FALSE)
+		widget_summary = collapsibleTree(master, collapsed = F, pieSummary=T, pieNode=T, ctypes=unique(master$Get("Cell.type")), ct_colors=c(type1_color,type2_color), width=width, height=height)
+		return(list(widget_sc, widget_summary))
+	}else{
+		return(master)
+	}
 }

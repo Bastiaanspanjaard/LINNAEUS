@@ -100,6 +100,26 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
                             nodeSize_sc = nodeSize_sc, jsonFields = jsonFields)
   }
 
+
+
+  # linnaeus Test feature HideScarnames -> show them on tooltip
+  if(hide_scars){    
+    df = Clone(df)
+    tra  = data.tree::Traverse(df, 'level')
+    sapply(tra, function(x){
+# TODO determine a fixed expected node field list e.g. scar, name, is, Scar, etc.
+      x$scar = gsub("_", ".", x$name)
+      xSummary = do_summary(x)
+      tot_scells = ifelse(!is.null(x$pieNode), sum(x$pieNode), xSummary$progeny)  
+      x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4><br><h4 style="color: #2e6c80;">shown:\t\t%s<br>in node:\t\t%s</h4>', 
+          ifelse(x$isScar, x$scar, x$Cell.type), tot_scells, xSummary$progeny )
+      x$scar = x$name}
+    )
+    options$tooltip = TRUE
+    tooltip = TRUE
+    tooltipHtml = "tp"
+  }
+
   if(pieSummary & pieNode){
    # Only after collecting the statistics for the scar nodes we get rid of the scells
     t <- data.tree::Traverse(df, 'post-order')
@@ -114,23 +134,6 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     jsonFields <- c(jsonFields, "Main")
   
   }
-
-  # linnaeus Test feature HideScarnames -> show them on tooltip
-	if(hide_scars){		
-		df = Clone(df)
-		tra  = data.tree::Traverse(df, 'level')
-		sapply(tra, function(x){
-# TODO determine a fixed expected node field list e.g. scar, name, is, Scar, etc.
-			x$scar = gsub("_", ".", x$name)
-			tot_scells = ifelse(!is.null(x$pieNode) ,sum(x$pieNode), x$SizeOfNode)	
-			x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4><br><h4 style="color: #2e6c80;">n=%s/%s</h4>', 
-					ifelse(x$isScar, x$scar, x$Cell.type), tot_scells, x$SizeOfNode)
-			x$scar = x$name}
-		)
-		options$tooltip = TRUE
-		tooltip = TRUE
-		tooltipHtml = "tp"
-	}
 
   # only necessary to perform these calculations if there is a tooltip
   if(tooltip & is.null(tooltipHtml)) {
