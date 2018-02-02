@@ -1333,6 +1333,126 @@ link.fisher.test <- function(cells, connections){
   return(fisher.outcomes)
 }
 
+make.edgelist <- function(tree.summary, node.counts, cells, main.min = 5,
+                          off.main.min = 10){
+  # Create an edgelist to generate a tree. All cells are placed in the
+  # edgelist.
+  
+  # Edges without cells first.
+  tree.plot <- tree.summary[, c("Node", "Node.2")]
+  colnames(tree.plot) <- c("Child", "Scar.acquisition")
+  tree.plot$Parent <-
+    sapply(tree.plot$Child,
+           function(x){
+             y <- unlist(strsplit(x, "_"))
+             z <- paste(y[-length(y)], collapse = "_")
+           }
+    )
+  root.scars <-
+    unique(tree.summary$Node.1[grepl("Root", tree.summary$Node.1)])
+  if(root.scars != "Root"){
+    root.add <- data.frame(Parent = "Root",
+                           Child = 0,
+                           Scar.acquisition = root.scars,
+                           stringsAsFactors = F)
+    root.add$Scar.acquisition <- 
+      sapply(root.add$Scar.acquisition,
+             function(x) paste(unlist(strsplit(x, ","))[-1], collapse = ","))
+    tree.plot <- rbind(root.add, tree.plot)
+  }
+  tree.plot$Cell.type <- "NA"
+  tree.plot$fill <- "black"
+  tree.plot$size <- 1
+  
+  tree.plot <- merge(tree.plot, node.counts[, c("Node", "Main")],
+                     by.x = "Child", by.y = "Node")
+  if(sum(tree.plot$Parent == "0") > 1){
+    tree.plot <-
+      rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+                       fill = "black", size = 1, Main = T),
+            tree.plot)
+    tree.plot$Parent <- as.character(tree.plot$Parent)
+  }
+  tree.plot$Scar.acquisition <- as.character(tree.plot$Scar.acquisition)
+  
+  # Add cells
+  if("Cell.type" %in% names(cells)){
+    cells.add <- cells[, c("Node", "Cell", "Cell.type")]
+  }else{
+    cells.add <- 
+      cells[, c("Node", "Cell")]
+    cell.add$Cell.type <- "Cell"
+  }
+  cells.add$Scar.acquisition <- ""
+  colnames(cells.add)[1:2] <- c("Parent", "Child")
+  cells.add$fill <- "lightgrey"
+  cells.add$size <- 0.5
+  cells.add$Child <- 
+    sapply(cells.add$Child,
+           function(x){
+             x <- as.character(x)
+             if(grepl(";", x)){
+               return(paste(unlist(strsplit(x, ";")), collapse = "d"))
+             }else{
+               return(x)
+             }
+           }
+    )
+  cells.add$Main <- T
+  
+  # Set thresholds to plot nodes - try plotting nodes >= 5 for main, > 10 for off-main
+  # Note - has to hold for the full information plot as well, there we need to collapse
+  # the scars as well (node sizes remain the same).
+  node.converter <- node.counts
+  
+  node.converter$To <-
+    sapply(node.converter$Node,
+           function(x){
+             y <- unlist(strsplit(x, "_"))
+             return(paste(y[-length(y)], collapse = "_"))
+           }
+    )
+  node.converter$Keep <-
+    ifelse(node.converter$Main, 
+           node.converter$Freq >= main.min,
+           node.converter$Freq >= off.main.min)
+  # See if any children of keep = F nodes still have keep = T.
+  keep.f.pattern <- paste(node.converter$Node[!node.converter$Keep], collapse = "_|")
+  node.converter$Keep[node.converter$Keep] <- !grepl(keep.f.pattern, node.converter$Node[node.converter$Keep])
+
+  node.converter$To <- ifelse(node.converter$Keep, node.converter$Node, node.converter$To)
+  
+  node.converter.2 <- node.converter[, c("Node", "To")]
+  colnames(node.converter.2) <- c("To", "To.2")
+  
+  while(sum(node.converter$To %in% c("0", node.converter$Node[node.converter$Keep])) < 
+        nrow(node.converter)){
+  node.converter <- merge(node.converter, node.converter.2, all.x = T)
+  node.converter$To.2[is.na(node.converter$To.2)] <- 
+    node.converter$To[is.na(node.converter$To.2)]
+  node.converter <- node.converter[, -1]
+  colnames(node.converter)[which(colnames(node.converter) == "To.2")] <- "To"
+  }
+  
+  if(sum(node.converter$To %in% c("0", node.converter$Node[node.converter$Keep])) < 
+     nrow(node.converter)){
+    stop("Was not able to collapse small nodes")
+  }
+  
+  # Remove nodes that have keep = F from nodelist.
+  tree.plot <- tree.plot[tree.plot$Child %in% c("0", node.converter$Node[node.converter$Keep]), ]
+  
+  # Shift cells
+  cells.add <- merge(cells.add, node.converter[, c("Node", "To")],
+                     by.x = "Parent", by.y = "Node")
+  cells.add$Parent <- cells.add$To
+  cells.add <- cells.add[, -which(colnames(cells.add) == "To")]
+  
+  # Output
+  tree.plot.cells <- rbind(tree.plot, cells.add)
+  return(tree.plot.cells)
+}
+
 normalize.data <- function(X.log.f, method, input){
   if(method == "median" && input == "log"){
     X.f <- exp(X.log.f)
