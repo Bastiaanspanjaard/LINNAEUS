@@ -5,19 +5,16 @@ library(data.tree)
 #source('linnaeus/app_pancreas.R')
 #source('linnaeus/app_neural_larva.R')
 
-master = do_toy_example()
-ct_colors = c("#0000dd","#cd00cd")
-ctypes = c("type1", "type2")
+if(T){master = do_toy_example()
+	ct_colors = c("#0000dd","#cd00cd")
+	ctypes = c("type1", "type2")
+	orit = Clone(master)
+	ttt = Clone(master)
+	namess = ttt$Get(function(x) if(x$isScar) x$name)
+	namess = namess[!is.na(namess)]
+	names(namess) = namess
+}
 
-orit = Clone(master)
-
-ttt = Clone(master)
-
-
-
-namess = ttt$Get(function(x) if(x$isScar) x$name)
-namess = namess[!is.na(namess)]
-names(namess) = namess
 
 do_barplot = function(foc_pie, ct_colors, zeros = FALSE, horiz = FALSE){
  #names(ct_colors) = ctypes

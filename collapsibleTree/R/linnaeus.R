@@ -161,7 +161,6 @@ master <- Node$new('master', size=scarSize, fill=scar_color, Cell.type="NA")
 			scF3 = scarF$AddChild('scF3', size=scSize, fill=type2_color, Cell.type=type2)
 			scF4 = scarF$AddChild('scF4', size=scSize, fill=type2_color, Cell.type=type2)
 # TODO sort children to have symmetrical trees
-browser()
 	get_pieNode(master, ctypes=c(type1, type2))
 	if(return_widget){
 		widget_sc = collapsibleTree(master, collapsed = F, pieSummary=F, pieNode=F, ctypes=unique(master$Get("Cell.type")), nodeSize='size', fill="fill", ct_colors=c(type2_color,type1_color), width=width, height=height, sort_by_ctype = FALSE)
