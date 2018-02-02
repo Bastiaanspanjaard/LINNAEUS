@@ -255,7 +255,7 @@ HTMLWidgets.widget({
         return 1;
       })
       .style('stroke-dasharray', function(d) {
-       	return (d.data.main ? '1,0' : '2,3')
+       	return (JSON.parse(d.data.Main) ? '1,0' : '2,3')
       })
       .attr('d', function(d){
         var o = { x: source.x0, y: source.y0 }

@@ -109,9 +109,9 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
             }
     })  
   }
-  if("main" %in% df$fieldsAll){
+  if("Main" %in% df$fieldsAll){
 
-    jsonFields <- c(jsonFields, "main")
+    jsonFields <- c(jsonFields, "Main")
   
   }
 
