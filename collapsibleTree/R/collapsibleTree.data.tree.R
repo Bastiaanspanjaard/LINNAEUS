@@ -11,13 +11,14 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     				nodeSize_sc = 2, nodeLabel_sc = FALSE,
 				ct_colors = NULL, ctypes = NULL, sort_by_ctype = TRUE, 
 				nodeSize_class = c(   10, 15, 20, 35),
-				nodeSize_breaks = c( 0, 5, 20, 100, 1e6),
+				nodeSize_breaks = c( 0, 5, 20, 500, 1e6),
 				angle = 0,
 				hide_scars = FALSE,
 				pieSummary = TRUE,
 				pieNode = FALSE,  
 			# linnaeus test
 		 	use_scar_as_name = TRUE,
+			do_collapse = TRUE,
 				...) {
 
   # acceptable inherent node attributes
@@ -69,6 +70,7 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
     useColors = !is.null(ct_colors), 
     colors = ct_colors, 
     angle  = angle,
+    do_collapse = do_collapse, # toggle collapsible capabilities
     nodeLabel_sc = ifelse(is.null(nodeLabel_sc), TRUE, nodeLabel_sc )
   )
 
@@ -107,13 +109,22 @@ collapsibleTree.Node <- function(df, hierarchy_attribute = "level",
             }
     })  
   }
+  if("Main" %in% df$fieldsAll){
+
+    jsonFields <- c(jsonFields, "Main")
+  
+  }
 
   # linnaeus Test feature HideScarnames -> show them on tooltip
 	if(hide_scars){		
 		df = Clone(df)
 		tra  = data.tree::Traverse(df, 'level')
 		sapply(tra, function(x){
-			x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4>', ifelse(x$isScar, x$scar, x$Cell.type))
+# TODO determine a fixed expected node field list e.g. scar, name, is, Scar, etc.
+			x$scar = gsub("_", ".", x$name)
+			tot_scells = ifelse(!is.null(x$pieNode) ,sum(x$pieNode), x$SizeOfNode)	
+			x$tp <- sprintf('<h4 style="color: #2e6c80;">%s</h4><br><h4 style="color: #2e6c80;">n=%s/%s</h4>', 
+					ifelse(x$isScar, x$scar, x$Cell.type), tot_scells, x$SizeOfNode)
 			x$scar = x$name}
 		)
 		options$tooltip = TRUE

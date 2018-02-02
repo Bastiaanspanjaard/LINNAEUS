@@ -6,12 +6,11 @@
 \alias{collapsibleTree.data.frame}
 \alias{collapsibleTree.Node}
 \alias{get_pieNode}
-\alias{do_toy_example}
 \alias{pieProportions}
 \alias{do_color_map}
 \alias{SortNumeric}
 \alias{renameNode}
-\alias{linnaeus.defaults}
+\alias{do_toy_example}
 \title{Create Interactive Collapsible Tree Diagrams}
 \source{
 Christopher Gandrud: \url{http://christophergandrud.github.io/networkD3/}.
@@ -37,17 +36,13 @@ collapsibleTree(df, ..., inputId = NULL, attribute = "leafCount",
   collapsed = TRUE, zoomable = TRUE, width = NULL, height = NULL,
   nodeSize_sc = 2, nodeLabel_sc = FALSE, ct_colors = NULL,
   ctypes = NULL, sort_by_ctype = TRUE, nodeSize_class = c(10, 15, 20, 35),
-  nodeSize_breaks = c(0, 5, 20, 100, 1e+06), angle = 0,
+  nodeSize_breaks = c(0, 5, 20, 500, 1e+06), angle = 0,
   hide_scars = FALSE, pieSummary = TRUE, pieNode = FALSE,
-  use_scar_as_name = TRUE, ...)
+  use_scar_as_name = TRUE, do_collapse = TRUE, ...)
 
 get_pieNode(df, ctypes, nodeSize_class = c(10, 15, 20, 35),
   nodeSize_breaks = c(0, 5, 20, 100, 1e+06), nodeSize_sc = 2,
   jsonFields = NULL)
-
-do_toy_example(type1 = "type1", type2 = "type2", scar_color = "#aaaaaa",
-  type1_color = "#ff0000", type2_color = "#0000ff", scarSize = 6,
-  scSize = 2.5, width = 500, height = 500)
 
 pieProportions(node)
 
@@ -57,7 +52,9 @@ SortNumeric(node, attribute, ..., decreasing = FALSE, recursive = TRUE)
 
 renameNode(node)
 
-linnaeus.defaults(name)
+do_toy_example(type1 = "type1", type2 = "type2", scar_color = "#aaaaaa",
+  type1_color = "#ff0000", type2_color = "#0000ff", scarSize = 6,
+  scSize = 2.5, width = 500, height = 500)
 }
 \arguments{
 \item{df}{a \code{data.frame} from which to construct a nested list
@@ -138,6 +135,8 @@ where every node can be expanded and collapsed by clicking on it.
 Helper function for pieNode modality of a Linnaeus data.tree object
 
 Helper function to sort children by attribute, casting the given value to numeric
+
+Helper function for pieNode modality of a Linnaeus data.tree object
 }
 \examples{
 collapsibleTree(warpbreaks, c("wool", "tension", "breaks"))
