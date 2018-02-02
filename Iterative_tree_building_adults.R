@@ -911,9 +911,16 @@ rm(root.scars)
 
 tree.plot <- merge(tree.plot, node.count.cumulative.agg[, c("Node", "Main")],
                    by.x = "Child", by.y = "Node")
+if(sum(tree.plot$Parent == "0") > 1){
+  tree.plot <-
+    rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+                     fill = "black", size = 1, Main = T),
+          tree.plot)
+  tree.plot$Parent <- as.character(tree.plot$Parent)
+}
 
 # With
-if("Cell.type" %in% names(correct.cell.placement.main)){
+if("Cell.type" %in% names(correct.cell.placement)){
   cells.add <- correct.cell.placement[, c("Node", "Cell", "Cell.type")]
   
   # cells.add <- 
@@ -948,6 +955,37 @@ cells.add$Child <-
   )
 cells.add$Main <- T
 
+# Set thresholds to plot nodes - try plotting nodes >= 5 for main, > 10 for off-main
+# Note - has to hold for the full information plot as well, there we need to collapse
+# the scars as well (node sizes remain the same).
+main.min <- 10
+omain.min <- 20
+node.converter <- node.count.cumulative.agg
+
+node.converter$To <-
+  sapply(node.converter$Node,
+         function(x){
+           y <- unlist(strsplit(x, "_"))
+           return(paste(y[-length(y)], collapse = "_"))
+         }
+  )
+node.converter$Keep <-
+  ifelse(node.converter$Main, 
+         node.converter$Freq >= main.min,
+         node.converter$Freq >= omain.min)
+node.converter$To <- ifelse(node.converter$Keep, node.converter$Node, node.converter$To)
+
+if(sum(node.converter$To %in% c("0", node.converter$Node[node.converter$Keep])) < 
+   nrow(node.converter)){
+  print("Was not able to collapse small nodes")
+}
+
+# Shift cells
+cells.add <- merge(cells.add, node.converter[, c("Node", "To")],
+                     by.x = "Parent", by.y = "Node")
+cells.add$Parent <- cells.add$To
+cells.add <- cells.add[, -which(colnames(cells.add) == "To")]
+
 tree.plot.cells <- rbind(tree.plot, cells.add)
 
 # Visualize trees ####
@@ -974,11 +1012,12 @@ print("Visualization of full trees")
 ## With pie charts
 tree.plot.cells.scar.blind <- tree.plot.cells
 tree.plot.cells.scar.blind$Scar.acquisition <- ""
-tree.plot.cells.scar.blind <-
-  rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
-                   fill = "black", size = 1, Main = T),
-        tree.plot.cells.scar.blind)
-tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
+# tree.plot.cells.scar.blind <-
+#   rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+#                    fill = "black", size = 1, Main = T),
+#         tree.plot.cells.scar.blind)
+# tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
+
 
 LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
 # save(LINNAEUS.pie, file = "./Data/2017_10X_7/A5_Ltree_pie.Robj")
@@ -997,7 +1036,7 @@ LINNAEUS.pie.wg <-
 tree.plot.cells.all <- tree.plot.cells
 tree.plot.cells.all <-
   merge(tree.plot.cells,
-        node.count.cumulative.agg.main[, c("Node", "Freq")],
+        node.count.cumulative.agg[, c("Node", "Freq")],
         by.x = "Child", by.y = "Node", all.x = T)
 tree.plot.cells.all$Freq[is.na(tree.plot.cells.all$Freq)] <- ""
 tree.plot.cells.all$Scar.acquisition[tree.plot.cells.all$Freq != ""] <-
@@ -1006,7 +1045,7 @@ tree.plot.cells.all$Scar.acquisition[tree.plot.cells.all$Freq != ""] <-
         sep = "")
 tree.plot.cells.all <-
   rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
-                   fill = "black", size = 1, Freq = tree.statistics$Main[1]),
+                   fill = "black", size = 1, Freq = tree.statistics$Placeable[1], Main = T),
         tree.plot.cells.all)
 LINNAEUS.pie.all.info <- generate_tree(tree.plot.cells.all)
 LINNAEUS.pie.all.info.wg <-
