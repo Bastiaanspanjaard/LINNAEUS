@@ -12,9 +12,6 @@ library(data.tree)
 load('~/Dropbox/PJ/linnaeus_manuscript/collapsibleTrees/Trees/A7_Ltree_pie.Robj')
 
 
-col_pan = c(colorRampPalette(c("#003bff","#b7d6fe"))(10), colorRampPalette(c("#e00700","#fdb6b3"))(10))
-ct_pan = c(ctypes_endo, ctypes_exo)
-ctypes_exo = paste(linnaeus.colors_adult$Cell.type[f_zoom2], "pancreas", "exo")
 f_zoom2 = !is.na(linnaeus.colors_adult$zoom2)
 ctypes_exo = paste(linnaeus.colors_adult$Cell.type[f_zoom2], "pancreas", "exo")
 ctypes_endo = paste(linnaeus.colors_adult$Cell.type[f_zoom2], "pancreas", "endo")
