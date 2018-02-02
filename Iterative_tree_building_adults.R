@@ -30,9 +30,9 @@ min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.125 # Default 0.125, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
-max.scar.p <- 0.001
+max.scar.p <- 0.01
 # Maximum number of embryos a scar can be present in to include in tree building
-max.larvae <- 1
+max.larvae <- 10
 
 parameters <-
   data.frame(Doublet.rate = doublet.rate,
@@ -48,35 +48,42 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA larvae
-tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+# tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+# mRNA adults
+tsne.coord.in.1 <- 
+  read.csv("./Data/Adult_data/Adults567_brain_cells.csv",
+           stringsAsFactors = F)
+tsne.coord.in.1$Cell.type <-
+  paste(tsne.coord.in.1$Cell.type, "brain")
+tsne.coord.in.2 <- 
+  read.csv("./Data/Adult_data/Adults567_heart_cells.csv",
+           stringsAsFactors = F)
+tsne.coord.in.2$Cell.type <-
+  paste(tsne.coord.in.2$Cell.type, "heart")
+tsne.coord.in.3 <- 
+  read.csv("./Data/Adult_data/Adults567_pancreas_cells.csv",
+           stringsAsFactors = F)
+tsne.coord.in.3$Cell.type <-
+  paste(tsne.coord.in.3$Cell.type, "pancreas")
+tsne.coord.in <- rbind(tsne.coord.in.1, tsne.coord.in.2, tsne.coord.in.3)
+# Count total number of cells present even without scars
 # For Z2
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
-                            c("Cell", "Cluster", "Cell.type")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
+#                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster", "Cell.type")]
-# mRNA adults
-# tsne.coord.in.1 <- 
-#   read.csv("./Data/Adult_data/Adults567_brain_cells.csv",
-#            stringsAsFactors = F)
-# tsne.coord.in.1$Cell.type <-
-#   paste(tsne.coord.in.1$Cell.type, "brain")
-# tsne.coord.in.2 <- 
-#   read.csv("./Data/Adult_data/Adults567_heart_cells.csv",
-#            stringsAsFactors = F)
-# tsne.coord.in.2$Cell.type <-
-#   paste(tsne.coord.in.2$Cell.type, "heart")
-# tsne.coord.in.3 <- 
-#   read.csv("./Data/Adult_data/Adults567_pancreas_cells.csv",
-#            stringsAsFactors = F)
-# tsne.coord.in.3$Cell.type <-
-#   paste(tsne.coord.in.3$Cell.type, "pancreas")
-# tsne.coord.in <- rbind(tsne.coord.in.1, tsne.coord.in.2, tsne.coord.in.3)
-# Count total number of cells present even without scars
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster")]
 # For A5
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B5", "H5", "P5"),
 #                             c("Cell", "Cell.type")]
+# For A6
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B6", "H6", "P6"),
+c("Cell", "Cell.type")]
+# For A7
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("B7", "H7", "P7endo", "P7exo"),
+#                             c("Cell", "Cell.type")]
+
 # For (simulated) tree B
 # N <- 3000 #125 #
 N <- nrow(tsne.coord)
@@ -88,7 +95,7 @@ colnames(larvae.colors)[2] <- "Cell.type"
 adult.colors <- read.csv("./Data/color_table_adult-2.csv",
                          stringsAsFactors = F)
 adult.colors$Cell.type <-
-  paste(adult.colors$Cell.type, adult.colors$color)
+  paste(adult.colors$Cell.type, adult.colors$origin)
 
 # Scars
 scar.input <- 
@@ -96,7 +103,9 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/2017_10X_7/A5_scars_compared.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_6/A6_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2018_10X_1/A7_scars_compared.csv", stringsAsFactors = F)
+# read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
 # read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
@@ -863,11 +872,12 @@ if(root.scars != "Root"){
     sapply(root.add$Scar.acquisition,
            function(x) paste(unlist(strsplit(x, ","))[-1], collapse = ","))
   tree.plot <- rbind(root.add, tree.plot)
+  rm(root.add)
 }
 tree.plot$Cell.type <- "NA"
 tree.plot$fill <- "black"
 tree.plot$size <- 1
-rm(root.scars, root.add)
+rm(root.scars)
 
 # With
 if("Cell.type" %in% names(correct.cell.placement.main)){
@@ -926,19 +936,25 @@ print("Visualization of full trees")
 ## With pie charts
 tree.plot.cells.scar.blind <- tree.plot.cells
 tree.plot.cells.scar.blind$Scar.acquisition <- ""
+tree.plot.cells.scar.blind <-
+  rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+                   fill = "black", size = 1),
+        tree.plot.cells.scar.blind)
+tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
+
 LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
-# save(LINNAEUS.pie, file = "./Data/2018_10X_1/Z4_Ltree_pie.Robj")
+# save(LINNAEUS.pie, file = "./Data/2017_10X_6/A6_Ltree_pie.Robj")
 # Without cells
 LINNAEUS.pie.wg <-
   collapsibleTree(df = LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
                   pieSummary = T,collapsed = F,
-                  width = 600, height = 600,
-                  ctypes = larvae.colors$Cell.type,linkLength=50,
-                  ct_colors = larvae.colors$color, angle = pi/2,
+                  width = 500, height = 500,
+                  ctypes = adult.colors$Cell.type,linkLength=50,
+                  ct_colors = adult.colors$color, angle = pi/2,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2018_10X_1/tree_Z5_LINNAEUS_pie_scb.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_6/tree_A6_LINNAEUS_pie_scb.html")
 # Without cells but with all information
 tree.plot.cells.all <- tree.plot.cells
 tree.plot.cells.all <-
@@ -950,18 +966,22 @@ tree.plot.cells.all$Scar.acquisition[tree.plot.cells.all$Freq != ""] <-
   paste(tree.plot.cells.all$Scar.acquisition[tree.plot.cells.all$Freq != ""],
         ", N = ", tree.plot.cells.all$Freq[tree.plot.cells.all$Freq != ""],
         sep = "")
+tree.plot.cells.all <-
+  rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+                   fill = "black", size = 1, Freq = tree.statistics$Main[1]),
+        tree.plot.cells.all)
 LINNAEUS.pie.all.info <- generate_tree(tree.plot.cells.all)
 LINNAEUS.pie.all.info.wg <-
   collapsibleTree(LINNAEUS.pie.all.info, root = LINNAEUS.pie.all.info$scar,
                   pieNode = T,
                   pieSummary = T,collapsed = F,
                   width = 800, height = 600,
-                  ctypes = larvae.colors$Cell.type,
-                  ct_colors = larvae.colors$color,
+                  ctypes = adult.colors$Cell.type,
+                  ct_colors = adult.colors$color,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.all.info.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2018_10X_1/tree_Z5_LINNAEUS_pie_scb_info.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_6/tree_A6_LINNAEUS_pie_scb_info.html")
 
 # With cells
 # LINNAEUS.pie.all <- generate_tree(tree.plot.cells)
@@ -981,23 +1001,18 @@ print("Visualization of zoomed trees")
 parent.child.scarnodes <-
   tree.plot.cells.scar.blind[tree.plot.cells.scar.blind$Cell.type == "NA", ]
 
+# colors.zoom <- adult.colors[grepl("endocrine", adult.colors$Cell.type), ]
 useful.colors <- 
-  read.csv("~/Dropbox/scartrace manuscript/collapsibleTrees/colors/color_table_larva.csv", 
-           stringsAsFactors = F, sep = ";")[, -1]
+  read.csv("~/Dropbox/scartrace manuscript/collapsibleTrees/colors/color_table_adult.csv", 
+           stringsAsFactors = F, sep = ";")
 colnames(useful.colors)[2] <- "Cell.type"
-# lpm.colors <- read.csv("./Data/colors_lpm.csv", stringsAsFactors = F)
-# larvae.colors.zoom <- merge(larvae.colors.zoom[, 1:3], lpm.colors[, c(1:3, 4)])
-# colnames(larvae.colors.zoom)[4] <- "color"
+useful.colors$Cell.type <- paste(useful.colors$Cell.type, useful.colors$origin)
 
-zoom.to <- "Endoderm"
-if(zoom.to == "Endoderm"){
+zoom.to <- "Immune"
+if(zoom.to == "Immune"){
   colors.use <- useful.colors[, c("Cell.type", "zoom1", "color1")]
-}else if(zoom.to == "Neurectoderm"){
+}else if(zoom.to == "Endocrine"){
   colors.use <- useful.colors[, c("Cell.type", "zoom2", "color2")]
-}else if(zoom.to == "Neural crest"){
-  colors.use <- useful.colors[, c("Cell.type", "zoom3", "color3")]
-}else if(zoom.to == "Lateral plate mesoderm"){
-  colors.use <- useful.colors[, c("Cell.type", "zoom4", "color4")]
 }
 colors.use <- colors.use[complete.cases(colors.use), ]
 colnames(colors.use)[2:3] <- c("Order", "color")
@@ -1009,19 +1024,24 @@ zoom.nodes <-
                                              cell.types.mini])
 zoom.parents <-
   unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.nodes])
+repeat{
+zoom.parents.2 <-
+  unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.parents])
+if(length(zoom.parents) == length(unique(c(zoom.parents, zoom.parents.2)))){
+  rm(zoom.parents.2)
+  break}
+zoom.parents <- unique(c(zoom.parents, zoom.parents.2))
+}
 
-# larvae.colors.zoom <- larvae.colors[larvae.colors$layer == "Neural crest", ]
-# 
-# cell.types.mini <- larvae.colors.zoom$Cell.type
-# zoom.nodes <- 
-#   unique(tree.plot.cells.scar.blind$Parent[tree.plot.cells.scar.blind$Cell.type %in%
-#                                              cell.types.mini])
-# zoom.parents <-
-#   unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.nodes])
 
 zoom.siblings <- parent.child.scarnodes$Child[parent.child.scarnodes$Parent %in% zoom.parents]
+
 zoom.edges <- rbind(parent.child.scarnodes[parent.child.scarnodes$Child %in% zoom.siblings, ],
                     cells.add)
+zoom.edges <-
+  rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+                   fill = "black", size = 1),
+        zoom.edges)
 LINNAEUS.zoom <- generate_tree(zoom.edges)
 LINNAEUS.pie.zoom.wg <-
   collapsibleTree(LINNAEUS.zoom, root = LINNAEUS.pie$scar, pieNode = T,
@@ -1032,7 +1052,7 @@ LINNAEUS.pie.zoom.wg <-
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.zoom.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2018_10X_1/tree_Z4_LINNAEUS_pie_scb_endoderm.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_6/tree_A6_LINNAEUS_pie_scb_immune.html")
 sum(zoom.edges$Cell.type %in% cell.types.mini)
 
 colors.use$Cell.type <- 
@@ -1040,7 +1060,7 @@ colors.use$Cell.type <-
          levels = colors.use$Cell.type[order(colors.use$Order)])
 zoom.colors <- colors.use$color
 names(zoom.colors) <- colors.use$Cell.type
-# pdf("./Images/2018_10X_1/Lpm_zoom_colors.pdf",
+# pdf("./Images/2018_10X_1/Endocrine_zoom_colors.pdf",
 # width = 3, height = 2)
 ggplot(colors.use) +
   geom_tile(aes(x = "", y = Cell.type, fill = Cell.type)) +
@@ -1056,81 +1076,6 @@ ggplot(colors.use) +
 # dev.off()
 
 # Write parameters and statistics ####
-parst.output <- data.frame(Z4 = rbind(t(parameters), t(tree.statistics)))
-# write.csv(parst.output, "./Data/2018_10X_1/Z4_LINNAUS_par_stat.csv",
+parst.output <- data.frame(A6 = rbind(t(parameters), t(tree.statistics)))
+# write.csv(parst.output, "./Data/2017_10X_6/A6_LINNAUS_par_stat.csv",
 #           quote = F)
-
-
-# Calculate cell type enrichment per node ####
-# Does a cell type have more than expected cells in a node (> expected is per
-# ratio of the above node)
-calculate.node.enrichment <- function(node.counts, node.counts.agg){
-  e.calc <- 
-    merge(node.counts[, c("Node", "Cell.type", "Freq")],
-          node.count.cumulative.agg.main[, c("Node", "Freq")],
-          by = "Node")
-  colnames(e.calc)[3:4] <- c("Node.tc", "Node.total")
-  e.calc$Parent.node <-
-    sapply(e.calc$Node,
-           function(x) {
-             if(x == "0_1"){
-               return(NA)
-             }else{
-               y <- unlist(strsplit(x, "_"))
-               return(paste(y[-length(y)], collapse = "_"))
-             }
-           }
-    )
-  e.calc <- e.calc[complete.cases(e.calc), ]
-  e.calc <- merge(e.calc, node.counts[, c("Node", "Cell.type", "Freq")],
-                  by.x = c("Parent.node", "Cell.type"), by.y = c("Node", "Cell.type"))
-  colnames(e.calc)[6] <- "Parent.tc"
-  e.calc <- merge(e.calc, node.count.cumulative.agg.main[, c("Node", "Freq")],
-                  by.x = "Parent.node", by.y = "Node")
-  colnames(e.calc)[7] <- "Parent.total"
-  e.calc <- e.calc[, c("Cell.type", "Node", "Parent.node", "Node.tc", "Node.total",
-                       "Parent.tc", "Parent.total")]
-  e.calc$Binom.p <-
-    apply(e.calc[, c("Node.tc", "Node.total", "Parent.tc", "Parent.total")], 1,
-          function(x){
-            bt <- binom.test(x = x[1], n = x[2], p = x[3]/x[4], alternative = "greater")
-            return(bt$p.value)
-          }
-    )
-  e.calc$p.adj <- p.adjust(e.calc$Binom.p, method = "fdr")
-  
-}
-
-e.calc <- 
-  merge(node.count.cumulative.main[, c("Node", "Cell.type", "Freq")],
-        node.count.cumulative.agg.main[, c("Node", "Freq")],
-        by = "Node")
-colnames(e.calc)[3:4] <- c("Node.tc", "Node.total")
-e.calc$Parent.node <-
-  sapply(e.calc$Node,
-         function(x) {
-           if(x == "0_1"){
-             return(NA)
-           }else{
-             y <- unlist(strsplit(x, "_"))
-             return(paste(y[-length(y)], collapse = "_"))
-           }
-         }
-  )
-e.calc <- e.calc[complete.cases(e.calc), ]
-e.calc <- merge(e.calc, node.count.cumulative.main[, c("Node", "Cell.type", "Freq")],
-                by.x = c("Parent.node", "Cell.type"), by.y = c("Node", "Cell.type"))
-colnames(e.calc)[6] <- "Parent.tc"
-e.calc <- merge(e.calc, node.count.cumulative.agg.main[, c("Node", "Freq")],
-                by.x = "Parent.node", by.y = "Node")
-colnames(e.calc)[7] <- "Parent.total"
-e.calc <- e.calc[, c("Cell.type", "Node", "Parent.node", "Node.tc", "Node.total",
-                     "Parent.tc", "Parent.total")]
-e.calc$Binom.p <-
-  apply(e.calc[, c("Node.tc", "Node.total", "Parent.tc", "Parent.total")], 1,
-        function(x){
-          bt <- binom.test(x = x[1], n = x[2], p = x[3]/x[4], alternative = "greater")
-          return(bt$p.value)
-        }
-  )
-e.calc$p.adj <- p.adjust(e.calc$Binom.p, method = "fdr")
