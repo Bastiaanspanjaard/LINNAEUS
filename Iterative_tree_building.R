@@ -24,7 +24,7 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
 # Fraction of doublets expected.
-doublet.rate <- 0.2 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
@@ -56,12 +56,12 @@ tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
 #                             c("Cell", "Cluster", "Cell.type")]
 # For Z3
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L3",
-#                             c("Cell", "Cluster", "Cell.type")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L3",
+                            c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster", "Cell.type")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster", "Cell.type")]
 # mRNA adults
 # tsne.coord.in.1 <- 
 #   read.csv("./Data/Adult_data/Adults567_brain_cells.csv",
@@ -104,12 +104,12 @@ scar.input <-
   # read.csv("./Data/2017_10X_1/Z1_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L1", scar.input$Barcode, sep = "_")
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_2/Z3_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z3_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L3", scar.input$Barcode, sep = "_")
 # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
-read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-scar.input$Cell <- paste("L5", scar.input$Barcode, sep = "_")
+# read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+# scar.input$Cell <- paste("L5", scar.input$Barcode, sep = "_")
 
 scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
                     tsne.coord)
