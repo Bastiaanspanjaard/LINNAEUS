@@ -24,15 +24,15 @@ source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
 
 # Parameters ####
 # Fraction of doublets expected.
-doublet.rate <- 0.1 # Default is 0.1, set to 0 to turn off.
+doublet.rate <- 0.2 # Default is 0.1, set to 0 to turn off.
 # The minimum detection rate for a scar to be considered as top scar.
 min.detection.rate <- 0.05 # Default value is 0.05
 # Minimum cell number ratio between branches.
 branch.size.ratio <- 0.125 # Default 0.125, set to 0 to turn off
 # Maximum scar probability to include scar in tree building
-max.scar.p <- 0.01
+max.scar.p <- 0.001
 # Maximum number of embryos a scar can be present in to include in tree building
-max.larvae <- 10
+max.larvae <- 1
 
 parameters <-
   data.frame(Doublet.rate = doublet.rate,
@@ -50,15 +50,18 @@ print("Loading data")
 # mRNA larvae
 tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
 # For Z1
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L1",
-                            c("Cell", "Cluster", "Cell.type")]
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L1",
+#                             c("Cell", "Cluster", "Cell.type")]
 # For Z2
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
+#                             c("Cell", "Cluster", "Cell.type")]
+# For Z3
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L3",
 #                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster", "Cell.type")]
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L5", c("Cell", "Cluster", "Cell.type")]
 # mRNA adults
 # tsne.coord.in.1 <- 
 #   read.csv("./Data/Adult_data/Adults567_brain_cells.csv",
@@ -98,13 +101,15 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_C2_100cellsout_detection03.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d0_wweakint.csv")
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
-  read.csv("./Data/2017_10X_1/Z1_scars_compared.csv", stringsAsFactors = F)
-scar.input$Cell <- paste("L1", scar.input$Barcode, sep = "_")
+  # read.csv("./Data/2017_10X_1/Z1_scars_compared.csv", stringsAsFactors = F)
+# scar.input$Cell <- paste("L1", scar.input$Barcode, sep = "_")
   # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
-  # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_2/Z3_scars_compared.csv", stringsAsFactors = F)
+# scar.input$Cell <- paste("L3", scar.input$Barcode, sep = "_")
+# read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
-# read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
-# scar.input$Cell <- paste("L5", scar.input$Barcode, sep = "_")
+read.csv("./Data/2017_10X_10_CR/Z5_scars_compared.csv", stringsAsFactors = F)
+scar.input$Cell <- paste("L5", scar.input$Barcode, sep = "_")
 
 scar.input <- merge(scar.input[, c("Cell", "Scar", "Presence", "p")],
                     tsne.coord)
@@ -874,28 +879,32 @@ print("Visualization of full trees")
 #                 collapsed = F, ctypes=unique(LINNAEUS.with$Get("Cell.types")))
 
 ## With pie charts
+tree.plot.cells <- 
+  make.edgelist(tree.summary.collapse, node.count.cumulative.agg,
+                correct.cell.placement, main.min = 5, off.main.min = 50)
+
 tree.plot.cells.scar.blind <- tree.plot.cells
 tree.plot.cells.scar.blind$Scar.acquisition <- ""
-if(sum(tree.plot.cells.scar.blind$Parent == "0") > 1){
-  tree.plot.cells.scar.blind <-
-    rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
-                     fill = "black", size = 1),
-          tree.plot.cells.scar.blind)
-  tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
-}
+# if(sum(tree.plot.cells.scar.blind$Parent == "0") > 1){
+#   tree.plot.cells.scar.blind <-
+#     rbind(data.frame(Child = 0, Scar.acquisition = "", Parent = "Root", Cell.type = "NA",
+#                      fill = "black", size = 1),
+#           tree.plot.cells.scar.blind)
+#   tree.plot.cells.scar.blind$Parent <- as.character(tree.plot.cells.scar.blind$Parent)
+# }
 LINNAEUS.pie <- generate_tree(tree.plot.cells.scar.blind)
-# save(LINNAEUS.pie, file = "./Data/2018_10X_1/Z4_Ltree_pie.Robj")
+# save(LINNAEUS.pie, file = "~/Dropbox/scartrace manuscript/collapsibleTrees/Trees/Z5_Ltree_pie.Robj")
 # Without cells
 LINNAEUS.pie.wg <-
   collapsibleTree(df = LINNAEUS.pie, root = LINNAEUS.pie$scar, pieNode = T,
                   pieSummary = T,collapsed = F,
-                  width = 600, height = 600,
+                  width = 600, height = 500,
                   ctypes = larvae.colors$Cell.type,linkLength=50,
                   ct_colors = larvae.colors$color, angle = pi/2,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2018_10X_1/tree_Z5_LINNAEUS_pie_scb.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_10/tree_Z5_LINNAEUS_pie_scb.html")
 # Without cells but with all information
 tree.plot.cells.all <- tree.plot.cells
 tree.plot.cells.all <-
@@ -918,7 +927,7 @@ LINNAEUS.pie.all.info.wg <-
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
 # htmlwidgets::saveWidget(
 #   LINNAEUS.pie.all.info.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2018_10X_1/tree_Z5_LINNAEUS_pie_scb_info.html")
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_10/tree_Z5_LINNAEUS_pie_scb_info.html")
 
 # With cells
 # LINNAEUS.pie.all <- generate_tree(tree.plot.cells)
@@ -942,11 +951,8 @@ useful.colors <-
   read.csv("~/Dropbox/scartrace manuscript/collapsibleTrees/colors/color_table_larva.csv", 
            stringsAsFactors = F, sep = ";")[, -1]
 colnames(useful.colors)[2] <- "Cell.type"
-# lpm.colors <- read.csv("./Data/colors_lpm.csv", stringsAsFactors = F)
-# larvae.colors.zoom <- merge(larvae.colors.zoom[, 1:3], lpm.colors[, c(1:3, 4)])
-# colnames(larvae.colors.zoom)[4] <- "color"
 
-zoom.to <- "Endoderm"
+zoom.to <- "Neurectoderm"
 if(zoom.to == "Endoderm"){
   colors.use <- useful.colors[, c("Cell.type", "zoom1", "color1")]
 }else if(zoom.to == "Neurectoderm"){
@@ -966,6 +972,27 @@ zoom.nodes <-
                                              cell.types.mini])
 zoom.parents <-
   unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.nodes])
+repeat{
+  zoom.parents.2 <-
+    unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.parents])
+  if(length(zoom.parents) == length(unique(c(zoom.parents, zoom.parents.2)))){
+    rm(zoom.parents.2)
+    break}
+  zoom.parents <- unique(c(zoom.parents, zoom.parents.2))
+}
+zoom.siblings <- parent.child.scarnodes$Child[parent.child.scarnodes$Parent %in% zoom.parents]
+
+zoom.edges <- make.edgelist(tree.summary.collapse, node.count.cumulative.agg, 
+                            correct.cell.placement,
+                            main.min = 5, off.main.min = 50)
+zoom.edges <- zoom.edges[zoom.edges$Cell.type != "NA" | zoom.edges$Child %in% zoom.siblings, ]
+zoom.edges$Scar.acquisition <- ""
+
+# zoom.nodes <- 
+#   unique(tree.plot.cells.scar.blind$Parent[tree.plot.cells.scar.blind$Cell.type %in%
+#                                              cell.types.mini])
+# zoom.parents <-
+#   unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.nodes])
 
 # larvae.colors.zoom <- larvae.colors[larvae.colors$layer == "Neural crest", ]
 # 
@@ -976,9 +1003,9 @@ zoom.parents <-
 # zoom.parents <-
 #   unique(parent.child.scarnodes$Parent[parent.child.scarnodes$Child %in%zoom.nodes])
 
-zoom.siblings <- parent.child.scarnodes$Child[parent.child.scarnodes$Parent %in% zoom.parents]
-zoom.edges <- rbind(parent.child.scarnodes[parent.child.scarnodes$Child %in% zoom.siblings, ],
-                    cells.add)
+# zoom.siblings <- parent.child.scarnodes$Child[parent.child.scarnodes$Parent %in% zoom.parents]
+# zoom.edges <- rbind(parent.child.scarnodes[parent.child.scarnodes$Child %in% zoom.siblings, ],
+#                     cells.add)
 LINNAEUS.zoom <- generate_tree(zoom.edges)
 LINNAEUS.pie.zoom.wg <-
   collapsibleTree(LINNAEUS.zoom, root = LINNAEUS.pie$scar, pieNode = T,
@@ -987,9 +1014,9 @@ LINNAEUS.pie.zoom.wg <-
                   ctypes = colors.use$Cell.type, angle = pi/2,
                   ct_colors = colors.use$color,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
-# htmlwidgets::saveWidget(
-#   LINNAEUS.pie.zoom.wg,
-#   file = "~/Documents/Projects/TOMO_scar/Images/2018_10X_1/tree_Z4_LINNAEUS_pie_scb_endoderm.html")
+htmlwidgets::saveWidget(
+  LINNAEUS.pie.zoom.wg,
+  file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_10/tree_Z5_LINNAEUS_pie_scb_lpm.html")
 sum(zoom.edges$Cell.type %in% cell.types.mini)
 
 colors.use$Cell.type <- 
@@ -997,7 +1024,7 @@ colors.use$Cell.type <-
          levels = colors.use$Cell.type[order(colors.use$Order)])
 zoom.colors <- colors.use$color
 names(zoom.colors) <- colors.use$Cell.type
-# pdf("./Images/2018_10X_1/Lpm_zoom_colors.pdf",
+# pdf("./Images/neural_crest_neurons_zoom_colors.pdf",
 # width = 3, height = 2)
 ggplot(colors.use) +
   geom_tile(aes(x = "", y = Cell.type, fill = Cell.type)) +
@@ -1013,9 +1040,122 @@ ggplot(colors.use) +
 # dev.off()
 
 # Write parameters and statistics ####
-parst.output <- data.frame(Z1 = rbind(t(parameters), t(tree.statistics)))
-# write.csv(parst.output, "./Data/2018_10X_1/Z4_LINNAUS_par_stat.csv",
+parst.output <- data.frame(Z5 = rbind(t(parameters), t(tree.statistics)))
+# write.csv(parst.output, "./Data/2017_10X_10/Z5_LINNAUS_par_stat.csv",
 #           quote = F)
+
+# Determine inferred scars ####
+# Create scar-cell matrix with observed values (1), inferred values (0.5),
+# and unobserved and uninferred values (0).
+# Start with the cells, their scars and their position in the tree
+observed.tree.scars <- merge(cells.in.tree[, c("Cell", "Scar")],
+                             correct.cell.placement[,
+                                                c("Cell", "Node")])
+# observed.tree.scars <- merge(cells.in.tree[, c("Cell", "Scar")],
+#                              cell.tree.position[complete.cases(cell.tree.position),
+#                                                 c("Cell", "Node")])
+observed.tree.scars$Observed <- T
+# Determine the full parent child structure of the tree.
+full.parent.child <- data.frame(Child = character(),
+                                Parent = character())
+# c.node <- unique(tree.summary.collapse$Node)[1]
+for(c.node in c("0", unique(tree.summary.collapse$Node))){
+  c.children <-
+    unique(tree.summary.collapse$Node[grep(paste(c.node, "_", sep = ""),
+                                           tree.summary.collapse$Node)])
+  parent.child.add <- data.frame(Child = c.children,
+                                 Parent = rep(c.node, length(c.children)))
+  full.parent.child <- rbind(full.parent.child, parent.child.add)
+}
+# for(c.node in unique(scar.tree.final$Nodes$Node)){
+#   c.children <-
+#     unique(scar.tree.final$Nodes$Node[grep(paste(c.node, "_", sep = ""),
+#                                            scar.tree.final$Nodes$Node)])
+#   parent.child.add <- data.frame(Child = c.children,
+#                                  Parent = rep(c.node, length(c.children)))
+#   full.parent.child <- rbind(full.parent.child, parent.child.add)
+# }
+
+# Determine which scars are inferred for each cell, based on their position.
+# Note that a position can include multiple scars.
+# This will include upstream scars that were actually observed.
+tree.summary.nn <- data.frame(Node.2 = character(), Node = character())
+for(i in 1:nrow(tree.summary.collapse)){
+  # ts.row <- tree.summary.collapse[i, c("Node.2", "Node")]
+  if(grepl(",", tree.summary.collapse$Node.2[i])){
+    scars <- unlist(strsplit(tree.summary.collapse$Node.2[i], ","))
+    ts.add <- data.frame(Node.2 = scars,
+                         Node = tree.summary.collapse$Node[i])
+  }else{
+    ts.add <- tree.summary.collapse[i, c("Node.2", "Node")]
+  }
+  tree.summary.nn <- rbind(tree.summary.nn, ts.add)
+}
+inferred.tree.scars.1 <-
+  merge(correct.cell.placement[, c("Cell", "Node")], full.parent.child,
+        by.x = "Node", by.y = "Child")
+# Determine both scars inferred through parents and through own node.
+inferred.tree.scars.node <-
+  unique(merge(inferred.tree.scars.1[, c("Node", "Cell")], 
+               tree.summary.nn[, c("Node.2", "Node")]))
+colnames(inferred.tree.scars.node)[3] <- "Scar"
+inferred.tree.scars.parent <-
+  merge(inferred.tree.scars.1, tree.summary.nn[, c("Node.2", "Node")],
+        by.x = "Parent", by.y = "Node")
+inferred.tree.scars.parent <- inferred.tree.scars.parent[, -1]
+colnames(inferred.tree.scars.parent)[3] <- "Scar"
+inferred.tree.scars <- 
+  unique(rbind(inferred.tree.scars.node, inferred.tree.scars.parent))
+inferred.tree.scars$Inferred <- T
+# inferred.tree.scars <-
+#   merge(cell.tree.position[, c("Cell", "Node")], full.parent.child,
+#         by.x = "Node", by.y = "Child")
+# inferred.tree.scars <-
+#   merge(inferred.tree.scars, scar.tree.final$Nodes,
+#         by.x = "Parent", by.y = "Node")
+# inferred.tree.scars$Inferred <- T
+# 
+# # Combine the observed and the inferred scars per cell.
+obsinf.per.cell <- data.frame(table(observed.tree.scars$Cell))
+colnames(obsinf.per.cell) <- c("Cell", "Observed")
+# 
+oi.tree.scars <- merge(observed.tree.scars[, c("Cell", "Scar", "Observed")],
+                       inferred.tree.scars[, c("Cell", "Scar", "Inferred")],
+                       all = T)
+oi.tree.scars$Observed[is.na(oi.tree.scars$Observed)] <- F
+oi.tree.scars$Inferred[is.na(oi.tree.scars$Inferred)] <- F
+oi.tree.scars$Needed.inferring <- !(oi.tree.scars$Observed)
+inf.per.cell <- aggregate(oi.tree.scars$Needed.inferring,
+                          by = list(Cell = oi.tree.scars$Cell),
+                          sum)
+colnames(inf.per.cell)[2] <- "Inferred"
+obsinf.per.cell <- merge(obsinf.per.cell, inf.per.cell)
+obsinf.per.cell$Total <- obsinf.per.cell$Observed + obsinf.per.cell$Inferred
+obsinf.per.cell <- obsinf.per.cell[order(-obsinf.per.cell$Total, -obsinf.per.cell$Observed), ]
+obsinf.per.cell$Cell.order <- 1:nrow(obsinf.per.cell)
+
+
+# obsinf.per.cell$Missing <- this.depth - obsinf.per.cell$Observed - obsinf.per.cell$Inferred
+# obsinf.per.cell <- obsinf.per.cell[order(obsinf.per.cell$Missing, -obsinf.per.cell$Observed), ]
+# obsinf.per.cell$Cell.order <- 1:nrow(obsinf.per.cell)
+# 
+# # Plot amount of observed, inferred and missing per cell
+obsinf.melt <- melt(obsinf.per.cell[, c(2, 3, 5)], id.vars = "Cell.order")
+colnames(obsinf.melt)[2:3] <- c("Type", "Scars")
+obsinf.melt$Type <- factor(obsinf.melt$Type,
+                           levels =c("Inferred", "Observed"))
+# png("./Images/2017_10X_10/Z5_inferred_scars_LINNAEUS.png",
+#     width = 5, height = 3, units = "in",
+#     res = 300)
+ggplot(obsinf.melt) +
+  geom_bar(stat = "identity", width = 1,
+           aes(x = Cell.order, y = Scars, fill = Type)) +
+  scale_fill_manual(values = c("yellow", "red")) +
+  labs(x = "", fill = "") +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.grid.major.x = element_blank())
+# dev.off()
 
 
 # Calculate cell type enrichment per node ####
@@ -1023,5 +1163,5 @@ parst.output <- data.frame(Z1 = rbind(t(parameters), t(tree.statistics)))
 # ratio of the above node). Maybe improve function output to include ratio
 # observed/expected instead of all the raw numbers? Or at least change the
 # column ordering.
-e.calc <- calculate.node.enrichment(node.counts = node.count.cumulative.main,
-                                      node.counts.agg = node.count.cumulative.agg.main)
+# e.calc <- calculate.node.enrichment(node.counts = node.count.cumulative.main,
+                                      # node.counts.agg = node.count.cumulative.agg.main)
