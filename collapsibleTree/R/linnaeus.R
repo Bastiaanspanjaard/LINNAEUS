@@ -121,6 +121,12 @@ linnaeus.sets = function(setname='adult'){
 #write.table(color_larvea, file='src/linnaeus-scripts/collapsibleTree/inst/extdata/colors_larvae.txt', quote=F, sep='\t', row.names=F)
 }
 
+#' Function to generate a list containing cached instances of different trees and parameters.
+#' @param df data.tree object to compute cell type counts. Requires Cell.type field
+#' @rdname collapsibleTree
+#' @export 
+
+
 
 #' @rdname collapsibleTree
 #' @export 

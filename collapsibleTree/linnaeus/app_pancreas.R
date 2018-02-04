@@ -19,7 +19,8 @@ sapply(t, function(x){if(grepl("endo", x$name)){x$Cell.type = paste(x$Cell.type,
 sapply(t, function(x){if(grepl("exo", x$name)){x$Cell.type = paste(x$Cell.type, "exo")}})
 
 get_pieNode(orit, ctypes=ctypes)
-ttt = Clone(orit$nd0_27$nd0_27_1)
+#ttt = Clone(orit$nd0_27$nd0_27_1)
+ttt = Clone(orit)
 
 namess = ttt$Get(function(x) if(x$isScar) x$name)
 namess = namess[!is.na(namess)]
