@@ -952,7 +952,7 @@ useful.colors <-
            stringsAsFactors = F, sep = ";")[, -1]
 colnames(useful.colors)[2] <- "Cell.type"
 
-zoom.to <- "Neurectoderm"
+zoom.to <- "Lateral plate mesoderm"
 if(zoom.to == "Endoderm"){
   colors.use <- useful.colors[, c("Cell.type", "zoom1", "color1")]
 }else if(zoom.to == "Neurectoderm"){
@@ -1014,9 +1014,9 @@ LINNAEUS.pie.zoom.wg <-
                   ctypes = colors.use$Cell.type, angle = pi/2,
                   ct_colors = colors.use$color,
                   nodeSize_class = c(10, 20, 35), nodeSize_breaks = c(0, 50, 1000, 1e6))
-htmlwidgets::saveWidget(
-  LINNAEUS.pie.zoom.wg,
-  file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_10/tree_Z5_LINNAEUS_pie_scb_lpm.html")
+# htmlwidgets::saveWidget(
+#   LINNAEUS.pie.zoom.wg,
+#   file = "~/Documents/Projects/TOMO_scar/Images/2017_10X_10/tree_Z5_LINNAEUS_pie_scb_lpm.html")
 sum(zoom.edges$Cell.type %in% cell.types.mini)
 
 colors.use$Cell.type <- 
