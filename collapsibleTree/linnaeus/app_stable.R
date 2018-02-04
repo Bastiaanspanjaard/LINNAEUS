@@ -13,7 +13,8 @@ if(FALSE){master = do_toy_example()
 	namess = ttt$Get(function(x) if(x$isScar) x$name)
 	namess = namess[!is.na(namess)]
 	names(namess) = namess
-	}
+}
+
 
 do_barplot = function(foc_pie, ct_colors, zeros = FALSE, horiz = FALSE){
  #names(ct_colors) = ctypes
