@@ -2,7 +2,7 @@ library(shiny)
 library(collapsibleTree)
 library(data.tree)
 
-#source('linnaeus/app_pancreas.R')
+# source('./Scripts/linnaeus-scripts/collapsibleTree/linnaeus/app_pancreas.R')
 #source('linnaeus/app_neural_larva.R')
 
 if(FALSE){master = do_toy_example()

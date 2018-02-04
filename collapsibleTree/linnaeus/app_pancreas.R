@@ -1,5 +1,6 @@
 #load('src/linnaeus-scripts/collapsibleTree/sand/Z2_Ltree_pie.Robj')
-load('~/Dropbox/PJ/linnaeus_manuscript/collapsibleTrees/Trees/A7_Ltree_pie.Robj')
+# load('~/Dropbox/PJ/linnaeus_manuscript/collapsibleTrees/Trees/A7_Ltree_pie.Robj')
+load('~/Dropbox/scartrace manuscript/collapsibleTrees/Trees/A7_Ltree_pie.Robj')
 
 f_zoom2 = !is.na(linnaeus.colors_adult$zoom2)
 ctypes_exo = paste(linnaeus.colors_adult$Cell.type[f_zoom2], "pancreas", "exo")
