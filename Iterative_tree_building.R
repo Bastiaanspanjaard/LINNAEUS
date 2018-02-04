@@ -53,11 +53,11 @@ tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L1",
 #                             c("Cell", "Cluster", "Cell.type")]
 # For Z2
-# tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
-#                             c("Cell", "Cluster", "Cell.type")]
-# For Z3
-tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L3",
+tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
                             c("Cell", "Cluster", "Cell.type")]
+# For Z3
+# tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L3",
+#                             c("Cell", "Cluster", "Cell.type")]
 # For Z4
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L4", c("Cell", "Cluster", "Cell.type")]
 # For Z5
@@ -103,8 +103,8 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/2017_10X_1/Z1_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L1", scar.input$Barcode, sep = "_")
-  # read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
-  read.csv("./Data/2017_10X_2/Z3_scars_compared.csv", stringsAsFactors = F)
+  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  # read.csv("./Data/2017_10X_2/Z3_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L3", scar.input$Barcode, sep = "_")
 # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L4", scar.input$Barcode, sep = "_")
@@ -1163,5 +1163,5 @@ ggplot(obsinf.melt) +
 # ratio of the above node). Maybe improve function output to include ratio
 # observed/expected instead of all the raw numbers? Or at least change the
 # column ordering.
-# e.calc <- calculate.node.enrichment(node.counts = node.count.cumulative.main,
-                                      # node.counts.agg = node.count.cumulative.agg.main)
+# e.calc <- calculate.node.enrichment(node.counts = node.count.cumulative,
+#                                     node.counts.agg = node.count.cumulative.agg)

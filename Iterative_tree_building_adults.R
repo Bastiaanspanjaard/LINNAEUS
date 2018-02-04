@@ -106,6 +106,10 @@ adult.colors$Cell.type[adult.colors$Cell.type == "sst1.1 expressing cells"] <-
   "sst1.1 cells"
 adult.colors$Cell.type <-
   paste(adult.colors$Cell.type, adult.colors$origin)
+# write.table(adult.colors$Cell.type, file = "./Data/Adult_data/adult_full_ctypes.txt",
+#             quote = F, col.names = F, row.names = F)
+# write.table(adult.colors$color, file = "./Data/Adult_data/adult_full_ct_colors.txt",
+#             quote = F, col.names = F, row.names = F)
 
 # Scars
 scar.input <- 
@@ -978,7 +982,7 @@ useful.colors <-
 colnames(useful.colors)[2] <- "Cell.type"
 useful.colors$Cell.type <- paste(useful.colors$Cell.type, useful.colors$origin)
 
-zoom.to <- "Heart"
+zoom.to <- "abd"
 if(zoom.to == "Immune"){
   colors.use <- useful.colors[, c("Cell.type", "zoom1", "color1")]
 }else if(zoom.to == "Endocrine"){
@@ -991,6 +995,10 @@ if(zoom.to == "Immune"){
 colors.use <- colors.use[complete.cases(colors.use), ]
 colnames(colors.use)[2:3] <- c("Order", "color")
 colors.use <- colors.use[order(colors.use$Order), ]
+# write.table(colors.use$Cell.type, file = "./Data/Adult_data/adult_abd_ctypes.txt",
+#             quote = F, col.names = F, row.names = F)
+# write.table(colors.use$color, file = "./Data/Adult_data/adult_abd_ct_colors.txt",
+#             quote = F, col.names = F, row.names = F)
 
 cell.types.mini <- colors.use$Cell.type
 

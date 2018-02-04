@@ -285,7 +285,7 @@ ggplot() +
 # dev.off()
 
 # maximum.scars <- read.csv("./Data/2017_10X_2/Z2_max_scars_7Larvae.csv",
-                          # stringsAsFactors =F)
+# stringsAsFactors =F)
 cell.scar.count <- merge(cell.scar.count, maximum.scars)
 
 cells.too.many.scars <- 

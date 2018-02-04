@@ -206,11 +206,15 @@ enr.hclust.dg <- as.dendrogram(enr.hclust)
 my_palette <- colorRampPalette(c("blue", "white", "red"))(n = 49)
 my_palette <- c(rep("Blue", 125), my_palette, rep("Red", 125))
 
+# larvae.colors.2 <- larvae.colors[larvae.colors$Cell.type %in% colnames(type.connection.heat), ]
+# sidecolors <- larvae.colors.2$color
+# names(sidecolors) <- larvae.colors.2$Cell.type
+
 # pdf("./Images/2017_10X_10/Z4_scar_enrichment_heatmap_binom_av_hclust_figure_resub.pdf",
 #            width = 8, height = 5)
 gplots::heatmap.2(type.connection.heat, dendrogram = "column", #keysize = 0.3, 
                   Rowv = enr.hclust.dg, Colv = enr.hclust.dg,
                   trace = "none", labCol = "",#key = T, 
                   col = my_palette, margins = c(1, 12),
-                  cexRow = 0.5)
+                  cexRow = 0.5) #, RowSideColors = sidecolors)
 # dev.off()
