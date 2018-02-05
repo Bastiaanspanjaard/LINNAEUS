@@ -134,12 +134,12 @@ sum(scars.A7 %in% unique.scars.nowt$Scar[unique.scars.nowt$Presence == 1])
 
 # Create Venn diagram ####
 require(VennDiagram)
-venn.fill <- RColorBrewer::brewer.pal(5, "Set1")
-# venn.diagram(list(Z1 = scars.Z1, Z2 = scars.Z2, Z3 = scars.Z3, Z4 = scars.Z4,
-#                   Z5 = scars.Z5),
-#              filename = "./Images/Z12345_scar_venn.png",
-#              fontfamily = "sans", main.fontfamily = "sans",
-#              imagetype = "png", fill = venn.fill)
+venn.fill <- RColorBrewer::brewer.pal(3, "Set1")
+venn.diagram(list(Z2 = scars.Z2, ZZ4 = scars.Z4, #Z1 = scars.Z1, 3 = scars.Z3, 
+                  Z5 = scars.Z5),
+             filename = "./Images/Z245_scar_venn.png",
+             fontfamily = "sans", main.fontfamily = "sans",
+             imagetype = "png", fill = venn.fill)
 
 # Write output ####
 Z1.scars.compared <- 

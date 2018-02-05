@@ -1,0 +1,1 @@
+/local/general-scripts/scar_CIGAR_bulk.pl -R1=/local/Bo/7th_sequencing_run/Data/Bo/Bulk_DNA_1_S10_R2_001.fastq -R2=/local/Bo/7th_sequencing_run/Data/Bo/Bulk_DNA_1_S10_R1_001.fastq -op=Bulk_DNA_1 -t=10 -r=/local/gene_models/lintrace_hGFP_RFP_ERCC92.fa -bc=/local/Bo/bulkbarcodes.csv -g=RFP -k=100 -l=100 -ps=CACCTCCCACAACGAGGAC
