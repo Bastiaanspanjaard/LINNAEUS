@@ -48,7 +48,7 @@ number.scars <- NA
 # Load data ####
 print("Loading data")
 # mRNA larvae
-tsne.coord.in <- read.csv("./Data/Larvae_data/Larvae_Seurat_batch_r_out_cells_2.csv")
+tsne.coord.in <- read.csv("Larvae_Seurat_batch_r_out_cells_2.csv")
 # For Z1
 # tsne.coord <- tsne.coord.in[tsne.coord.in$Library == "L1",
 #                             c("Cell", "Cluster", "Cell.type")]
@@ -88,10 +88,10 @@ tsne.coord <- tsne.coord.in[tsne.coord.in$Library %in% c("L21", "L22"),
 N <- nrow(tsne.coord)
 
 # Cell type colors
-larvae.colors <- read.csv("./Data/color_table_larvae.csv",
+larvae.colors <- read.csv("color_table_larvae.csv",
                           stringsAsFactors = F)
 colnames(larvae.colors)[2] <- "Cell.type"
-adult.colors <- read.csv("./Data/color_table_adult-2.csv",
+adult.colors <- read.csv("color_table_adult-2.csv",
                          stringsAsFactors = F)
 adult.colors$Cell.type <-
   paste(adult.colors$Cell.type, adult.colors$color)
@@ -948,7 +948,7 @@ parent.child.scarnodes <-
   tree.plot.cells.scar.blind[tree.plot.cells.scar.blind$Cell.type == "NA", ]
 
 useful.colors <- 
-  read.csv("~/Dropbox/scartrace manuscript/collapsibleTrees/colors/color_table_larva.csv", 
+  read.csv("color_table_larva.csv", 
            stringsAsFactors = F, sep = ";")[, -1]
 colnames(useful.colors)[2] <- "Cell.type"
 
