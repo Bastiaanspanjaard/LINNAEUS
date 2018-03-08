@@ -6,6 +6,7 @@ LINNAEUS is a single-cell organism wide lineage tracing method relying on CRISPR
 
 # Script description
 A brief description of all scripts in the repository, ordered by folder.
+
 * R_scripts
 * collapsibleTree - a (with author permission) modified version of the [collapsibleTree](https://cran.r-project.org/web/packages/collapsibleTree/index.html) package. Install locally using devtools: ```install_local("./Scripts/LINNAEUS/collapsibleTree/")```.
 * library_scar_filtering
