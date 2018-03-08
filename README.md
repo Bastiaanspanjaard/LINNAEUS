@@ -7,7 +7,15 @@ A description of the full tree-building workflow, starting from sequenced scars 
 1. __Extract scars.__ Run the extract_scar_P5.sh UNIX shell script in the scar_extraction folder. This script calls scar_CIGAR_sc_10X_v2.pl and scar_filter.py, present in the same folder. The script scar_CIGAR_sc_10X_v2.pl requires [bwa](http://bio-bwa.sourceforge.net) to be installed, and the (Python 2.7) script scar_filter.py assumes the existence of a virtual environment to run in, and packages optparse, pandas and distance to be installed in that environment.
 2. __Determine cell types using Seurat.__ Run the Larvae_Seurat_mt.R script in the R_scripts folder. This script combines the Cell Ranger-generated count tables of all sequenced larval 10X libraries, filters, clusters and determines differentially expressed genes for the cells sequenced. Uses [Seurat](http://satijalab.org/seurat/).
 3. __Filter scars within the library and determine creation probability of scars.__ Run the Preprocess_droplet_scar_X_allreads.R scripts (one for each organism) and the Scar_comparison_between_fish.R script in the library_scar_filtering folder to combine scar libraries with mRNA libraries and perform further filtering steps.
-4. __Run the tree-building algorithm.__ Run Iterative_tree_building.R (for larvae) or Iterative_tree_building_adults.R (for adults) to build and plot tree using cell type and filtered scar data.
+4. __Run the tree-building algorithm.__ Run Iterative_tree_building.R (for larvae) or Iterative_tree_building_adults.R (for adults) to build and plot tree using cell type and filtered scar data. The data files provided in the directory Test_data can be used to build and display a larval tree.
+
+# Data description
+We provide scar and cell type data for one dataset in the Test_data folder, together with colors needed in Iterative_tree_building.R for tree visualization. Other datasets can be downloaded from GEO.
+
+* Larvae_Seurat_batch_r_out_cells_2.csv - Cell type and tSNE coordinates for all larval cells.
+* Z2_scars_compared.csv - Filtered scars from one organism.
+* color_table_larva.csv - Colors used for subsets of larval cell types to plot subtrees.
+* color_table_larvae.csv - Colors used for all larval cell types together.
 
 # Script description
 A brief description of all scripts in the repository, ordered by folder.
