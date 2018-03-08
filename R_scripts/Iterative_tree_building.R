@@ -103,7 +103,7 @@ scar.input <-
   # read.csv("./Data/Simulations/Tree_B2_2000cellsout_d005_wweakint.csv")
   # read.csv("./Data/2017_10X_1/Z1_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L1", scar.input$Barcode, sep = "_")
-  read.csv("./Data/2017_10X_2/Z2_scars_compared.csv", stringsAsFactors = F)
+  read.csv("Z2_scars_compared.csv", stringsAsFactors = F)
   # read.csv("./Data/2017_10X_2/Z3_scars_compared.csv", stringsAsFactors = F)
 # scar.input$Cell <- paste("L3", scar.input$Barcode, sep = "_")
 # read.csv("./Data/2017_10X_10_CR/Z4_scars_compared.csv", stringsAsFactors = F)
