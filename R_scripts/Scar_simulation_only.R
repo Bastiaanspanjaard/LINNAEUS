@@ -7,7 +7,7 @@
 # sequencing.
 
 # Dependencies ####
-source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
+source("./scar_helper_functions.R")
 
 # Parameters ####
 generations <- 6 # Number of developmental generations while scarring takes place

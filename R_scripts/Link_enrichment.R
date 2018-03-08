@@ -5,7 +5,7 @@
 # output.fish <- "Z2"
 
 # Dependencies ####
-source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
+source("./scar_helper_functions.R")
 
 # Parameters ####
 # Maximum scar probability to include scar in tree building

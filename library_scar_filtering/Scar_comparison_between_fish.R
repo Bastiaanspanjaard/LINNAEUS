@@ -1,5 +1,5 @@
 # Dependencies/parameters ####
-source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
+source("./scar_helper_functions.R")
 min.presence <- 2 # Cells that have to have a scar for it to be considered
 # present in an organism
 

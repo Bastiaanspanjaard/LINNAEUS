@@ -2,7 +2,7 @@
 # Determine cell-specific scar detection rates
 
 # Dependencies ####
-source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
+source("./scar_helper_functions.R")
 
 # Load data ####
 # Filtered scars

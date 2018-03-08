@@ -19,9 +19,6 @@ require(data.tree)
 require(treemap)
 require(collapsibleTree)
 require(data.table)
-# source("./Scripts/linnaeus-scripts/collapsibleTree.R")
-# source("./Scripts/linnaeus-scripts/collapsibleTree.data.tree.R")
-
 
 # Parameters ####
 wildtype.seq <- 

@@ -20,7 +20,7 @@
 # scar with the highest p-value as the first scar.
 
 # Dependencies ####
-source("./Scripts/linnaeus-scripts/scar_helper_functions.R")
+source("./scar_helper_functions.R")
 
 # Parameters ####
 # Fraction of doublets expected.
